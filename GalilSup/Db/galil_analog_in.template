@@ -32,7 +32,7 @@
 
 record(ai, "$(P):$(R)_MON") {
 	field(PREC, "$(PREC)")
-	field(EGU,  "Volts")
+	field(EGU,  "V")
 	field(SCAN, "I/O Intr")
 	field(DTYP, "asynFloat64")
 	field(INP,  "@asyn($(PORT),$(ADDR))ANALOG_IN")
