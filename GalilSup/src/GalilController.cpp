@@ -70,6 +70,12 @@ bool readAllowed_ = false;
 #define MIN(a,b) ((a)<(b)? (a): (b))
 #endif
 
+#ifdef _WIN32
+#define rint(x) floor((x)+0.5)
+#define lrint(x) floor((x)+0.5)
+#endif /* _WIN32 */
+
+
 //EPICS exit handler
 extern "C" void shutdownCallback(void *pPvt)
 {
@@ -99,7 +105,8 @@ GalilController::GalilController(const char *portName, const char *address, doub
                          asynInt32Mask | asynFloat64Mask | asynUInt32DigitalMask,
                          ASYN_CANBLOCK | ASYN_MULTIDEVICE, 
                          1, // autoconnect
-                         0, 0)  // Default priority and stack size
+                         0, 0),  // Default priority and stack size
+						 numAxes_(0)
 {
   struct Galilmotor_enables *motor_enables = NULL;  //Convenience pointer to GalilController motor_enables[digport]
   unsigned i;
@@ -243,6 +250,9 @@ GalilController::GalilController(const char *portName, const char *address, doub
 	//Register for iocInit state updates, so we can keep track of iocInit status
 	initHookRegister(myHookFunction);
 	}
+
+	// only needed with Galil1 library, Galil2 does not have Qt bundled
+  connect(); // make a connection early so Qt library gets initialised from correct thread, otherwise we get problems on windows 
 
   //Register this GalilController instance with GalilConnector for connection management
   connector->registerController(this);
@@ -421,7 +431,6 @@ void GalilController::connected(void)
 		setIntegerParam(GalilSSICapable_, 0);
 	else
 		setIntegerParam(GalilSSICapable_, 1);
-	
 	//Determine number of threads supported
 	//RIO
 	numThreads_ = (strncmp(model_,"RIO",3) == 0)? 4 : numThreads_;
@@ -1874,7 +1883,7 @@ asynStatus GalilController::writeUInt32Digital(asynUser *pasynUser, epicsUInt32 
 	//Determine bit i from mask
 	for (i=0;i<16;i++)
 		{
-		if (pow(2,i) == mask)
+		if (pow(2.0,i) == mask)
 			{
 			//Bit numbering is different on DMC compared to RIO controllers
 			if (strncmp(model_,"RIO",3) != 0)
@@ -2745,7 +2754,7 @@ void GalilController::gen_motor_enables_code(void)
 					sprintf(digital_code_,"%sST%c;", digital_code_, motor_enables->motors[j]);
 				}
 			//Manipulate interrupt flag to turn off the interrupt on this port for one threadA cycle
-			sprintf(digital_code_,"%sdpoff=dpoff-%d\nENDIF\n", digital_code_, (int)pow(2,i));
+			sprintf(digital_code_,"%sdpoff=dpoff-%d\nENDIF\n", digital_code_, (int)pow(2.0,i));
 			}
 		}
 	/* Re-enable input interrupt for all except the digital port(s) just serviced during interrupt routine*/
@@ -2789,7 +2798,7 @@ void GalilController::write_gen_codefile(void)
 void GalilController::read_codefile(const char *code_file)
 {
 	int i = 0;
-	char user_code[MAX_GALIL_AXES*(THREAD_CODE_LEN+LIMIT_CODE_LEN+INP_CODE_LEN)];
+	char* user_code = new char[MAX_GALIL_AXES*(THREAD_CODE_LEN+LIMIT_CODE_LEN+INP_CODE_LEN)];
 	char file[MAX_FILENAME_LEN];
 	FILE *fp;
 
@@ -2829,6 +2838,7 @@ void GalilController::read_codefile(const char *code_file)
 		else
 			errlogPrintf("\ngalil_read_codefile: Can't open user code file, using generated code\n\n");
 		}
+	delete[] user_code;
 }
 
 /** Find kinematic variables Q-X and substitute them for variable in range A-P for sCalcPerform

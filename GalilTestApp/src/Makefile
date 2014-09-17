@@ -22,14 +22,16 @@ GalilTestApp_DBD += sscanSupport.dbd
 GalilTestApp_DBD += asSupport.dbd
 GalilTestApp_DBD += busySupport.dbd
 GalilTestApp_DBD += GalilSupport.dbd
+GalilTestApp_DBD += motorSimSupport.dbd 
+GalilTestApp_DBD += utilities.dbd pvcomplete.dbd asubFunctions.dbd
 
 # <name>_registerRecordDeviceDriver.cpp will be created from <name>.dbd
 GalilTestApp_SRCS += GalilTestApp_registerRecordDeviceDriver.cpp
 GalilTestApp_SRCS_DEFAULT += GalilTestAppMain.cpp
 
 #add a definition for each support application used by this application
-GalilTestApp_LIBS += asyn motor calc sscan autosave busy
 GalilTestApp_LIBS += GalilSupport
+GalilTestApp_LIBS += motorSimSupport motor asyn busy calc sscan autosave utilities pvcomplete asubFunctions
 GalilTestApp_LIBS += $(EPICS_BASE_IOC_LIBS)
 
 #===========================

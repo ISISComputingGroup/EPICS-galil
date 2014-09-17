@@ -30,10 +30,10 @@ dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_profileMoveAxis.substitutions")
 # 3. double updatePeriod	- The time in ms between datarecords 8ms minimum.  Async if controller + bus supports it, otherwise is polled/synchronous.
 
 # Create a Galil controller
-GalilCreateController("Galil", "192.168.0.55", 8)
+GalilCreateController("Galil", "130.246.51.169", 20)
 
 # Create a Galil controller
-GalilCreateController("RIO", "192.168.0.101", 8)
+#GalilCreateController("RIO", "192.168.0.101", 8)
 
 # GalilCreateAxis command parameters are:
 #
@@ -92,7 +92,7 @@ GalilCreateCSAxes("Galil","I=(A+B)/2,J=B-A","A=I-J/2,B=I+J/2")
 # 4. int   display code. Set bit 1 to display generated code and or the code file specified.  Set bit 2 to display uploaded code
 
 # Start the controller
-GalilStartController("Galil", "", 1, 0)
+GalilStartController("Galil", "", 0, 0)
 
 #GalilStartController("RIO", "rio.gmc", 1, 0)
 

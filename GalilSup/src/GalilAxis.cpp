@@ -38,6 +38,12 @@ using namespace std; //cout ostringstream vector string
 #include "GalilController.h"
 #include <epicsExport.h>
 
+#ifdef _WIN32
+#define rint(x) floor((x)+0.5)
+#define lrint(x) floor((x)+0.5)
+#endif /* _WIN32 */
+
+
 // These are the GalilAxis methods
 
 /** Creates a new GalilAxis object.
@@ -980,7 +986,7 @@ asynStatus GalilAxis::poll(bool *moving)
    int home;				 	//Home status to give to motorRecord
    int done;					//Done status
    bool motor_move, enc_move;			//motor move, encoder move status
-   int encoder_direction;			//Encoder move direction
+   int encoder_direction = 0;			//Encoder move direction
    bool encdirok = true;			//Encoder direction ok flag
    int ueip;					//motorRecord ueip
    double eres, edel;	 		 	//motorRecord eres, and GalilEncoderDeadB_ (edel) Param
@@ -1241,19 +1247,19 @@ void GalilAxis::set_ssi_connectflag(void)
 		for (i=0;i<(ssitotalbits - ssierrbits);i++)
 			{
 			if (i % 2)
-				disconnect_valtmp |= (long)pow(2,i);
+				disconnect_valtmp |= (long)pow(2.0,i);
 			
 			}
 		if (!(invert_ssi_))
 			disconnect_val = (double)disconnect_valtmp;
 		else
-			disconnect_val = (pow(2,ssitotalbits - ssierrbits) - 1) - disconnect_valtmp;
+			disconnect_val = (pow(2.0,ssitotalbits - ssierrbits) - 1) - disconnect_valtmp;
 		}
 	else
 		{
 		//last we do binary code encoders
 		if (!(invert_ssi_))
-			disconnect_val = (pow(2,ssitotalbits - ssierrbits) - 1);
+			disconnect_val = (pow(2.0,ssitotalbits - ssierrbits) - 1);
 		else
 			disconnect_val = 0;
 		}

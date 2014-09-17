@@ -33,7 +33,9 @@ using namespace std; //cout ostringstream vector string
 #include <iocsh.h>
 #include <epicsThread.h>
 #include <errlog.h>
+extern "C" {
 #include "sCalcPostfix.h"
+}
 #include "postfix.h"
 
 #include <asynOctetSyncIO.h>
@@ -384,11 +386,11 @@ asynStatus GalilCSAxis::doCalc(const char *expr, double args[], double *result) 
     *result /= *result;  /* Start as NaN */
 
     //We use sCalcPostfix and sCalcPerform because it can handle upto 16 args
-    if (sCalcPostfix(expr, rpn, &err)) {
+    if (sCalcPostfix(const_cast<char*>(expr), reinterpret_cast<char*>(rpn), &err)) {
 	printf("sCalcPostfix error in expression %s \n", expr);
 	return asynError;
     } else 
-	if (sCalcPerform(args, SCALCARGS, NULL, 0, result, NULL, 0, rpn) && finite(*result)) {
+	if (sCalcPerform(args, SCALCARGS, NULL, 0, result, NULL, 0, reinterpret_cast<char*>(rpn)) && _finite(*result)) {
 	    printf("calcPerform: error evaluating '%s'", expr);
 	    return asynError;
     }
