@@ -115,6 +115,13 @@
 #define GalilOffOnErrorString		  "MOTOR_OOE"
 #define GalilAxisString			  "MOTOR_AXIS"
 
+#define GalilUserVarString		      "USERVAR"
+#define GalilUserVarInt32String		  "USERVARI32"
+#define GalilUserVarFloat64String	  "USERVARF64"
+#define GalilUserVarOctetString		  "USERVAROCT"
+#define GalilUserCmdString		      "USERCMD"
+#define GalilUserCmdOutString		  "USERCMDOUT"
+
 /* For each digital input, we maintain a list of motors, and the state the input should be in*/
 /* To disable the motor */
 struct Galilmotor_enables {
@@ -131,8 +138,12 @@ public:
   asynStatus setDeferredMoves(bool deferMoves);
   asynStatus writeInt32(asynUser *pasynUser, epicsInt32 value);
   asynStatus writeFloat64(asynUser *pasynUser, epicsFloat64 value);
+  asynStatus readOctet(asynUser* pasynUser,  char* value, size_t maxChars,  size_t* nActual,  int* eomReason);
   asynStatus readInt32(asynUser *pasynUser, epicsInt32 *value);
   asynStatus readFloat64(asynUser *pasynUser, epicsFloat64 *value);
+  asynStatus writeOctet(asynUser *pasynUser, const char*  value,  size_t  nChars,  size_t *  nActual); 
+  asynStatus drvUserCreate(asynUser *pasynUser, const char* drvInfo, const char** pptypeName, size_t* psize); 
+  asynStatus drvUserDestroy(asynUser *pasynUser); 
   void report(FILE *fp, int level);
 
   //Real motors
@@ -251,6 +262,12 @@ protected:
   int GalilOffOnError_;
   int GalilAxis_;
 //Add new parameters here
+  int GalilUserVar_;
+  int GalilUserVarInt32_;
+  int GalilUserVarFloat64_;
+  int GalilUserVarOctet_;
+  int GalilUserCmd_;
+  int GalilUserCmdOut_;
 
   int GalilCommunicationError_;
   #define LAST_GALIL_PARAM GalilCommunicationError_

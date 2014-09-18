@@ -101,8 +101,8 @@ extern "C" void myHookFunction(initHookState state)
   */
 GalilController::GalilController(const char *portName, const char *address, double updatePeriod)
   :  asynMotorController(portName, MAX_GALIL_AXES + MAX_GALIL_CSAXES, NUM_GALIL_PARAMS,	//MAX_GALIL_AXES paramLists are needed for binary IO at all times
-                         asynInt32Mask | asynFloat64Mask | asynUInt32DigitalMask, 
-                         asynInt32Mask | asynFloat64Mask | asynUInt32DigitalMask,
+                         asynInt32Mask | asynFloat64Mask | asynUInt32DigitalMask | asynOctetMask | asynDrvUserMask, 
+                         asynInt32Mask | asynFloat64Mask | asynUInt32DigitalMask | asynOctetMask,
                          ASYN_CANBLOCK | ASYN_MULTIDEVICE, 
                          1, // autoconnect
                          0, 0),  // Default priority and stack size
@@ -192,6 +192,12 @@ GalilController::GalilController(const char *portName, const char *address, doub
   createParam(GalilOffOnErrorString, asynParamInt32, &GalilOffOnError_);
   createParam(GalilAxisString, asynParamInt32, &GalilAxis_);
 //Add new parameters here
+  createParam(GalilUserVarString, asynParamOctet, &GalilUserVar_);
+  createParam(GalilUserVarInt32String, asynParamInt32, &GalilUserVarInt32_);
+  createParam(GalilUserVarFloat64String, asynParamFloat64, &GalilUserVarFloat64_);
+  createParam(GalilUserVarOctetString, asynParamOctet, &GalilUserVarOctet_);
+  createParam(GalilUserCmdString, asynParamOctet, &GalilUserCmd_);
+  createParam(GalilUserCmdOutString, asynParamOctet, &GalilUserCmdOut_);
 
   createParam(GalilCommunicationErrorString, asynParamInt32, &GalilCommunicationError_);
 
@@ -384,6 +390,13 @@ void GalilController::setParamDefaults(void)
   //Output compare is off
   for (i = 0; i < 2; i++)
 	setIntegerParam(i, GalilOutputCompareAxis_, 0);
+
+  setStringParam(GalilUserVar_, ""); // not used - redirected to values below based on read type
+  setIntegerParam(GalilUserVarInt32_, 999);  // value to return on unknown galil variable or read error
+  setDoubleParam(GalilUserVarFloat64_, 999.0); // value to return on unknown galil variable or read error
+  setStringParam(GalilUserVarOctet_, "<unknown>"); // value to return on unknown galil variable or read error
+  setStringParam(GalilUserCmd_, "<none>"); // last user cmd sent
+  setStringParam(GalilUserCmdOut_, "<empty>"); // output of last user cmd sent
 }
 
 //Anything that should be done once connection established
@@ -1777,6 +1790,11 @@ asynStatus GalilController::readInt32(asynUser *pasynUser, epicsInt32 *value)
         //Set any external changes in coordsys in paramList
 	setIntegerParam(0, GalilCoordSys_, *value);
 	}
+  else if (function == GalilUserVar_)
+  {
+	epicsSnprintf(cmd_, sizeof(cmd_), "%s=?", (const char*)pasynUser->userData);
+	status = get_integer(GalilUserVarInt32_, value);
+  }
    else 
 	{
 	status = asynPortDriver::readInt32(pasynUser, value);
@@ -1837,6 +1855,11 @@ asynStatus GalilController::readFloat64(asynUser *pasynUser, epicsFloat64 *value
 	sprintf(cmd_, "MG _ER%c", pAxis->axisName_);
 	status = get_double(GalilErrorLimit_, value, pAxis->axisNo_);
 	}
+    else if (function == GalilUserVar_)
+    {
+	  epicsSnprintf(cmd_, sizeof(cmd_), "%s=?", (const char*)pasynUser->userData);
+	  status = get_double(GalilUserVarFloat64_, value);
+    }
     else
 	{
 	status = asynPortDriver::readFloat64(pasynUser, value);
@@ -1944,7 +1967,10 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
    
   /* Set the parameter and readback in the parameter library.  This may be overwritten when we read back the
    * status at the end, but that's OK */
-  status = setIntegerParam(pAxis->axisNo_, function, value);
+  if (function != GalilUserVar_)
+  {
+      status = setIntegerParam(pAxis->axisNo_, function, value);
+  }
 
   if (function == GalilHomeType_ || function == GalilLimitType_)
   	{
@@ -2111,6 +2137,11 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
 	{
 	status = setOutputCompare(addr);
 	}
+  else if (function == GalilUserVar_)
+  {
+	    epicsSnprintf(cmd_, sizeof(cmd_), "%s=%d", (const char*)pasynUser->userData, value);
+		status = writeReadController(functionName);
+  }
   else 
   	{
     	/* Call base class method */
@@ -2149,11 +2180,13 @@ asynStatus GalilController::writeFloat64(asynUser *pasynUser, epicsFloat64 value
   reqd_comms = true;
 
   /* Set the parameter and readback in the parameter library. */
-  if (pAxis)
-  	status = setDoubleParam(pAxis->axisNo_, function, value);	//DMC (digital motor controller) axis
-  else
-	status = setDoubleParam(addr, function, value);			//Rio analog output when no axis are defined
-
+  if (function != GalilUserVar_)
+  {
+    if (pAxis)
+  	  status = setDoubleParam(pAxis->axisNo_, function, value);	//DMC (digital motor controller) axis
+    else
+	  status = setDoubleParam(addr, function, value);			//Rio analog output when no axis are defined
+  }
   if (function == GalilStepSmooth_)
         {
 	if (pAxis)
@@ -2185,6 +2218,11 @@ asynStatus GalilController::writeFloat64(asynUser *pasynUser, epicsFloat64 value
 	{
 	status = setOutputCompare(addr);
 	}
+  else if (function == GalilUserVar_)
+  {
+	    epicsSnprintf(cmd_, sizeof(cmd_), "%s=%f", (const char*)pasynUser->userData, value);
+		status = writeReadController(functionName);
+  }
   else
 	{
         /* Call base class method */
@@ -2199,6 +2237,119 @@ asynStatus GalilController::writeFloat64(asynUser *pasynUser, epicsFloat64 value
   return asynSuccess;
 }
 
+asynStatus GalilController::writeOctet(asynUser *pasynUser, const char*  value,  size_t  nChars,  size_t *  nActual)
+{
+  int function = pasynUser->reason;		//Function requested
+  asynStatus status;				//Used to work out communication_error_ status.  asynSuccess always returned
+  GalilAxis *pAxis = getAxis(pasynUser);	//Retrieve the axis instance
+  const char *functionName = "GalilController::writeOctet";
+  bool reqd_comms;				//Check for comms error only when function reqd comms
+  int addr=0;					//Address requested
+
+  std::string value_s(value, nChars);  // in case value is not NULL terminated
+
+  //Retrieve address.  Used for analog IO
+  status = getAddress(pasynUser, &addr); 
+  if (status != asynSuccess) return(status);
+
+  //Most functions require comms
+  reqd_comms = true;
+	
+  /* Set the parameter and readback in the parameter library. */
+  if (function == GalilUserCmd_)
+  {
+	  status = setStringParam(function, value_s.c_str());			
+	  epicsSnprintf(cmd_, sizeof(cmd_), "%s", value_s.c_str());
+	  if ( (status = writeReadController(functionName)) == asynSuccess )
+	  {
+		  setStringParam(GalilUserCmdOut_, resp_);
+	      *nActual = nChars;
+	  }
+	  else
+	  {
+		  setStringParam(GalilUserCmdOut_, "<error>");
+	      *nActual = 0;
+	  }
+  }
+  else if (function == GalilUserVar_)
+  {
+	    epicsSnprintf(cmd_, sizeof(cmd_), "%s=%s", (const char*)pasynUser->userData, value_s.c_str());
+	    if ( (status = writeReadController(functionName)) == asynSuccess )
+		{
+	      *nActual = nChars;
+		}
+	    else
+	    {
+	      *nActual = 0;
+	    }
+  }
+  else
+  {
+        /* Call base class method */
+	status = asynMotorController::writeOctet(pasynUser, value,  nChars, nActual);
+	reqd_comms = false;
+  }
+    
+  //Flag comms error only if function reqd comms
+  check_comms(reqd_comms, status);
+
+  //Always return success. Dont need more error mesgs
+  return asynSuccess;
+}
+
+asynStatus GalilController::readOctet(asynUser* pasynUser,  char* value, size_t maxChars,  size_t* nActual,  int* eomReason)
+{
+    int function = pasynUser->reason;		 //function requested
+    asynStatus status;				 //Used to work out communication_error_ status.  asynSuccess always returned
+    GalilAxis *pAxis = getAxis(pasynUser);	 //Retrieve the axis instance
+    const char *functionName = "GalilController::readOctet";
+    bool reqd_comms;				 //Check for comms error only when function reqd comms
+
+    //If provided addr does not return an GalilAxis instance, then return asynError
+    if (!pAxis) return asynError;
+
+    //We dont retrieve values for records at iocInit.  
+    //For output records autosave, or db defaults are pushed to hardware instead
+    if (!readAllowed_) return asynError;
+
+    //Most functions require comms
+    reqd_comms = true;
+  if (function == GalilUserVar_)
+  {
+	epicsSnprintf(cmd_, sizeof(cmd_), "%s=?", (const char*)pasynUser->userData);
+	if ((status = writeReadController(functionName)) == asynSuccess)
+	{
+		strncpy(value, resp_, maxChars-1);
+		value[maxChars-1] = '\0';
+	}
+	else
+	{
+		strncpy(value, "<error>", maxChars-1);
+	}
+	*nActual = strlen(value);
+	if ( strlen(value) == (maxChars - 1) )
+	{
+	    *eomReason = ASYN_EOM_CNT;
+	}
+	else
+	{
+		*eomReason = ASYN_EOM_EOS;
+	}
+  }
+   else 
+	{
+	status = asynPortDriver::readOctet(pasynUser, value, maxChars, nActual, eomReason);
+	reqd_comms = false;
+	}
+
+   //Flag comms error only if function reqd comms
+   check_comms(reqd_comms, status);
+
+   //Always return success. Dont need more error mesgs
+   return asynSuccess;	
+}
+
+	
 //Extract controller data from GalilController data record
 //Return status of GalilController data record acquisition
 void GalilController::getStatus(void)
@@ -2287,6 +2438,7 @@ void GalilController::getStatus(void)
 		}
 	}
 }
+
 
 //Override asynMotorController::poll
 //Acquire a data record from controller, store in GalilController instance
@@ -2798,7 +2950,7 @@ void GalilController::write_gen_codefile(void)
 void GalilController::read_codefile(const char *code_file)
 {
 	int i = 0;
-	char* user_code = new char[MAX_GALIL_AXES*(THREAD_CODE_LEN+LIMIT_CODE_LEN+INP_CODE_LEN)];
+	char* user_code = (char*)calloc(MAX_GALIL_AXES * (THREAD_CODE_LEN+LIMIT_CODE_LEN+INP_CODE_LEN),sizeof(char));
 	char file[MAX_FILENAME_LEN];
 	FILE *fp;
 
@@ -2838,7 +2990,7 @@ void GalilController::read_codefile(const char *code_file)
 		else
 			errlogPrintf("\ngalil_read_codefile: Can't open user code file, using generated code\n\n");
 		}
-	delete[] user_code;
+	free(user_code);
 }
 
 /** Find kinematic variables Q-X and substitute them for variable in range A-P for sCalcPerform
@@ -2993,6 +3145,44 @@ asynStatus GalilController::breakupTransform(char *raw, char *axes, char **equat
 	expectAxis = (expectAxis) ? false : true;
 	}
    return (asynStatus)status;
+}
+
+asynStatus GalilController::drvUserCreate(asynUser *pasynUser, const char* drvInfo, const char** pptypeName, size_t* psize)
+{
+    const char *functionName = "drvUserCreate";
+	char uservar[64];
+    
+	if ( 1 == sscanf(drvInfo, "USERVAR_%64s", uservar) )
+	{
+		pasynUser->reason = GalilUserVar_; 
+		pasynUser->userData = strdup(uservar);
+		asynPrint(pasynUser, ASYN_TRACE_FLOW,
+              "%s:%s: drvInfo=%s, index=%d, uservar=%s\n", 
+              driverName, functionName, drvInfo, pasynUser->reason, (const char*)pasynUser->userData);
+		return(asynSuccess);
+	}
+	else
+	{
+	    return asynMotorController::drvUserCreate(pasynUser, drvInfo, pptypeName, psize);
+	}
+}
+
+asynStatus GalilController::drvUserDestroy(asynUser *pasynUser)
+{
+    const char *functionName = "drvUserDestroy";
+	if ( GalilUserVar_ == pasynUser->reason )
+	{
+		asynPrint(pasynUser, ASYN_TRACE_FLOW,
+              "%s:%s: index=%d uservar=%s\n", 
+              driverName, functionName, pasynUser->reason, (const char*)pasynUser->userData);
+		free(pasynUser->userData);
+		pasynUser->userData = NULL;
+		return(asynSuccess);
+	}
+	else
+	{
+	    return asynMotorController::drvUserDestroy(pasynUser);
+	}
 }
 
 //IocShell functions

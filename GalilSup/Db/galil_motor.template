@@ -55,7 +55,12 @@ grecord(motor,"$(P):$(M)")
 	field(PCOF,"$(PCOF)")
 	field(ICOF,"$(ICOF)")
 	field(DCOF,"$(DCOF)")
+    info(archive,"VAL RBV DVAL DRBV OFF MSTA")
 }
+
+alias("$(P):$(M)", "$(P):$(M):SP")
+
+alias("$(P):$(M)", "$(P):$(M):SP:RBV")
 
 record(transform,"$(P):$(M)_ableput") {
   field(CLCB,"a")
@@ -63,6 +68,18 @@ record(transform,"$(P):$(M)_ableput") {
   field(OUTA,"$(P):$(M).DISA NPP NMS")
   field(OUTB,"$(P):$(M).DISP NPP NMS")
   field(OUTC,"$(P):$(M).DISA NPP NMS")
+}
+
+record(transform,"$(P):$(M)_lockput") {
+  field(CLCB, "a = 0 ? 3 : 0")
+  field(CMTB, "SPMG value")
+  field(CMTA, "locked value")
+  field(CLCC,"b")
+  field(CLCD,"a")
+  field(CLCE,"b")
+  field(OUTC,"$(P):$(M).SPMG NPP NMS")
+  field(OUTD,"$(P):$(M).DISP NPP NMS")
+  field(OUTE,"$(P):$(M).SPMG NPP NMS")
 }
 
 record(bo,"$(P):$(M)_able") {
@@ -168,6 +185,39 @@ record(ao, "$(P):$(M)_STOPGO_CMD")
 	field(OMSL, "closed_loop") 
 	field(DOL,  "$(P):$(M)_STOPGO_MON CP MS")
 	field(OUT,  "$(P):$(M).SPMG CA")
+}
+
+# monitor the motor status and update a string field with results
+record(aSub, "$(P):$(M):_MSTACALC")
+{
+    field(SNAM, "displayMotorMSTA")
+	field(INPA, "$(P):$(M).MSTA CP")
+	field(FTA, "ULONG")
+	field(OUTA, "$(P):$(M)_MSTA_STR PP")
+	field(FTVA, "CHAR")
+	field(NOVA, "512")	
+}
+
+record(waveform, "$(P):$(M)_MSTA_STR")
+{
+	field(NELM, "512")
+	field(FTVL, "CHAR")
+	field(DESC, "Text version of motor MSTA")
+}
+
+record(aSub, "$(P):$(M):_STATUSCALC")
+{
+    field(SNAM, "displayMotorMSTASimple")
+	field(INPA, "$(P):$(M).MSTA CP")
+	field(FTA, "ULONG")
+	field(OUTA, "$(P):$(M)_STATUS PP")
+	field(FTVA, "STRING")
+	field(NOVA, "1")	
+}
+
+record(stringin, "$(P):$(M)_STATUS")
+{
+	field(DESC, "Simple Text version of motor MSTA")
 }
 
 # end

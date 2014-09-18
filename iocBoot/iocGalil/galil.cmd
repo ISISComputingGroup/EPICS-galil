@@ -1,27 +1,31 @@
+epicsEnvSet("GALILCRATE","01")
+calc("GCID", "$(GALILCRATE) - 1", 2, 2)
+
 #Load motor records
-dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_motors.substitutions")
+dbLoadRecords("$(TOP)/db/galil_motor.db", "P=$(MYPVPREFIX)MOT,CC=$(GCID),CCP=$(GALILCRATE),IFSIM=#,IFNOTSIM=")
 
 #Load extra features that have controller wide scope (eg.  Limit switch type, home switch type)
-dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_ctrl_extras.substitutions")
+dbLoadRecords("$(TOP)/db/galil_ctrl_extras.db", "P=$(MYPVPREFIX)MOT,CC=$(GCID),CCP=$(GALILCRATE),IFSIM=#,IFNOTSIM=")
 
 #Load extra features for axis/motors (eg. Motor type, encoder type)
-dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_motor_extras.substitutions")
+dbLoadRecords("$(TOP)/db/galil_motor_extras.db", "P=$(MYPVPREFIX)MOT,CC=$(GCID),CCP=$(GALILCRATE),IFSIM=#,IFNOTSIM=")
 
 #Load coordinate system features
-dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_coordinate_systems.substitutions")
+#dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_coordinate_systems.substitutions")
 
 #Load digital IO databases
-dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_digital_ports.substitutions")
+#dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_digital_ports.substitutions")
 
 #Load analog IO databases
-dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_analog_ports.substitutions")
+#dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_analog_ports.substitutions")
 
 #Load user defined functions
 #dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_userdef_records.substitutions")
+dbLoadRecords("$(TOP)/db/galil_userdef_records8.db", "P=$(MYPVPREFIX)MOT,CC=$(GCID),CCP=$(GALILCRATE),IFSIM=#,IFNOTSIM=")
 
 #Load profiles
-dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_profileMoveController.substitutions")
-dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_profileMoveAxis.substitutions")
+#dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_profileMoveController.substitutions")
+#dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_profileMoveAxis.substitutions")
 
 # GalilCreateController command parameters are:
 #
@@ -31,6 +35,7 @@ dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_profileMoveAxis.substitutions")
 
 # Create a Galil controller
 GalilCreateController("Galil", "130.246.51.169", 20)
+
 
 # Create a Galil controller
 #GalilCreateController("RIO", "192.168.0.101", 8)

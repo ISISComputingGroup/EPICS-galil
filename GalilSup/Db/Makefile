@@ -15,7 +15,11 @@ include $(TOP)/configure/CONFIG
 # If <anyname>.db template is not named <anyname>*.template add
 # <anyname>_template = <templatename>
 
+DB += galil_userdef_records8.template
+
 include $(TOP)/configure/RULES
 #----------------------------------------
 #  ADD RULES AFTER THIS LINE
 
+galil_userdef_records8.template ../O.Common/galil_userdef_records8.template : $(TOP)/galilSup/Db/galil_userdef_records.template $(TOP)/galilSup/Db/galil_userdef_records8.substitutions
+	$(MSI) -o $@ -S $(TOP)/galilSup/Db/galil_userdef_records8.substitutions $(TOP)/galilSup/Db/galil_userdef_records.template

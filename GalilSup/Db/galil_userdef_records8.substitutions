@@ -1,0 +1,55 @@
+# $File: //ASP/Dev/SBS/4_Controls/4_3_Network_Infrastructure/4_3_1_Comms_Common_Services/sw/device_drivers/Galil/1-5/galilTestApp/Db/galil_userdef_records.substitutions $
+# $Revision: #2 $
+# $DateTime: 2012/03/20 11:55:19 $
+# $Author: cliftm $
+#
+# Description
+# Substitution file for user defined commands and monitors
+#
+# Copyright (c) 2006  Australian Synchrotron 
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# Licence as published by the Free Software Foundation; either
+# version 2.1 of the Licence, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public Licence for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# Licence along with this library; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+# 
+# Contact details:
+# mark.clift@synchrotron.vic.gov.au
+# 800 Blackburn Road, Clayton, Victoria 3168, Australia.
+
+# P:EPICSName_MONITOR
+# P:EPICSName_STATUS
+# P:EPICSName_SP
+# P:EPICSName_CMD
+
+# GalilStr is a galil command or variable 
+# eg. TI0, SB 1, uservarname, etc
+
+# DRVCMD = VAR (GalilStr is a galil variable)
+# DRVCMD = CMD (GalilStr is a galil command)
+
+
+file "$(TOP)/galilSup/Db/galil_userdef_records.template"
+{
+pattern
+{ P, PORT, ADDR, EPICSName, GalilStr }
+{ "\$(P)", "\$(PORT)", 0, "\$(EN)01_\$(GS)",     "\$(GS)A" }  
+{ "\$(P)", "\$(PORT)", 1, "\$(EN)02_\$(GS)",     "\$(GS)B" }  
+{ "\$(P)", "\$(PORT)", 2, "\$(EN)03_\$(GS)",     "\$(GS)C" }  
+{ "\$(P)", "\$(PORT)", 3, "\$(EN)04_\$(GS)",     "\$(GS)D" }  
+{ "\$(P)", "\$(PORT)", 4, "\$(EN)05_\$(GS)",     "\$(GS)E" }  
+{ "\$(P)", "\$(PORT)", 5, "\$(EN)06_\$(GS)",     "\$(GS)F" }  
+{ "\$(P)", "\$(PORT)", 6, "\$(EN)07_\$(GS)",     "\$(GS)G" }  
+{ "\$(P)", "\$(PORT)", 7, "\$(EN)08_\$(GS)",     "\$(GS)H" }
+}  
+
+# end
