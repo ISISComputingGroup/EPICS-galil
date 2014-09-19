@@ -435,7 +435,9 @@ asynStatus GalilAxis::setLimitDecel(double velocity)
 		{
 		    // we also get called during record initialisation, so fields might contain junk, so need to be careful how we copy
 			memcpy(mr_prem_, pmr->prem, std::min(sizeof(pmr->prem),sizeof(mr_prem_)));
+			mr_prem_[sizeof(mr_prem_)-1] = '\0';
 			memcpy(mr_post_, pmr->post, std::min(sizeof(pmr->post),sizeof(mr_post_)));
+			mr_post_[sizeof(mr_post_)-1] = '\0';
 		}
 	  }
 	  return asynSuccess;
@@ -1184,7 +1186,7 @@ skip:
 		--begin_move_count_;
 		if (mr_post_[0] != '\0')
 		{
-			sprintf(pC_->cmd_, "%s", mr_post_);
+			epicsSnprintf(pC_->cmd_, sizeof(pC_->cmd_), "%s", mr_post_);
 			status = pC_->writeReadController(functionName);
 		}
 	}
