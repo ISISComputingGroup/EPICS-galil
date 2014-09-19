@@ -43,6 +43,13 @@ using namespace std; //cout ostringstream vector string
 #define lrint(x) floor((x)+0.5)
 #endif /* _WIN32 */
 
+#include "motorRecord.h"
+//	motorAsynPvt is a private structure in devMotorAsyn.c, however we only want its first member
+struct motorAsynPvt_dummy
+{
+	struct motorRecord * pmr;
+	// the real motorAsynPvt has other stuff here
+};
 
 // These are the GalilAxis methods
 
@@ -59,12 +66,12 @@ GalilAxis::GalilAxis(class GalilController *pC, //Pointer to controller instance
 		     char *enables_string,	//digital input(s) to use for motor enable/disable function
 		     int switch_type)		//motor enable/disable switch type
   : asynMotorAxis(pC, (toupper(axisname[0]) - AASCII)),
-    pC_(pC)
+    pC_(pC), begin_move_count_(0)
 {
   char axis_limit_code[LIMIT_CODE_LEN];   	//Code generated for limits interrupt on this axis
   char axis_digital_code[INP_CODE_LEN];	     	//Code generated for digital interrupt related to this axis
   char axis_thread_code[THREAD_CODE_LEN]; 	//Code generated for the axis (eg. home code, limits response)
- 
+  mr_prem_[0] = mr_post_[0] = '\0';
   //Increment internal axis counter
   //Used to check start status of galil thread (on hardware) for this GalilAxis
   pC_->numAxes_++;
@@ -417,7 +424,40 @@ asynStatus GalilAxis::setLimitDecel(double velocity)
 	return status;
 }
 
-/** Move the motor to an absolute location or by a relative amount.
+  asynStatus GalilAxis::getMotorRecordFields(asynUser *pasynUser)
+  {
+  //	we cannot access motorAsynPvt structure, but it's first member is a pointer to a motor record *pPvt;
+      struct motorAsynPvt_dummy* pPvt = (struct motorAsynPvt_dummy*)pasynUser->userPvt;
+	  if (pPvt != NULL)
+	  {
+		struct motorRecord* pmr = pPvt->pmr;
+		if (pmr != NULL)
+		{
+		    // we also get called during record initialisation, so fields might contain junk, so need to be careful how we copy
+			memcpy(mr_prem_, pmr->prem, std::min(sizeof(pmr->prem),sizeof(mr_prem_)));
+			memcpy(mr_post_, pmr->post, std::min(sizeof(pmr->post),sizeof(mr_post_)));
+		}
+	  }
+	  return asynSuccess;
+  }
+
+  asynStatus GalilAxis::beginMove()
+  {
+	    static const char* functionName = "GalilAxis::beginMove";
+	    asynStatus status;
+		++begin_move_count_;
+  		if (mr_prem_[0] != '\0')
+		{
+		    sprintf(pC_->cmd_, "%s", mr_prem_);
+		    status = pC_->writeReadController(functionName);
+		}
+		sprintf(pC_->cmd_, "BG%c", axisName_);
+		status = pC_->writeReadController(functionName);
+		return status;
+  }
+  
+  
+  /** Move the motor to an absolute location or by a relative amount.
   * \param[in] position  The absolute position to move to (if relative=0) or the relative distance to move 
   * by (if relative=1). Units=steps.
   * \param[in] relative  Flag indicating relative move (1) or absolute move (0).
@@ -492,8 +532,7 @@ asynStatus GalilAxis::move(double position, int relative, double minVelocity, do
 			}
 
 		//Begin the move
-		sprintf(pC_->cmd_, "BG%c", axisName_);
-		status = pC_->writeReadController(functionName);
+		status = beginMove();
 		}
 	else
 		{
@@ -601,8 +640,7 @@ asynStatus GalilAxis::home(double minVelocity, double maxVelocity, double accele
 	pC_->writeReadController(functionName);
 
 	//Begin home jog
-	sprintf(pC_->cmd_, "BG %c", axisName_);
-	pC_->writeReadController(functionName);
+	beginMove();
 
 	//tell controller which axis we are doing a home on*
 	//We do this last as controller may reset jog speed once home%c is set to 1
@@ -658,8 +696,7 @@ asynStatus GalilAxis::moveVelocity(double minVelocity, double maxVelocity, doubl
 	pC_->writeReadController(functionName);
 					
 	//Begin jogging
-	sprintf(pC_->cmd_, "BG %c", axisName_);
-	pC_->writeReadController(functionName);
+	beginMove();
 
         //Allow time for motion to begin
 	epicsThreadSleep(.02);
@@ -982,7 +1019,7 @@ asynStatus GalilAxis::getStatus(void)
   * \param[out] moving A flag that is set indicating that the axis is moving (1) or done (0). */
 asynStatus GalilAxis::poll(bool *moving)
 {
-   //static const char *functionName = "GalilAxis::poll";
+   static const char *functionName = "GalilAxis::poll";
    int home;				 	//Home status to give to motorRecord
    int done;					//Done status
    bool motor_move, enc_move;			//motor move, encoder move status
@@ -1142,6 +1179,15 @@ asynStatus GalilAxis::poll(bool *moving)
     last_encoder_position_ = encoder_position_;
 
 skip:
+	if ( done && (begin_move_count_ > 0) )
+	{
+		--begin_move_count_;
+		if (mr_post_[0] != '\0')
+		{
+			sprintf(pC_->cmd_, "%s", mr_post_);
+			status = pC_->writeReadController(functionName);
+		}
+	}
     //Set status
     //Pass step count/aux encoder info to motorRecord
     setDoubleParam(pC_->motorPosition_, motor_position_);

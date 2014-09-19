@@ -91,6 +91,9 @@ public:
   asynStatus setIGain(double iGain);
   asynStatus setDGain(double dGain);
   asynStatus setClosedLoop(bool closedLoop);
+  asynStatus getMotorRecordFields(asynUser *pasynUser);
+private:
+  asynStatus beginMove();
 
 private:
   GalilController *pC_;      		/**< Pointer to the asynMotorController to which this axis belongs.
@@ -122,6 +125,11 @@ private:
   double deferredVelocity_;		//Coordinate system velocity
   double deferredPosition_;		//Deferred move position
   bool deferredMove_;			//Has a deferred move been set
+  int begin_move_count_;
+  // motor record fields
+  char mr_prem_[40];   // Copy of motor record PREM
+  char mr_post_[40];   // Copy of motor record POST
+
   
 friend class GalilController;
 };

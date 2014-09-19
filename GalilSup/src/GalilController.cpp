@@ -547,7 +547,12 @@ void GalilController::report(FILE *fp, int level)
 GalilAxis* GalilController::getAxis(asynUser *pasynUser)
 {
   //For real motors
-  return static_cast<GalilAxis*>(asynMotorController::getAxis(pasynUser));
+  GalilAxis* axis = static_cast<GalilAxis*>(asynMotorController::getAxis(pasynUser));
+  if (axis != NULL)
+  {
+      axis->getMotorRecordFields(pasynUser);
+  }
+  return axis;
 }
 
 /** Returns a pointer to an GalilMotorAxis object.
