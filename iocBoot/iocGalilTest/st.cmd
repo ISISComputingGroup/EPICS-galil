@@ -1,12 +1,12 @@
-#!../../bin/linux-x86/GalilTestApp
+#!../../bin/linux-x86/GalilTest
 
 < envPaths
 
 cd ${TOP}
 
 ## Register all support components
-dbLoadDatabase("dbd/GalilTestApp.dbd",0,0)
-GalilTestApp_registerRecordDeviceDriver(pdbbase)
+dbLoadDatabase("dbd/GalilTest.dbd",0,0)
+GalilTest_registerRecordDeviceDriver(pdbbase)
 
 cd ${TOP}/iocBoot/${IOC}
 
@@ -27,8 +27,9 @@ epicsEnvSet("SIMULATE", "0")
 
 ### autosave
 # specify additional directories in which to to search for included request files
-set_requestfile_path("${GALIL}/db/", "")
+set_requestfile_path("${GALIL}/GalilSup/Db", "")
 set_requestfile_path("${MOTOR}/motorApp/Db", "")
+
 
 epicsEnvSet("GALILCONFIG","$(ICPCONFIGROOT)/galil")
 
@@ -70,7 +71,7 @@ create_monitor_set("$(IOCNAME)_positions.req", 5, "P=$(MYPVPREFIX)MOT:,IFDMC01=$
 create_monitor_set("$(IOCNAME)_settings.req", 30, "P=$(MYPVPREFIX)MOT:,IFDMC01=$(IFDMC01),IFDMC02=$(IFDMC02),IFDMC03=$(IFDMC03),IFDMC04=$(IFDMC04),IFDMC05=$(IFDMC05),IFDMC06=$(IFDMC06),IFDMC07=$(IFDMC07)")
 
 # Save motor positions every 5 seconds
-#create_monitor_set("galilTestApp_positions.req", 5,"P=DMC01:")
+#create_monitor_set("galilTest_positions.req", 5,"P=DMC01:")
 # Save motor settings every 30 seconds
-#create_monitor_set("galilTestApp_settings.req", 30,"P=DMC01:")
+#create_monitor_set("galilTest_settings.req", 30,"P=DMC01:")
 

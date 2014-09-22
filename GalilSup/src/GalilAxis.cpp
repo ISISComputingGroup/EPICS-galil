@@ -131,7 +131,7 @@ asynStatus GalilAxis::setDefaults(int limit_as_home, char *enables_string, int s
 	//const char *functionName = "GalilAxis::setDefaults";
 	
 	//Store limits as home setting						       
-	limit_as_home_ = (limit_as_home > 0) ? 1 : 0;
+	limit_as_home_ = (limit_as_home > 0) ? true : false;
 
 	//Store switch type setting for motor enable/disable function			       
 	switch_type_ = (switch_type > 0) ? 1 : 0;
@@ -448,7 +448,6 @@ asynStatus GalilAxis::setLimitDecel(double velocity)
   {
 	    static const char* functionName = "GalilAxis::beginMove";
 	    asynStatus status;
-		++begin_move_count_;
   		if (mr_prem_[0] != '\0')
 		{
 			std::cout << "Executing pre move commmand: " << mr_prem_ << std::endl;
@@ -458,6 +457,8 @@ asynStatus GalilAxis::setLimitDecel(double velocity)
 		}
 		sprintf(pC_->cmd_, "BG%c", axisName_);
 		status = pC_->writeReadController(functionName);
+//		inmotion_ = true; // though we might need to set this here in case we test in poll() for _BG and get a cached value, but seems not
+		++begin_move_count_;
 		return status;
   }
   
@@ -965,7 +966,7 @@ asynStatus GalilAxis::getStatus(void)
 
 			//moving status
 			sprintf(src, "_BG%c", axisName_);
-			inmotion_ = (bool)pC_->gco_->sourceValue(pC_->recdata_, src);
+			inmotion_ = (pC_->gco_->sourceValue(pC_->recdata_, src) == 1 ? true : false);
 			//reverse limit
 			sprintf(src, "_LR%c", axisName_);
 			rev_ = (bool)(pC_->gco_->sourceValue(pC_->recdata_, src) == 1) ? 0 : 1;
@@ -1137,7 +1138,7 @@ asynStatus GalilAxis::poll(bool *moving)
 	
    //Move status
    //Motors with deferred moves pending set to status moving
-   if ((inmotion_) || (motor_move == 1) || (enc_move == 1) || (deferredMove_))
+   if ((inmotion_) || (motor_move) || (enc_move) || (deferredMove_))
         {
         *moving = 1;               	//set flag for moving
         done = 0;		
@@ -1168,15 +1169,15 @@ asynStatus GalilAxis::poll(bool *moving)
 	setIntegerParam(pC_->GalilWrongLimitProtectionActive_, 0); //NOT actively stopping this motor now
 
    //Check home switch
-   if (home_ && limit_as_home_ == 0)
+   if (home_ && !limit_as_home_)
 	home = 1;
 
    /*if Rev switch is on and we are using it as a home, set the appropriate flag*/
-   if (rev_ && limit_as_home_ > 0)
+   if (rev_ && limit_as_home_)
 	home = 1;
 
    /*if fwd switch is on and we are using it as a home, set the appropriate flag*/
-    if (fwd_ && limit_as_home_ > 0)
+    if (fwd_ && limit_as_home_)
 	home = 1;
 
     //Save positions, direction for next poll cycle
@@ -1189,11 +1190,11 @@ skip:
 		--begin_move_count_;
 		if (mr_post_[0] != '\0')
 		{
-			std::cout << "TODO: Would ideally now execute post move: " << mr_post_ << std::endl;
-//			pC_->lock();
-//			epicsSnprintf(pC_->cmd_, sizeof(pC_->cmd_), "%s", mr_post_);
-//			status = pC_->writeReadController(functionName);
-//			pC_->unlock();
+			std::cout << "Executing post move command: " << mr_post_ << std::endl;
+			pC_->lock();
+			epicsSnprintf(pC_->cmd_, sizeof(pC_->cmd_), "%s", mr_post_);
+			status = pC_->writeReadController(functionName);
+			pC_->unlock();
 		}
 	}
     //Set status
