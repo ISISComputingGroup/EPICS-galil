@@ -26,6 +26,8 @@ dbLoadRecords("$(TOP)/db/galil_userdef_records8.db", "P=$(MYPVPREFIX)MOT,CC=$(GC
 #Load profiles
 #dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_profileMoveController.substitutions")
 #dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_profileMoveAxis.substitutions")
+dbLoadRecords("$(TOP)/db/galil_profileMoveController.db", "P=$(MYPVPREFIX)MOT,CC=$(GCID),CCP=$(GALILCRATE),IFSIM=#,IFNOTSIM=")
+dbLoadRecords("$(TOP)/db/galil_profileMoveAxis.db", "P=$(MYPVPREFIX)MOT,CC=$(GCID),CCP=$(GALILCRATE),IFSIM=#,IFNOTSIM=")
 
 # GalilCreateController command parameters are:
 #

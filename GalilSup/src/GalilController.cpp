@@ -547,12 +547,7 @@ void GalilController::report(FILE *fp, int level)
 GalilAxis* GalilController::getAxis(asynUser *pasynUser)
 {
   //For real motors
-  GalilAxis* axis = static_cast<GalilAxis*>(asynMotorController::getAxis(pasynUser));
-  if (axis != NULL)
-  {
-      axis->getMotorRecordFields(pasynUser);
-  }
-  return axis;
+  return static_cast<GalilAxis*>(asynMotorController::getAxis(pasynUser));
 }
 
 /** Returns a pointer to an GalilMotorAxis object.
@@ -2151,7 +2146,7 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
   	{
     	/* Call base class method */
     	status = asynMotorController::writeInt32(pasynUser, value);
-	reqd_comms = false;
+	    reqd_comms = false;
   	}
 
   //Flag comms error only if function reqd comms

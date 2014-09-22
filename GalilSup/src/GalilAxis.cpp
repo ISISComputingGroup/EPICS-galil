@@ -71,7 +71,8 @@ GalilAxis::GalilAxis(class GalilController *pC, //Pointer to controller instance
   char axis_limit_code[LIMIT_CODE_LEN];   	//Code generated for limits interrupt on this axis
   char axis_digital_code[INP_CODE_LEN];	     	//Code generated for digital interrupt related to this axis
   char axis_thread_code[THREAD_CODE_LEN]; 	//Code generated for the axis (eg. home code, limits response)
-  mr_prem_[0] = mr_post_[0] = '\0';
+  sprintf(mr_prem_, "SH%c", toupper(axisname[0]));
+  sprintf(mr_post_, "MO%c", toupper(axisname[0]));
   //Increment internal axis counter
   //Used to check start status of galil thread (on hardware) for this GalilAxis
   pC_->numAxes_++;
@@ -450,8 +451,10 @@ asynStatus GalilAxis::setLimitDecel(double velocity)
 		++begin_move_count_;
   		if (mr_prem_[0] != '\0')
 		{
+			std::cout << "Executing pre move commmand: " << mr_prem_ << std::endl;
 		    sprintf(pC_->cmd_, "%s", mr_prem_);
 		    status = pC_->writeReadController(functionName);
+
 		}
 		sprintf(pC_->cmd_, "BG%c", axisName_);
 		status = pC_->writeReadController(functionName);
@@ -1186,8 +1189,11 @@ skip:
 		--begin_move_count_;
 		if (mr_post_[0] != '\0')
 		{
-			epicsSnprintf(pC_->cmd_, sizeof(pC_->cmd_), "%s", mr_post_);
-			status = pC_->writeReadController(functionName);
+			std::cout << "TODO: Would ideally now execute post move: " << mr_post_ << std::endl;
+//			pC_->lock();
+//			epicsSnprintf(pC_->cmd_, sizeof(pC_->cmd_), "%s", mr_post_);
+//			status = pC_->writeReadController(functionName);
+//			pC_->unlock();
 		}
 	}
     //Set status

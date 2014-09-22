@@ -14,11 +14,22 @@ AUTOSAVE=$(SUPPORT)/autosave/R5_0
 ASYN=$(SUPPORT)/asyn/4-22
 ONCRPC=$(SUPPORT)/oncrpc/2
 UTILITIES=$(SUPPORT)/utilities
-JAWS=$(SUPPORT)/jaws
 ZLIB=$(SUPPORT)/zlib/1-2-8
 TEMPLATE_TOP=$(EPICS_BASE)/templates/makeBaseApp/top
-PVCOMPLETE=$(SUPPORT)/pvcomplete
-ASUBFUNCTIONS=$(SUPPORT)/asubFunctions
 BUSY=$(SUPPORT)/busy/1-4
+
+## ISIS standard modules ##
+ICPCONFIG=$(SUPPORT)/icpconfig
+PVDUMP=$(SUPPORT)/pvdump
+PVCOMPLETE=$(SUPPORT)/pvcomplete
+DEVIOCSTATS=$(SUPPORT)/devIocStats/3-1-11
+CAPUTLOG=$(SUPPORT)/caPutLog/3-3-3
+SQLITE=$(SUPPORT)/sqlite
+UTILITIES=$(SUPPORT)/utilities
+ZLIB=$(SUPPORT)/zlib/1-2-8
+ASUBFUNCTIONS=$(SUPPORT)/asubFunctions
+STD=$(SUPPORT)/std/R3_1
+ONCRPC=$(SUPPORT)/oncrpc/2
+
 
 include $(TOP)/../../../ISIS_CONFIG.$(EPICS_HOST_ARCH)
