@@ -121,9 +121,11 @@ void GalilPoller::run(void)
 			pCntrl_->gco_->recordsStart(0);
 
 		//Burn parameters, in case user changed them (eg. motor type)
-//		sprintf(pCntrl_->cmd_, "BN");
-//		pCntrl_->writeReadController(functionName);
-
+		if (pCntrl_->eeprom_write_ == 1)
+		{
+		    sprintf(pCntrl_->cmd_, "BN");
+		    pCntrl_->writeReadController(functionName);
+		}
 		//Break from loop
 		break;
 		}

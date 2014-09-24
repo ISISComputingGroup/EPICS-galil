@@ -421,7 +421,7 @@ asynStatus GalilCSAxis::poll(bool *moving)
    //Default communication status
    status = asynError;
    //Default moving status
-   *moving = 0;
+   *moving = false;
    done = 1;
    motor_move = false;
    //Default slipstall status
@@ -484,8 +484,8 @@ asynStatus GalilCSAxis::poll(bool *moving)
 	}
 
    //Moving status
-   *moving = (bool)csmoving;
-   done = (*moving) ? false : true;
+   *moving = (csmoving != 0);
+   done = (*moving) ? 0 : 1;
 
 skip:
     //Set status

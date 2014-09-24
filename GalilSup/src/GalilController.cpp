@@ -778,7 +778,7 @@ asynStatus GalilController::buildLinearProfile()
 	}
 
   /* Create the profile file */
-  profFile =  fopen(fileName, "w");
+  profFile =  fopen(fileName, "wt");
 
   //Write profile type
   fprintf(profFile,"LINEAR\n");
@@ -1443,7 +1443,7 @@ asynStatus GalilController::runProfile()
   callParamCallbacks();
     
   //Open the profile file
-  profFile =  fopen(fileName, "r");
+  profFile =  fopen(fileName, "rt");
 
   if (profFile != NULL)
 	{
@@ -2618,7 +2618,7 @@ void GalilController::GalilStartController(char *code_file, int eeprom_write, in
 
 	//Backup parameters used by developer for later re-start attempts of this controller
 	//This allows full recovery after disconnect of controller
-	strcpy(code_file_, code_file);
+	strncpy(code_file_, code_file, sizeof(code_file_));
 	eeprom_write_ = eeprom_write;
 
 	//Assemble code for download to controller.  This is generated, or user specified code.
@@ -2927,7 +2927,7 @@ void GalilController::write_gen_codefile(void)
 	
 	sprintf(filename,"./%s.gmc",address_);
 	
-	fp = fopen(filename,"w");
+	fp = fopen(filename,"wt");
 
 	if (fp != NULL)
 		{
@@ -2943,14 +2943,73 @@ void GalilController::write_gen_codefile(void)
 		errlogPrintf("Could not open %s",filename);
 }
 
+/// as well as a single code_file, also handles extended syntax of:
+///          "header_file;first_axis_file!second_axis_file!third_axis_file;footer_file"
+/// this allows the downloaded program to be assembed from on-disk templates that are tailored to the
+/// specific e.g. homing required. Within an axis_file, $(AXIS) is replaced by the relevant axis letter
+void GalilController::read_codefile(const char *code_file)
+{
+	if (strcmp(code_file,"") == 0)
+	{
+		return;
+	}
+	card_code_[0] = '\0';
+	if (strchr(code_file, ';') == NULL)
+	{
+		read_codefile_part(code_file, NULL); // only one part (whole code file specified)
+		return;
+	}
+	char* code_file_copy = strdup(code_file); // as strtok() modifies string
+	const char* header_file = strtok(code_file_copy, ";");
+	if (header_file == NULL)
+	{
+		errlogPrintf("\nread_codefile: no header file\n\n");
+		return;
+	}
+	read_codefile_part(header_file, NULL);
+	char* body_files = strtok(NULL, ";");
+	if (body_files == NULL)
+	{
+		errlogPrintf("\nread_codefile: no body files\n\n");
+		return;
+	}
+	body_files = strdup(body_files);  // make copy in case further calls to strtok() are an issue
+	const char* footer_file = strtok(NULL, ";");
+	if (footer_file == NULL)
+	{
+		errlogPrintf("\nread_codefile: no footer file\n\n");
+		return;
+	}
+	MAC_HANDLE *mac_handle = NULL;
+	macCreateHandle(&mac_handle, NULL);
+	char axis_value[MAX_GALIL_AXES];
+	const char* body_file = strtok(body_files, "!");
+	for(int i = 0; body_file != NULL; ++i) // i will loop over axis index, 0=A,1=B etc.
+	{
+		macPushScope(mac_handle);
+		// define the macros we will substitute in the included codefile
+		sprintf(axis_value, "%c", i + 'A');
+		macPutValue(mac_handle, "AXIS", axis_value);  // substitute $(AXIS) for axis letter 
+		read_codefile_part(body_file, mac_handle);
+		macPopScope(mac_handle);
+		body_file = strtok(NULL, "!");
+	}
+	macDeleteHandle(mac_handle);
+	read_codefile_part(footer_file, NULL);
+	free(body_files);
+	free(code_file_copy);
+}
+
 /*-----------------------------------------------------------------------------------*/
 /*  Load the galil code specified into the controller class
 */
 
-void GalilController::read_codefile(const char *code_file)
+void GalilController::read_codefile_part(const char *code_file, MAC_HANDLE* mac_handle)
 {
 	int i = 0;
-	char* user_code = (char*)calloc(MAX_GALIL_AXES * (THREAD_CODE_LEN+LIMIT_CODE_LEN+INP_CODE_LEN),sizeof(char));
+	int max_size = MAX_GALIL_AXES * (THREAD_CODE_LEN+LIMIT_CODE_LEN+INP_CODE_LEN);
+	char* user_code = (char*)calloc(max_size,sizeof(char));
+	char* user_code_exp = (char*)calloc(max_size,sizeof(char));
 	char file[MAX_FILENAME_LEN];
 	FILE *fp;
 
@@ -2958,7 +3017,7 @@ void GalilController::read_codefile(const char *code_file)
 		{
 		strcpy(file, code_file);
 
-		fp = fopen(file,"r");
+		fp = fopen(file,"rt");
 
 		if (fp != NULL)
 			{
@@ -2985,12 +3044,21 @@ void GalilController::read_codefile(const char *code_file)
 			//Terminate the code buffer, we dont want the EOF character
 			user_code[i-1] = '\0';
 			//Load galil code into the GalilController instance
-			strcpy(card_code_, user_code);
+			if (mac_handle != NULL) // substitute macro definitios for e.g. $(AXIS)
+			{
+				macExpandString(mac_handle, user_code, user_code_exp, max_size);
+				strcat(card_code_, user_code_exp);
+			}
+			else
+			{
+				strcat(card_code_, user_code);
+			}
 			}
 		else
-			errlogPrintf("\ngalil_read_codefile: Can't open user code file, using generated code\n\n");
+			errlogPrintf("\ngread_codefile: Can't open user code file, using generated code\n\n");
 		}
 	free(user_code);
+	free(user_code_exp);
 }
 
 /** Find kinematic variables Q-X and substitute them for variable in range A-P for sCalcPerform
@@ -3450,7 +3518,7 @@ static void GalilCreateCSAxesCallFunc(const iocshArgBuf *args)
 
 //GalilCreateProfile iocsh function
 static const iocshArg GalilCreateProfileArg0 = {"Controller Port name", iocshArgString};
-static const iocshArg GalilCreateProfileArg1 = {"Code file", iocshArgInt};
+static const iocshArg GalilCreateProfileArg1 = {"Max points", iocshArgInt};
 static const iocshArg * const GalilCreateProfileArgs[] = {&GalilCreateProfileArg0,
                                                           &GalilCreateProfileArg1};
                                                              
