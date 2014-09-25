@@ -2024,7 +2024,7 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
 		status = pAxis->setClosedLoop(true);
 	else
 		status = pAxis->setClosedLoop(false);
-	//printf("GalilMotorOn_ cmd:%s value=%d\n", cmd_, value);
+	printf("GalilMotorOn_ cmd:%s value=%d\n", cmd_, value);
 	}
   else if (function == GalilMotorType_)
 	{

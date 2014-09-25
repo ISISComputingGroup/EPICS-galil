@@ -358,6 +358,7 @@ void GalilAxis::gen_homecode(char c,			//GalilAxis::axisName_ used very often
 	sprintf(pC_->cmd_, "home%c=0\n", c);
 	pC_->writeReadController(functionName);
 	home_in_progress_ = false;
+    std::cout << functionName << " home" << c << "=0" << std::endl;
 
 
 	//Ensure homed variable is defined on controller
@@ -492,8 +493,9 @@ asynStatus GalilAxis::move(double position, int relative, double minVelocity, do
 	return asynSuccess;  //Nothing to do
   
   //Ensure home flag is 0
-  sprintf(pC_->cmd_, "home%c=0", axisName_);
+  sprintf(pC_->cmd_, "home%c=0\n", axisName_);
   pC_->writeReadController(functionName);
+  std::cout << functionName << " home" << axisName_ << "=0" << std::endl;
   home_in_progress_ = false;
 
 		
@@ -698,9 +700,10 @@ asynStatus GalilAxis::moveVelocity(double minVelocity, double maxVelocity, doubl
   if (motor_enabled())
   	{
 	//Ensure home flag is 0
-	sprintf(pC_->cmd_, "home%c=0", axisName_);
+	sprintf(pC_->cmd_, "home%c=0\n", axisName_);
 	pC_->writeReadController(functionName);
 	home_in_progress_ = false;
+    std::cout << functionName << " home" << axisName_ << "=0" << std::endl;
 
 	//Set acceleration and deceleration
 	accel = lrint(acceleration/1024.0) * 1024;
@@ -741,6 +744,7 @@ asynStatus GalilAxis::stop(double acceleration )
   sprintf(pC_->cmd_, "home%c=0\n", axisName_);
   pC_->writeReadController(functionName);
   home_in_progress_ = false;
+  std::cout << functionName << " home" << axisName_ << "=0" << std::endl;
 												
   //cancel any home switch jog off operations that may be underway
   sprintf(pC_->cmd_, "hjog%c=0\n", axisName_);
@@ -929,7 +933,7 @@ asynStatus GalilAxis::setClosedLoop(bool closedLoop)
 {
   const char *functionName = "GalilAxis::setClosedLoop";
   asynStatus status;
-
+  std::cout << functionName << "=" << closedLoop << std::endl;
   //Enable or disable motor amplifier
   if (closedLoop)
 	sprintf(pC_->cmd_, "SH%c", axisName_);
