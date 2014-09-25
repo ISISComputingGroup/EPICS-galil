@@ -199,6 +199,12 @@ GalilController::GalilController(const char *portName, const char *address, doub
   createParam(GalilUserCmdString, asynParamOctet, &GalilUserCmd_);
   createParam(GalilUserCmdOutString, asynParamOctet, &GalilUserCmdOut_);
 
+  createParam(GalilEthAddrString, asynParamOctet, &GalilEthAddr_);
+  createParam(GalilSerialNumString, asynParamOctet, &GalilSerialNum_);
+
+  createParam(GalilMotorPREMString, asynParamOctet, &GalilMotorPREM_);
+  createParam(GalilMotorPOSTString, asynParamOctet, &GalilMotorPOST_);
+
   createParam(GalilCommunicationErrorString, asynParamInt32, &GalilCommunicationError_);
 
   //Print Galil communication library version
@@ -386,7 +392,11 @@ void GalilController::setParamDefaults(void)
   setStringParam(1, GalilCoordSysMotors_, "");
   //Put all motors in spmg go mode
   for (i = 0; i < MAX_GALIL_AXES + MAX_GALIL_CSAXES; i++)
+  {
 	setIntegerParam(i, GalilMotorStopGo_, 3);
+    setStringParam(i, GalilMotorPREM_, "");
+    setStringParam(i, GalilMotorPOST_, "");
+  }
   //Output compare is off
   for (i = 0; i < 2; i++)
 	setIntegerParam(i, GalilOutputCompareAxis_, 0);
@@ -397,6 +407,8 @@ void GalilController::setParamDefaults(void)
   setStringParam(GalilUserVarOctet_, "<unknown>"); // value to return on unknown galil variable or read error
   setStringParam(GalilUserCmd_, "<none>"); // last user cmd sent
   setStringParam(GalilUserCmdOut_, "<empty>"); // output of last user cmd sent
+  setStringParam(GalilSerialNum_, "");
+  setStringParam(GalilEthAddr_, "");
 }
 
 //Anything that should be done once connection established
@@ -2254,7 +2266,12 @@ asynStatus GalilController::writeOctet(asynUser *pasynUser, const char*  value, 
 
   //Most functions require comms
   reqd_comms = true;
-	
+
+  if (pAxis)
+  	  status = setStringParam(pAxis->axisNo_, function, value_s.c_str());	
+  else
+	  status = setStringParam(addr, function, value_s.c_str());			
+
   /* Set the parameter and readback in the parameter library. */
   if (function == GalilUserCmd_)
   {
@@ -2304,9 +2321,10 @@ asynStatus GalilController::readOctet(asynUser* pasynUser,  char* value, size_t 
     GalilAxis *pAxis = getAxis(pasynUser);	 //Retrieve the axis instance
     const char *functionName = "GalilController::readOctet";
     bool reqd_comms;				 //Check for comms error only when function reqd comms
+	int addr = 0;
 
-    //If provided addr does not return an GalilAxis instance, then return asynError
-    if (!pAxis) return asynError;
+    status = getAddress(pasynUser, &addr); 
+    if (status != asynSuccess) return(status);
 
     //We dont retrieve values for records at iocInit.  
     //For output records autosave, or db defaults are pushed to hardware instead
@@ -2336,11 +2354,50 @@ asynStatus GalilController::readOctet(asynUser* pasynUser,  char* value, size_t 
 		*eomReason = ASYN_EOM_EOS;
 	}
   }
-   else 
-	{
+  else if (function == GalilEthAddr_)
+  {
+	  strcpy(cmd_, "TH");
+	  if ( (status = writeReadController(functionName)) == asynSuccess )
+	  {
+		  strncpy(value, resp_, maxChars-1);
+		  value[maxChars-1] = '\0';
+		  setStringParam(GalilEthAddr_, resp_);
+	      *nActual = strlen(value);
+		  *eomReason = ASYN_EOM_EOS;
+	  }
+	  else
+	  {
+		  value[0] = '\0';
+		  setStringParam(GalilEthAddr_, "<error>");
+	      *nActual = 0;
+	      *eomReason = ASYN_EOM_CNT;
+	  }
+
+  }
+  else if (function == GalilSerialNum_)
+  {
+	  strcpy(cmd_, "MG _BN");
+	  if ( (status = writeReadController(functionName)) == asynSuccess )
+	  {
+		  strncpy(value, resp_, maxChars-1);
+		  value[maxChars-1] = '\0';
+		  setStringParam(GalilSerialNum_, resp_);
+	      *nActual = strlen(value);
+		  *eomReason = ASYN_EOM_EOS;
+	  }
+	  else
+	  {
+		  value[0] = '\0';
+		  setStringParam(GalilSerialNum_, "<error>");
+	      *nActual = 0;
+	      *eomReason = ASYN_EOM_CNT;
+	  }
+  }
+  else 
+  {
 	status = asynPortDriver::readOctet(pasynUser, value, maxChars, nActual, eomReason);
 	reqd_comms = false;
-	}
+  }
 
    //Flag comms error only if function reqd comms
    check_comms(reqd_comms, status);
@@ -2557,7 +2614,8 @@ asynStatus GalilController::writeReadController(const char *caller)
 		if (gco_ != NULL)
 		       	{
 		 	//send the command, and get the response
-			strcpy(resp_, gco_->command(strcmd).c_str()); 
+			strncpy(resp_, gco_->command(strcmd).c_str(), sizeof(resp_));
+			resp_[sizeof(resp_)-1] = '\0';
 			//No exception = success
 			done = true;
 		 	consecutive_timeouts_ = 0;

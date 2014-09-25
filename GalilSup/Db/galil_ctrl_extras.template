@@ -42,6 +42,24 @@ record(stringin,"$(P):ADDRESS_MON")
    	field(INP,  "@asyn($(PORT),0)CONTROLLER_ADDRESS")
 }
 
+record(stringin,"$(P):ETHADDR_MON")
+{
+	field(DESC, "Ctrl Ethernet address")
+	field(DTYP, "asynOctetRead")
+	field(PINI, "YES")
+	field(SCAN, "Passive")
+   	field(INP,  "@asyn($(PORT),0)CONTROLLER_ETHADDR")
+}
+
+record(stringin,"$(P):SERIALNUM_MON")
+{
+	field(DESC, "Ctrl Serial Number")
+	field(DTYP, "asynOctetRead")
+	field(PINI, "YES")
+	field(SCAN, "Passive")
+   	field(INP,  "@asyn($(PORT),0)CONTROLLER_SERIALNUM")
+}
+
 record(bi,"$(P):LIMITTYPE_STATUS")
 {
 	field(DESC, "Ctrl limit sw type")

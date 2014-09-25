@@ -92,6 +92,8 @@
 #define GalilEncoderResolutionString 	  	"MOTOR_ERES"
 #define GalilDirectionString 		  	"MOTOR_DIR"
 #define GalilUseEncoderString		  	"MOTOR_UEIP"
+#define GalilMotorPREMString		  	"MOTOR_PREM"
+#define GalilMotorPOSTString		  	"MOTOR_POST"
 
 #define GalilMainEncoderString		  "MOTOR_MAIN_ENCODER"
 #define GalilAuxEncoderString		  "MOTOR_AUX_ENCODER"
@@ -123,6 +125,8 @@
 #define GalilUserVarOctetString		  "USERVAROCT"
 #define GalilUserCmdString		      "USERCMD"
 #define GalilUserCmdOutString		  "USERCMDOUT"
+#define GalilEthAddrString		  	"CONTROLLER_ETHADDR"
+#define GalilSerialNumString		  	"CONTROLLER_SERIALNUM"
 
 /* For each digital input, we maintain a list of motors, and the state the input should be in*/
 /* To disable the motor */
@@ -271,6 +275,10 @@ protected:
   int GalilUserVarOctet_;
   int GalilUserCmd_;
   int GalilUserCmdOut_;
+  int GalilEthAddr_;
+  int GalilSerialNum_;
+  int GalilMotorPREM_;
+  int GalilMotorPOST_;
 
   int GalilCommunicationError_;
   #define LAST_GALIL_PARAM GalilCommunicationError_

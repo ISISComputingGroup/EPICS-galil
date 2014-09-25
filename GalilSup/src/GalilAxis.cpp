@@ -66,13 +66,11 @@ GalilAxis::GalilAxis(class GalilController *pC, //Pointer to controller instance
 		     char *enables_string,	//digital input(s) to use for motor enable/disable function
 		     int switch_type)		//motor enable/disable switch type
   : asynMotorAxis(pC, (toupper(axisname[0]) - AASCII)),
-    pC_(pC), begin_move_count_(0)
+    pC_(pC), begin_move_count_(0), home_in_progress_(false)
 {
   char axis_limit_code[LIMIT_CODE_LEN];   	//Code generated for limits interrupt on this axis
   char axis_digital_code[INP_CODE_LEN];	     	//Code generated for digital interrupt related to this axis
   char axis_thread_code[THREAD_CODE_LEN]; 	//Code generated for the axis (eg. home code, limits response)
-  sprintf(mr_prem_, "SH%c", toupper(axisname[0]));
-  sprintf(mr_post_, "MO%c", toupper(axisname[0]));
   //Increment internal axis counter
   //Used to check start status of galil thread (on hardware) for this GalilAxis
   pC_->numAxes_++;
@@ -359,6 +357,8 @@ void GalilAxis::gen_homecode(char c,			//GalilAxis::axisName_ used very often
 	//initialise home variable for this axis, set to not homming just yet.  Set to homming only when doing a home
 	sprintf(pC_->cmd_, "home%c=0\n", c);
 	pC_->writeReadController(functionName);
+	home_in_progress_ = false;
+
 
 	//Ensure homed variable is defined on controller
 	sprintf(pC_->cmd_, "homed%c=?\n", c);
@@ -425,6 +425,7 @@ asynStatus GalilAxis::setLimitDecel(double velocity)
 	return status;
 }
 
+#if 0
   asynStatus GalilAxis::getMotorRecordFields(asynUser *pasynUser)
   {
   //	we cannot access motorAsynPvt structure, but it's first member is a pointer to a motor record *pPvt;
@@ -443,17 +444,22 @@ asynStatus GalilAxis::setLimitDecel(double velocity)
 	  }
 	  return asynSuccess;
   }
+#endif
 
   asynStatus GalilAxis::beginMove()
   {
 	    static const char* functionName = "GalilAxis::beginMove";
+		char motor_prem[40];
 	    asynStatus status;
-  		if (mr_prem_[0] != '\0')
+		pC_->getStringParam(axisNo_, pC_->GalilMotorPREM_, sizeof(motor_prem), motor_prem);
+  		if (motor_prem[0] != '\0')
 		{
-			std::cout << "Executing pre move commmand: " << mr_prem_ << std::endl;
-		    sprintf(pC_->cmd_, "%s", mr_prem_);
-		    status = pC_->writeReadController(functionName);
-
+			std::cout << "Executing pre move commmand: " << motor_prem << std::endl;
+			epicsSnprintf(pC_->cmd_, sizeof(pC_->cmd_), "%s", motor_prem);
+		    if (pC_->writeReadController(functionName) != asynSuccess)
+			{
+				std::cout << "Executing pre move commmand: " << motor_prem << std::endl;
+			}
 		}
 		sprintf(pC_->cmd_, "BG%c", axisName_);
 		status = pC_->writeReadController(functionName);
@@ -488,6 +494,8 @@ asynStatus GalilAxis::move(double position, int relative, double minVelocity, do
   //Ensure home flag is 0
   sprintf(pC_->cmd_, "home%c=0", axisName_);
   pC_->writeReadController(functionName);
+  home_in_progress_ = false;
+
 		
   //recalculate limit deceleration given velo/slew velocity
   setLimitDecel(maxVelocity);
@@ -645,6 +653,8 @@ asynStatus GalilAxis::home(double minVelocity, double maxVelocity, double accele
 	sprintf(pC_->cmd_, "AC%c=%ld;DC%c=%ld", axisName_, accel, axisName_, accel);
 	pC_->writeReadController(functionName);
 
+	home_in_progress_ = true;
+
 	//Begin home jog
 	beginMove();
 
@@ -653,6 +663,8 @@ asynStatus GalilAxis::home(double minVelocity, double maxVelocity, double accele
 	//Sitting on the home limit is one example of this
 	sprintf(pC_->cmd_, "home%c=1\n", axisName_);
 	pC_->writeReadController(functionName);
+
+	std::cout << "Home started (home" << axisName_ << "=1)" << std::endl;
 
         //Allow time for motion to begin
 	epicsThreadSleep(.02);
@@ -688,6 +700,7 @@ asynStatus GalilAxis::moveVelocity(double minVelocity, double maxVelocity, doubl
 	//Ensure home flag is 0
 	sprintf(pC_->cmd_, "home%c=0", axisName_);
 	pC_->writeReadController(functionName);
+	home_in_progress_ = false;
 
 	//Set acceleration and deceleration
 	accel = lrint(acceleration/1024.0) * 1024;
@@ -727,6 +740,7 @@ asynStatus GalilAxis::stop(double acceleration )
   //cancel any home operations that may be underway
   sprintf(pC_->cmd_, "home%c=0\n", axisName_);
   pC_->writeReadController(functionName);
+  home_in_progress_ = false;
 												
   //cancel any home switch jog off operations that may be underway
   sprintf(pC_->cmd_, "hjog%c=0\n", axisName_);
@@ -1135,10 +1149,26 @@ asynStatus GalilAxis::poll(bool *moving)
 			}
 		}
 	}
+
+	// check if homing has finished by querying the "home" controller variable
+	if (home_in_progress_)
+	{
+		pC_->lock();
+		epicsSnprintf(pC_->cmd_, sizeof(pC_->cmd_), "home%c=?", axisName_);
+		if (pC_->writeReadController(functionName) == asynSuccess)
+		{
+			home_in_progress_ = atoi(pC_->resp_) != 0 ? true : false;
+			if (!home_in_progress_)
+			{
+				std::cout << "Home complete (home" << axisName_ << "=0)" << std::endl;
+			}
+		}
+		pC_->unlock();
+	}
 	
    //Move status
    //Motors with deferred moves pending set to status moving
-   if ((inmotion_) || (motor_move) || (enc_move) || (deferredMove_))
+   if ((inmotion_) || (motor_move) || (enc_move) || (deferredMove_) || (home_in_progress_))
         {
         *moving = 1;               	//set flag for moving
         done = 0;		
@@ -1187,13 +1217,18 @@ asynStatus GalilAxis::poll(bool *moving)
 skip:
 	if ( done && (begin_move_count_ > 0) )
 	{
+	    char motor_post[40];
 		--begin_move_count_;
-		if (mr_post_[0] != '\0')
+	    pC_->getStringParam(axisNo_, pC_->GalilMotorPOST_, sizeof(motor_post), motor_post);
+		if (motor_post[0] != '\0')
 		{
-			std::cout << "Executing post move command: " << mr_post_ << std::endl;
+			std::cout << "Executing post move command: " << motor_post << std::endl;
 			pC_->lock();
-			epicsSnprintf(pC_->cmd_, sizeof(pC_->cmd_), "%s", mr_post_);
-			status = pC_->writeReadController(functionName);
+			epicsSnprintf(pC_->cmd_, sizeof(pC_->cmd_), "%s", motor_post);
+			if (pC_->writeReadController(functionName) != asynSuccess)
+			{
+				std::cout << "Error Executing post move command: " << motor_post << std::endl;
+			}
 			pC_->unlock();
 		}
 	}

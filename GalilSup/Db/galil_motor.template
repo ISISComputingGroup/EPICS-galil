@@ -170,6 +170,22 @@ record(bo,"$(P):$(M)_UEIP_SP") {
     field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_UEIP")
 }
 
+record(stringout,"$(P):$(M)_PREM_SP") {
+    field(DESC, "PREM")
+    field(DOL,  "$(P):$(M).PREM CP MS")
+    field(OMSL, "closed_loop")
+    field(DTYP, "asynOctetWrite")
+    field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_PREM")
+}
+
+record(stringout,"$(P):$(M)_POST_SP") {
+    field(DESC, "POST")
+    field(DOL,  "$(P):$(M).POST CP MS")
+    field(OMSL, "closed_loop")
+    field(DTYP, "asynOctetWrite")
+    field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_POST")
+}
+
 #driver to mr command to stop/go
 #motors in coordsys
 record(ai,"$(P):$(M)_STOPGO_MON")
@@ -186,6 +202,7 @@ record(ao, "$(P):$(M)_STOPGO_CMD")
 	field(DOL,  "$(P):$(M)_STOPGO_MON CP MS")
 	field(OUT,  "$(P):$(M).SPMG CA")
 }
+
 
 # monitor the motor status and update a string field with results
 record(aSub, "$(P):$(M):_MSTACALC")
