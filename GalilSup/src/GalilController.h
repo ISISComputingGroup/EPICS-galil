@@ -183,7 +183,7 @@ public:
   void setParamDefaults(void);
   void gen_card_codeend(void);
   void gen_motor_enables_code(void);
-  void write_gen_codefile(void);
+  void write_gen_codefile(const char* suffix);
   void read_codefile(const char *code_file);
   void read_codefile_part(const char *code_file, MAC_HANDLE* mac_handle);
   asynStatus writeReadController(const char *caller);

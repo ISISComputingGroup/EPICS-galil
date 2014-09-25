@@ -364,6 +364,8 @@ void GalilController::connect(void)
   //if connected
   if (gco_ != NULL)
 	{
+    // may configure a timeout option later, 500ms is the default
+    // gco_->timeout_ms = 500;
 	//Read controller model, firmware, stop all motors and threads
   	connected();
 	callParamCallbacks();	//Pass changes to custom records (ai, ao, etc)
@@ -2694,12 +2696,16 @@ void GalilController::GalilStartController(char *code_file, int eeprom_write, in
 			strcat(card_code_, limit_code_);
 			strcat(card_code_, digital_code_);
 	
-			//Dump generated code to file
-			write_gen_codefile();
 			}
+
+		write_gen_codefile("_gen"); // dump generated codefile, which we may or may not actually use
 
 		//load up code file specified by user (ie. generated, or generated & user edited, or complete user code)
 		read_codefile(code_file);
+
+		//Dump code we will send to the controller, which may be either generated or user specified
+		write_gen_codefile("");
+
 		}
 
 	/*print out the generated/user code for the controller*/
@@ -2977,13 +2983,13 @@ void GalilController::gen_motor_enables_code(void)
 /*  Dump galil code generated for this controller to file
 */
 
-void GalilController::write_gen_codefile(void)
+void GalilController::write_gen_codefile(const char* suffix)
 {
 	FILE *fp;
 	int i = 0;
 	char filename[100];
 	
-	sprintf(filename,"./%s.gmc",address_);
+	sprintf(filename,"./%s%s.gmc",address_, suffix);
 	
 	fp = fopen(filename,"wt");
 
@@ -3113,7 +3119,7 @@ void GalilController::read_codefile_part(const char *code_file, MAC_HANDLE* mac_
 			}
 			}
 		else
-			errlogPrintf("\ngread_codefile: Can't open user code file, using generated code\n\n");
+			errlogPrintf("\ngread_codefile: Can't open user code file \"%s\", using generated code\n\n", code_file);
 		}
 	free(user_code);
 	free(user_code_exp);
