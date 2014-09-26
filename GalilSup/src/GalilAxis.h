@@ -119,6 +119,7 @@ private:
   bool encmratioset_;			//Flag to indicate if the ratio has been set
   epicsTimeStamp pestall_nowt_;		//Used to track length of time encoder has been stalled for
   epicsTimeStamp pestall_begint_;	//Time when possible encoder stall first detected
+  epicsTimeStamp done_begint_;	//Time when move completed, used to judge when to call POST move
   bool pestall_detected_;		//Possible encoder stall detected flag
   int deferredCoordsys_;		//Coordinate system 0 (S) or 1 (T)
   double deferredAcceleration_;		//Coordinate system acceleration

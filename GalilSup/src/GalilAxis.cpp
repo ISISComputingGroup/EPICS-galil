@@ -117,6 +117,7 @@ GalilAxis::GalilAxis(class GalilController *pC, //Pointer to controller instance
   //Default stall/following error status
   setIntegerParam(pC_->motorStatusSlip_, 0);
   setIntegerParam(pC_->GalilEStall_, 0);
+  epicsTimeGetCurrent(&done_begint_);
   callParamCallbacks();
 }
 
@@ -1147,6 +1148,7 @@ asynStatus GalilAxis::poll(bool *moving)
 			setIntegerParam(pC_->motorStatusSlip_, 1);
 			setIntegerParam(pC_->GalilEStall_, 1);
 			//stop the motor
+			std::cout << "Stall detected - estall time = " << estall_time << std::endl;
 			stop(1);
 			//Flag the motor has been stopped
 			protectStop_ = true;
@@ -1188,6 +1190,7 @@ asynStatus GalilAxis::poll(bool *moving)
 			{
 			//Wrong limit protection actively stopping this motor now
 	  		setIntegerParam(pC_->GalilWrongLimitProtectionActive_, 1);
+			std::cout << "Wrong limit protection activated" << std::endl;
 			stop(1);//Stop the motor if the wrong limit is active, AND wlp protection active
 			//Flag the motor has been stopped
 			protectStop_ = true;
@@ -1219,7 +1222,15 @@ asynStatus GalilAxis::poll(bool *moving)
     last_encoder_position_ = encoder_position_;
 
 skip:
-	if ( done && (begin_move_count_ > 0) )
+	if (!done)
+	{
+		  epicsTimeGetCurrent(&done_begint_);
+	}
+	epicsTimeStamp now;
+	epicsTimeGetCurrent(&now);
+	// only call post move after we have been idle for a specified time, this allows for backlash or
+	// for another move to appear and so avoid unnecessary on/off switching
+	if ( done && (begin_move_count_ > 0) && (epicsTimeDiffInSeconds(&now, &done_begint_) > 1.0) )
 	{
 	    char motor_post[40];
 		--begin_move_count_;
