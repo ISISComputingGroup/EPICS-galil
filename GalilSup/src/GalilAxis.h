@@ -91,9 +91,12 @@ public:
   asynStatus setIGain(double iGain);
   asynStatus setDGain(double dGain);
   asynStatus setClosedLoop(bool closedLoop);
+  asynStatus doneMove();
+
 //  asynStatus getMotorRecordFields(asynUser *pasynUser);
 private:
   asynStatus beginMove();
+  asynStatus doneMoveMotorOff();
 
 private:
   GalilController *pC_;      		/**< Pointer to the asynMotorController to which this axis belongs.

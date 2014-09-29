@@ -94,6 +94,7 @@
 #define GalilUseEncoderString		  	"MOTOR_UEIP"
 #define GalilMotorPREMString		  	"MOTOR_PREM"
 #define GalilMotorPOSTString		  	"MOTOR_POST"
+#define GalilMotorDMOVString		  	"MOTOR_DMOV"
 
 #define GalilMainEncoderString		  "MOTOR_MAIN_ENCODER"
 #define GalilAuxEncoderString		  "MOTOR_AUX_ENCODER"
@@ -277,8 +278,10 @@ protected:
   int GalilUserCmdOut_;
   int GalilEthAddr_;
   int GalilSerialNum_;
+  // values pushed from Motor record using a record in IOC database
   int GalilMotorPREM_;
   int GalilMotorPOST_;
+  int GalilMotorDMOV_;
 
   int GalilCommunicationError_;
   #define LAST_GALIL_PARAM GalilCommunicationError_

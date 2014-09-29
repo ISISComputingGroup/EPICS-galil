@@ -164,7 +164,7 @@ void GalilPoller::wakePoller(void)
 				{
 				pCntrl_->gco_->recordsStart(pCntrl_->updatePeriod_);
 				}
-			catch (string e)
+			catch (const std::string& e)
 				{
 				//Print explanation
 				cout << "Asynchronous re-start failed, swapping to synchronous poll " << pCntrl_->model_ << " at " << pCntrl_->address_ << endl;

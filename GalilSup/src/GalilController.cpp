@@ -204,6 +204,7 @@ GalilController::GalilController(const char *portName, const char *address, doub
 
   createParam(GalilMotorPREMString, asynParamOctet, &GalilMotorPREM_);
   createParam(GalilMotorPOSTString, asynParamOctet, &GalilMotorPOST_);
+  createParam(GalilMotorDMOVString, asynParamInt32, &GalilMotorDMOV_);
 
   createParam(GalilCommunicationErrorString, asynParamInt32, &GalilCommunicationError_);
 
@@ -346,7 +347,7 @@ void GalilController::connect(void)
 	//A connection fail mesg not issued, because connect succeeded
 	connect_fail_reported_ = false;
 	}
-  catch (string e)
+  catch (const std::string& e)
       	{
 	//Ensure galil communications object is NULL on connect failure
 	gco_ = NULL;
@@ -398,6 +399,7 @@ void GalilController::setParamDefaults(void)
 	setIntegerParam(i, GalilMotorStopGo_, 3);
     setStringParam(i, GalilMotorPREM_, "");
     setStringParam(i, GalilMotorPOST_, "");
+    setIntegerParam(i, GalilMotorDMOV_, 1);
   }
   //Output compare is off
   for (i = 0; i < 2; i++)
@@ -511,7 +513,7 @@ void GalilController::connected(void)
 		//Success, no exception
 		async_records_ = true;
 		}
-	catch  (string e) {
+	catch  (const std::string& e) {
 		//Upon any exception, use synchronous poll mechanism at rate specified in GalilCreateController as fall back strategy
 		//Fail.  Probably wrong bus.  RS-232 does not support async DR data record 
 		async_records_ = false;
@@ -2151,6 +2153,13 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
 	{
 	status = setOutputCompare(addr);
 	}
+  else if (function == GalilMotorDMOV_)
+  {
+	  if (value == 1)
+	  {
+		  status = pAxis->doneMove();
+	  }
+  }
   else if (function == GalilUserVar_)
   {
 	    epicsSnprintf(cmd_, sizeof(cmd_), "%s=%d", (const char*)pasynUser->userData, value);
@@ -2484,7 +2493,7 @@ void GalilController::getStatus(void)
 				}
 			}
 		}
-	catch (string e) 
+	catch (const std::string& e) 
 		{
 		//Print exception mesg
 		cout << functionName << ":" << e;
@@ -2568,7 +2577,7 @@ asynStatus GalilController::acquireDataRecord(string cmd)
 	        recstatus_ = asynError;
 		}
 	    }
-	catch (string e)
+	catch (const std::string& e)
 	    {
 	    //Failure.  Print exception mesg
 	    cout << functionName << ":" << model_ << ":" << address_ << ":" << e;
@@ -2626,7 +2635,7 @@ asynStatus GalilController::writeReadController(const char *caller)
 		else 	//Not connected
 		       	return asynError;
 		}
-	catch (string e) 
+	catch (const std::string& e) 
 		{
 		//Print exception mesg
 		cout << caller << ":" << functionName << ":" << cmd_ << ":" << e;
@@ -2730,7 +2739,7 @@ void GalilController::GalilStartController(char *code_file, int eeprom_write, in
 			//Remove ' characters
 			uc.erase (std::remove(uc.begin(), uc.end(), '\''), uc.end());
 			}
-		catch (string e)
+		catch (const std::string& e)
 		      	{
 			//Upload failed
 		      	cout << "GalilStartController:Upload failed:" << " " << e;
@@ -2758,7 +2767,7 @@ void GalilController::GalilStartController(char *code_file, int eeprom_write, in
 				//Do the download
 				gco_->programDownload(dc);
 				}
-			catch (string e)
+			catch (const std::string& e)
 				{
 				//Donwload failed
 				errlogPrintf("\nError downloading code model %s, address %s msg %s\n",model_, address_, e.c_str());

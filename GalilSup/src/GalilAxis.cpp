@@ -491,8 +491,10 @@ asynStatus GalilAxis::move(double position, int relative, double minVelocity, do
   pC_->getIntegerParam(axisNo_, pC_->GalilWrongLimitProtectionActive_, &wlpactive);
 
   if ((wlp && wlpactive) || (lrint(maxVelocity) == 0))
+  {
+    std::cout << functionName << " nothing to do, either maxVelocity=0 or wrong limit protection active for axis " << axisName_ << std::endl;
 	return asynSuccess;  //Nothing to do
-  
+  }
   //Ensure home flag is 0
   sprintf(pC_->cmd_, "home%c=0\n", axisName_);
   pC_->writeReadController(functionName);
@@ -588,7 +590,10 @@ asynStatus GalilAxis::home(double minVelocity, double maxVelocity, double accele
   pC_->getIntegerParam(axisNo_, pC_->GalilWrongLimitProtectionActive_, &wlpactive);
 
   if ((wlp && wlpactive) || (lrint(maxVelocity) == 0))
+  {
+    std::cout << functionName << " nothing to do, either maxVelocity=0 or wrong limit protection active for axis " << axisName_ << std::endl;
 	return asynSuccess;  //Nothing to do 
+  }
 
   //Home only if interlock ok
   if (motor_enabled())
@@ -695,7 +700,10 @@ asynStatus GalilAxis::moveVelocity(double minVelocity, double maxVelocity, doubl
   pC_->getIntegerParam(axisNo_, pC_->GalilWrongLimitProtectionActive_, &wlpactive);
 
   if ((wlp && wlpactive) || (lrint(maxVelocity) == 0))
+  {
+    std::cout << functionName << " nothing to do, either maxVelocity=0 or wrong limit protection active for axis " << axisName_ << std::endl;
 	return asynSuccess;  //Nothing to do 
+  }
 
   //Check interlock status before allowing move
   if (motor_enabled())
@@ -1020,7 +1028,7 @@ asynStatus GalilAxis::getStatus(void)
 			setDoubleParam(pC_->GalilError_, error);
 			}
 		}
-	catch (string e) 
+	catch (const std::string& e) 
 		{
 		//Print exception mesg
 		cout << functionName << ":" << e;
@@ -1148,7 +1156,7 @@ asynStatus GalilAxis::poll(bool *moving)
 			setIntegerParam(pC_->motorStatusSlip_, 1);
 			setIntegerParam(pC_->GalilEStall_, 1);
 			//stop the motor
-			std::cout << "Stall detected - estall time = " << estall_time << std::endl;
+			std::cout << "Slip/stall detected, estall time = " << pestall_time << "(limit=" << estall_time << ") stopping axis " << axisName_ << std::endl;
 			stop(1);
 			//Flag the motor has been stopped
 			protectStop_ = true;
@@ -1190,7 +1198,7 @@ asynStatus GalilAxis::poll(bool *moving)
 			{
 			//Wrong limit protection actively stopping this motor now
 	  		setIntegerParam(pC_->GalilWrongLimitProtectionActive_, 1);
-			std::cout << "Wrong limit protection activated" << std::endl;
+			std::cout << "Wrong limit protection activated, stopping axis "<< axisName_ << std::endl;
 			stop(1);//Stop the motor if the wrong limit is active, AND wlp protection active
 			//Flag the motor has been stopped
 			protectStop_ = true;
@@ -1228,25 +1236,14 @@ skip:
 	}
 	epicsTimeStamp now;
 	epicsTimeGetCurrent(&now);
-	// only call post move after we have been idle for a specified time, this allows for backlash or
+	double idle_time = epicsTimeDiffInSeconds(&now, &done_begint_); // how long since last move completed
+    // only call post move after we have been idle for a specified time, this allows for backlash or
 	// for another move to appear and so avoid unnecessary on/off switching
-	if ( done && (begin_move_count_ > 0) && (epicsTimeDiffInSeconds(&now, &done_begint_) > 1.0) )
+	if ( done && (begin_move_count_ > 0) && (idle_time > 1.0) )
 	{
-	    char motor_post[40];
-		--begin_move_count_;
-	    pC_->getStringParam(axisNo_, pC_->GalilMotorPOST_, sizeof(motor_post), motor_post);
-		if (motor_post[0] != '\0')
-		{
-			std::cout << "Executing post move command: " << motor_post << std::endl;
-			pC_->lock();
-			epicsSnprintf(pC_->cmd_, sizeof(pC_->cmd_), "%s", motor_post);
-			if (pC_->writeReadController(functionName) != asynSuccess)
-			{
-				std::cout << "Error Executing post move command: " << motor_post << std::endl;
-			}
-			pC_->unlock();
-		}
+	    doneMoveMotorOff();
 	}
+	
     //Set status
     //Pass step count/aux encoder info to motorRecord
     setDoubleParam(pC_->motorPosition_, motor_position_);
@@ -1268,6 +1265,42 @@ skip:
     callParamCallbacks();
     //Always return success. Dont need more error mesgs
     return asynSuccess;
+}
+
+asynStatus GalilAxis::doneMove()
+{
+    static const char *functionName = "GalilAxis::doneMove";
+	std::cout << functionName << std::endl;
+	return asynSuccess;
+}
+
+// called when the motor record DMOV field goes TRUE
+asynStatus GalilAxis::doneMoveMotorOff()
+{
+    static const char *functionName = "GalilAxis::doneMoveMotorOff";
+	if (begin_move_count_ == 0)
+	{
+		std::cout << "Tried to execute post move command but no move was started" << std::endl;
+		return asynSuccess;
+	}
+	char motor_post[40];
+	pC_->getStringParam(axisNo_, pC_->GalilMotorPOST_, sizeof(motor_post), motor_post);
+	if (motor_post[0] != '\0')
+	{
+	    while(begin_move_count_ > 0)
+	    {
+		    --begin_move_count_;
+			std::cout << "Executing post move command: " << motor_post << std::endl;
+			pC_->lock();
+			epicsSnprintf(pC_->cmd_, sizeof(pC_->cmd_), "%s", motor_post);
+			if (pC_->writeReadController(functionName) != asynSuccess)
+			{
+				std::cout << "Error Executing post move command: " << motor_post << std::endl;
+			}
+			pC_->unlock();
+		}
+	}
+	return asynSuccess;
 }
 
 /*-----------------------------------------------------------------------------------*/

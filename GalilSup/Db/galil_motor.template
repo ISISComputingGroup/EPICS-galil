@@ -186,6 +186,14 @@ record(stringout,"$(P):$(M)_POST_SP") {
     field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_POST")
 }
 
+record(longout,"$(P):$(M)_DMOV_SP") {
+    field(DESC, "DMOV")
+    field(DOL,  "$(P):$(M).DMOV CP MS")
+    field(OMSL, "closed_loop")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_DMOV")
+}
+
 #driver to mr command to stop/go
 #motors in coordsys
 record(ai,"$(P):$(M)_STOPGO_MON")
