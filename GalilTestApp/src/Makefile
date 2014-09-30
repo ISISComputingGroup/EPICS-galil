@@ -23,6 +23,7 @@ GalilTest_DBD += asSupport.dbd
 GalilTest_DBD += busySupport.dbd
 GalilTest_DBD += GalilSupport.dbd
 GalilTest_DBD += motorSimSupport.dbd 
+GalilTest_DBD += devSoftMotor.dbd 
 GalilTest_DBD += utilities.dbd devIocStats.dbd pvdump.dbd icpconfig.dbd stdSupport.dbd pvcomplete.dbd asubFunctions.dbd caPutLog.dbd
 
 # <name>_registerRecordDeviceDriver.cpp will be created from <name>.dbd
@@ -31,7 +32,7 @@ GalilTest_SRCS_DEFAULT += GalilTestMain.cpp
 
 #add a definition for each support application used by this application
 GalilTest_LIBS += GalilSupport
-GalilTest_LIBS += motorSimSupport motor asyn busy calc sscan autosave utilities pvcomplete asubFunctions
+GalilTest_LIBS += motorSimSupport softMotor motor asyn busy calc sscan autosave utilities pvcomplete asubFunctions
 GalilTest_LIBS += devIocStats pvdump easySQLite sqlite caPutLog icpconfig std
 GalilTest_LIBS += $(EPICS_BASE_IOC_LIBS)
 

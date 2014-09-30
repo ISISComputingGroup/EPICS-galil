@@ -490,9 +490,14 @@ asynStatus GalilAxis::move(double position, int relative, double minVelocity, do
   pC_->getIntegerParam(axisNo_, pC_->GalilWrongLimitProtection_, &wlp);
   pC_->getIntegerParam(axisNo_, pC_->GalilWrongLimitProtectionActive_, &wlpactive);
 
-  if ((wlp && wlpactive) || (lrint(maxVelocity) == 0))
+  if (wlp && wlpactive)
   {
-    std::cout << functionName << " nothing to do, either maxVelocity=0 or wrong limit protection active for axis " << axisName_ << std::endl;
+    std::cout << functionName << " failed, wrong limit protection active for axis " << axisName_ << std::endl;
+	return asynSuccess;  //Nothing to do
+  }
+  if (lrint(maxVelocity) == 0)
+  {
+    std::cout << functionName << " failed, maxVelocity=0 for axis " << axisName_ << std::endl;
 	return asynSuccess;  //Nothing to do
   }
   //Ensure home flag is 0
@@ -589,10 +594,15 @@ asynStatus GalilAxis::home(double minVelocity, double maxVelocity, double accele
   pC_->getIntegerParam(axisNo_, pC_->GalilWrongLimitProtection_, &wlp);
   pC_->getIntegerParam(axisNo_, pC_->GalilWrongLimitProtectionActive_, &wlpactive);
 
-  if ((wlp && wlpactive) || (lrint(maxVelocity) == 0))
+  if (wlp && wlpactive)
   {
-    std::cout << functionName << " nothing to do, either maxVelocity=0 or wrong limit protection active for axis " << axisName_ << std::endl;
-	return asynSuccess;  //Nothing to do 
+    std::cout << functionName << " failed, wrong limit protection active for axis " << axisName_ << std::endl;
+	return asynSuccess;  //Nothing to do
+  }
+  if (lrint(maxVelocity) == 0)
+  {
+    std::cout << functionName << " failed, maxVelocity=0 for axis " << axisName_ << std::endl;
+	return asynSuccess;  //Nothing to do
   }
 
   //Home only if interlock ok
@@ -699,10 +709,15 @@ asynStatus GalilAxis::moveVelocity(double minVelocity, double maxVelocity, doubl
   pC_->getIntegerParam(axisNo_, pC_->GalilWrongLimitProtection_, &wlp);
   pC_->getIntegerParam(axisNo_, pC_->GalilWrongLimitProtectionActive_, &wlpactive);
 
-  if ((wlp && wlpactive) || (lrint(maxVelocity) == 0))
+  if (wlp && wlpactive)
   {
-    std::cout << functionName << " nothing to do, either maxVelocity=0 or wrong limit protection active for axis " << axisName_ << std::endl;
-	return asynSuccess;  //Nothing to do 
+    std::cout << functionName << " failed, wrong limit protection active for axis " << axisName_ << std::endl;
+	return asynSuccess;  //Nothing to do
+  }
+  if (lrint(maxVelocity) == 0)
+  {
+    std::cout << functionName << " failed, maxVelocity=0 for axis " << axisName_ << std::endl;
+	return asynSuccess;  //Nothing to do
   }
 
   //Check interlock status before allowing move
@@ -1199,6 +1214,7 @@ asynStatus GalilAxis::poll(bool *moving)
 			//Wrong limit protection actively stopping this motor now
 	  		setIntegerParam(pC_->GalilWrongLimitProtectionActive_, 1);
 			std::cout << "Wrong limit protection activated, stopping axis "<< axisName_ << std::endl;
+			std::cout << "You can disable this protection by setting $(MOTOR)_WLP_CMD to 0" << std::endl;
 			stop(1);//Stop the motor if the wrong limit is active, AND wlp protection active
 			//Flag the motor has been stopped
 			protectStop_ = true;
