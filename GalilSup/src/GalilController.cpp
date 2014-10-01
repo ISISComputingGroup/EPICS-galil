@@ -895,7 +895,7 @@ asynStatus GalilController::buildLinearProfile()
 		//Check profile velocity less than mr vmax for this motor
 		if (fabs(velocity[j]) > maxAllowedVelocity[j])
 			{
-			sprintf(message, "Velocity too high, increase time, or check profile loaded");
+			sprintf(message, "Segment %d: Velocity too high for motor %c, increase time, or check profile loaded", i,  pAxis->axisName_);
 			buildOK = false;
 			}
 
@@ -947,9 +947,14 @@ asynStatus GalilController::buildLinearProfile()
         vectorVelocity = sqrt(vectorVelocity);
 
         //Check for segment too short error
-	if ((rint(vectorVelocity) == 0 && i != 0) || (zm_count == num_motors && i != 0))
+	if (rint(vectorVelocity) == 0 && i != 0)
 		{
-		sprintf(message, "Velocity zero, reduce time, add motors, and ensure profile loaded");
+		sprintf(message, "Segment %d: Vector velocity zero (%f), reduce time, add motors, and ensure profile loaded", i, vectorVelocity);
+		buildOK = false;
+		}
+	if (zm_count == num_motors && i != 0)
+		{
+		sprintf(message, "Segment %d: %d/%d motors not moving, reduce time, add motors, and ensure profile loaded", i, zm_count, num_motors);
 		buildOK = false;
 		}
 
