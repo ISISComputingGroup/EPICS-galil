@@ -1171,6 +1171,7 @@ asynStatus GalilController::startLinearProfileCoordsys(char coordName)
   int status = asynSuccess;		//Start status
  
   //Start profile execution
+  std::cout << "Sending BG" << coordName << std::endl;
   sprintf(cmd_, "BG %c \n", coordName);
   status |= writeReadController(functionName);
   if (status)
@@ -1272,6 +1273,8 @@ asynStatus GalilController::runLinearProfile(FILE *profFile)
 		//Coordsys moving status
 		getIntegerParam(coordsys, GalilCoordSysMoving_, &moving);
 
+		std::cout << "segements sent, processed " << segsent << " " << segprocessed << std::endl;
+
 		//Case where profile has started, but then stopped
 		if (profStarted && !moving)
 			{
@@ -1325,6 +1328,7 @@ asynStatus GalilController::runLinearProfile(FILE *profFile)
 			//Proceed to send next segment to controller
 			sprintf(cmd_, "LI %s\n", moves);
 			status = writeReadController(functionName);
+			std::cout << "Sending " << cmd_ << std::endl;
 			if (status)
 				{
 				strcpy(message, "Error downloading segment");
@@ -1360,12 +1364,14 @@ asynStatus GalilController::runLinearProfile(FILE *profFile)
   if (!profStarted && motorsMoving(axes) && !status && !profileAbort_)
 	{
 	//Pause till motors stop
+	std::cout << "Waiting for motors " << std::endl;
 	while (motorsMoving(axes))
 		{
 		unlock();
 		epicsThreadSleep(.01);
 		lock();
 		}
+	std::cout << "motors at start pos" << std::endl;
 	}
 
   //Start short profiles that fit entirely in the controller buffer <= MAX_SEGMENTS
