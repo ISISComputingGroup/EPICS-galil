@@ -837,6 +837,8 @@ asynStatus GalilController::buildLinearProfile()
   //Determine number of motors in profile move
   num_motors = strlen(axes);
 
+  printf("Axes %s startpos %s nPoints %d\n", axes, startp, nPoints);
+
   //Calculate motor segment velocities from profile positions, and common time base
   for (i=0; i<nPoints; i++)
   	{
@@ -949,12 +951,12 @@ asynStatus GalilController::buildLinearProfile()
         //Check for segment too short error
 	if (rint(vectorVelocity) == 0 && i != 0)
 		{
-		sprintf(message, "Segment %d: Vector velocity zero (%f), reduce time, add motors, and ensure profile loaded", i, vectorVelocity);
+		sprintf(message, "Segment %d: Vector velocity zero (%f), incmove=%f, reduce time, add motors, and ensure profile loaded", i, vectorVelocity, incmove);
 		buildOK = false;
 		}
 	if (zm_count == num_motors && i != 0)
 		{
-		sprintf(message, "Segment %d: %d/%d motors not moving, reduce time, add motors, and ensure profile loaded", i, zm_count, num_motors);
+		sprintf(message, "Segment %d: %d/%d motors not moving, incmove=%f, reduce time, add motors, and ensure profile loaded", i, zm_count, num_motors, incmove);
 		buildOK = false;
 		}
 
