@@ -24,6 +24,8 @@
 #include <stdlib.h>
 #ifdef _WIN32
 #include <process.h>
+#else
+#include <unistd.h>
 #endif /* _WIN32 */
 #include <Galil.h>   //Galil communication library api
 #include <iostream>  //cout
