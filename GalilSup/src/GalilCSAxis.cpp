@@ -43,6 +43,10 @@ extern "C" {
 #include "GalilController.h"
 #include <epicsExport.h>
 
+#ifdef _WIN32
+#define finite(x) _finite(x)
+#endif /* __WIN32 */
+
 // These are the GalilCSAxis methods
 
 /** Creates a new GalilCSAxis object.
@@ -390,7 +394,7 @@ asynStatus GalilCSAxis::doCalc(const char *expr, double args[], double *result) 
 	printf("sCalcPostfix error in expression %s \n", expr);
 	return asynError;
     } else 
-	if (sCalcPerform(args, SCALCARGS, NULL, 0, result, NULL, 0, reinterpret_cast<char*>(rpn)) && _finite(*result)) {
+	if (sCalcPerform(args, SCALCARGS, NULL, 0, result, NULL, 0, reinterpret_cast<char*>(rpn)) && finite(*result)) {
 	    printf("calcPerform: error evaluating '%s'", expr);
 	    return asynError;
     }

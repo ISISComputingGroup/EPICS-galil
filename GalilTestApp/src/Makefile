@@ -32,11 +32,13 @@ GalilTest_SRCS_DEFAULT += GalilTestMain.cpp
 
 #add a definition for each support application used by this application
 GalilTest_LIBS += GalilSupport
-GalilTest_LIBS += motorSimSupport softMotor motor asyn busy calc sscan autosave utilities pvcomplete asubFunctions
+GalilTest_LIBS += motorSimSupport softMotor motor asyn busy calc sscan autosave pvcomplete asubFunctions
 GalilTest_LIBS += devIocStats pvdump easySQLite sqlite caPutLog icpconfig std
+GalilTest_LIBS += seq pv utilities
 GalilTest_LIBS += $(EPICS_BASE_IOC_LIBS)
 
 
+GalilTest_SYS_LIBS_Linux += Galil
 
 
 #===========================

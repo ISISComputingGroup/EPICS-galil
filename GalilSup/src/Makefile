@@ -32,7 +32,7 @@ GalilSupport_SRCS += GalilController.cpp GalilAxis.cpp GalilCSAxis.cpp GalilConn
 GalilSupport_LIBS += asyn motor calc
 
 Galil_DIR = $(LIBGALIL)/lib/$(EPICS_HOST_ARCH)
-GalilSupport_LIBS_Linux += Galil
+GalilSupport_SYS_LIBS_Linux += Galil
 
 Galil1_DIR = $(LIBGALIL)/lib/$(EPICS_HOST_ARCH)
 galil2_DIR = $(LIBGALIL)/lib/$(EPICS_HOST_ARCH)

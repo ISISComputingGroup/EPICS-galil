@@ -22,7 +22,9 @@
 #include <float.h>
 #include <string.h>
 #include <stdlib.h>
+#ifdef _WIN32
 #include <process.h>
+#endif /* _WIN32 */
 #include <Galil.h>   //Galil communication library api
 #include <iostream>  //cout
 #include <sstream>   //ostringstream istringstream
@@ -759,7 +761,7 @@ asynStatus GalilController::buildLinearProfile()
   double minProfilePosition[MAX_GALIL_AXES];	//Minimum profile position in absolute mode
   double maxProfileAcceleration[MAX_GALIL_AXES];//Maximum profile acceleration in any mode
   double vectorVelocity;			//Segment vector velocity
-  double incmove;				//Motor incremental move distance
+  double incmove(0.0);				//Motor incremental move distance
   double firstmove[MAX_GALIL_AXES];		//Used to normalize moves to relative, and prevent big jumps at profile start			
   double apos[MAX_GALIL_AXES];			//Accumulated profile position calculated from integer rounded units (ie. steps/counts)
   double aerr[MAX_GALIL_AXES];			//Accumulated error
