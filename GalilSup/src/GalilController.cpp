@@ -2626,7 +2626,11 @@ asynStatus GalilController::writeReadController(const char *caller)
   bool done = false;
   asynStatus status;
   int ex_count;
+  static FILE* debug_file = fopen("debug.out","wt");
 
+  asynPrint(this->pasynUserSelf, ASYN_TRACE_FLOW, 
+          "%s: caller=\"%s\" command=\"%s\"\n", 
+		  functionName, caller, cmd_);
   //Count the number of exceptions
   ex_count = 0;
   
@@ -2683,6 +2687,19 @@ asynStatus GalilController::writeReadController(const char *caller)
 			  }
 		}
       }
+      asynPrint(this->pasynUserSelf, ASYN_TRACEIO_DRIVER, 
+          "%s: caller=\"%s\", command=\"%s\", response=\"%s\", status=%s\n", 
+		      functionName, caller, cmd_, resp_, (status == asynSuccess ? "OK" : "ERROR"));
+	  if (debug_file != NULL)
+	  {
+		  time_t now;
+		  time(&now);
+		  char time_buffer[64];
+		  strftime(time_buffer, sizeof(time_buffer), "%Y-%m-%d %H:%M:%S", localtime(&now));
+		  fprintf(debug_file, "%s %s: caller=\"%s\", command=\"%s\", response=\"%s\", status=%s\n", 
+		      time_buffer, functionName, caller, cmd_, resp_, (status == asynSuccess ? "OK" : "ERROR"));
+	  }
+
   return status;
 }
 
