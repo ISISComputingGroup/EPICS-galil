@@ -37,9 +37,8 @@ GalilTest_LIBS += devIocStats pvdump easySQLite sqlite caPutLog icpconfig std
 GalilTest_LIBS += seq pv utilities
 GalilTest_LIBS += $(EPICS_BASE_IOC_LIBS)
 
-
+GalilTest_LIBS_WIN32 += Galil1 # galil2
 GalilTest_SYS_LIBS_Linux += Galil
-
 
 #===========================
 
