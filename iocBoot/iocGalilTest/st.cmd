@@ -10,6 +10,9 @@ GalilTest_registerRecordDeviceDriver(pdbbase)
 
 cd ${TOP}/iocBoot/${IOC}
 
+## uncomment to see every command sent to galil
+#epicsEnvSet("GALIL_DEBUG_FILE", "galil_debug.txt")
+
 epicsEnvSet("IOCNAME", "$(IOC)")
 # this is to avoid a warning message about undefined macros from galil driver
 epicsEnvSet("SIMULATE", "0")

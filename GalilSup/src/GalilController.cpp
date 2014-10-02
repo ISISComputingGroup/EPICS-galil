@@ -22,6 +22,7 @@
 #include <float.h>
 #include <string.h>
 #include <stdlib.h>
+#include <process.h>
 #include <Galil.h>   //Galil communication library api
 #include <iostream>  //cout
 #include <sstream>   //ostringstream istringstream
@@ -2626,7 +2627,8 @@ asynStatus GalilController::writeReadController(const char *caller)
   bool done = false;
   asynStatus status;
   int ex_count;
-  static FILE* debug_file = fopen("debug.out","wt");
+  static const char* debug_file_name = macEnvExpand("$(GALIL_DEBUG_FILE)");
+  static FILE* debug_file = ( (debug_file_name != NULL && strlen(debug_file_name) > 0) ? fopen(debug_file_name,"at") : NULL);
 
   asynPrint(this->pasynUserSelf, ASYN_TRACE_FLOW, 
           "%s: caller=\"%s\" command=\"%s\"\n", 
@@ -2696,8 +2698,8 @@ asynStatus GalilController::writeReadController(const char *caller)
 		  time(&now);
 		  char time_buffer[64];
 		  strftime(time_buffer, sizeof(time_buffer), "%Y-%m-%d %H:%M:%S", localtime(&now));
-		  fprintf(debug_file, "%s %s: caller=\"%s\", command=\"%s\", response=\"%s\", status=%s\n", 
-		      time_buffer, functionName, caller, cmd_, resp_, (status == asynSuccess ? "OK" : "ERROR"));
+		  fprintf(debug_file, "%s (%d) %s: caller=\"%s\", command=\"%s\", response=\"%s\", status=%s\n", 
+		      time_buffer, getpid(), functionName, caller, cmd_, resp_, (status == asynSuccess ? "OK" : "ERROR"));
 	  }
 
   return status;
