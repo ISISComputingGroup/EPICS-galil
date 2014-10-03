@@ -1,5 +1,5 @@
 NO*****************AXIS ${AXIS}********************
-NO************HOME - Piezo Home********************
+NO*******HOME - Piezo Home***************
 #HOME${AXIS}
 IF ((rdecel${AXIS}=1) & (_BG${AXIS}=0) & (home${AXIS}=0))
 DC${AXIS}=oldecel${AXIS};rdecel${AXIS}=0
