@@ -509,7 +509,7 @@ void GalilController::connected(void)
 	if (code_assembled_)
 		{
 	        //Deliver and start the code on controller
-		GalilStartController(code_file_, eeprom_write_, 0);
+		GalilStartController(code_file_, eeprom_write_, 0, thread_mask_);
 		}
 	//Use async polling by default
 	try	{
@@ -2712,7 +2712,7 @@ asynStatus GalilController::writeReadController(const char *caller)
 /*--------------------------------------------------------------*/
 /* Start the card requested by user   */
 /*--------------------------------------------------------------*/
-void GalilController::GalilStartController(char *code_file, int eeprom_write, int display_code)
+void GalilController::GalilStartController(char *code_file, int eeprom_write, int display_code, unsigned thread_mask)
 {
 	const char *functionName = "GalilStartController";
 	unsigned i;					 //General purpose looping
@@ -2770,10 +2770,10 @@ void GalilController::GalilStartController(char *code_file, int eeprom_write, in
 		/*Upload code currently in controller for comparison to generated code */
 		try	{
 			uc = gco_->programUpload();
-			//Remove the \r characters
+			//Remove the \r characters - \r\n is returned
 			uc.erase (std::remove(uc.begin(), uc.end(), '\r'), uc.end());
 			//Remove ' characters
-			uc.erase (std::remove(uc.begin(), uc.end(), '\''), uc.end());
+//			uc.erase (std::remove(uc.begin(), uc.end(), '\''), uc.end());
 			}
 		catch (const std::string& e)
 		      	{
@@ -2790,14 +2790,19 @@ void GalilController::GalilStartController(char *code_file, int eeprom_write, in
 
 		//Copy card_code_ into download code buffer
 		dc = card_code_;
-		//Remove the \r characters
-		dc.erase (std::remove(dc.begin(), dc.end(), '\r'), dc.end());
 		//Remove ' characters
-		dc.erase (std::remove(dc.begin(), dc.end(), '\''), dc.end());
+//		dc.erase (std::remove(dc.begin(), dc.end(), '\''), dc.end());
 
 		/*If generated code differs from controller current code then download generated code*/
 		if (dc.compare(uc) != 0 && dc.compare("") != 0)
 			{
+		    //Change \n to \r - Galil Communications Library expects \r separated lines
+		    std::replace(dc.begin(), dc.end(), '\n', '\r');
+			size_t pos;
+			if ( (pos = dc.find_last_not_of(" \t\f\v\n\r")) != std::string::npos )
+			{
+				dc.erase(pos + 1); // remove all trailing whitespace (if any)
+			}
 			printf("\nTransferring code to model %s, address %s\n",model_, address_);
 			try	{
 				//Do the download
@@ -2856,9 +2861,27 @@ void GalilController::GalilStartController(char *code_file, int eeprom_write, in
 				errlogPrintf("Thread 0 failed to start on model %s address %s\n\n",model_, address_);
 					
 			epicsThreadSleep(1);
-		
-			//Check code is running for all created GalilAxis
-			if (numAxes_ > 0)
+			
+			if (thread_mask != 0) // is we gave a mask, only check for these threads
+				{
+				for (i=0; i<32; ++i)
+					{
+						if ( (thread_mask & (1 << i)) != 0 )
+						{
+					        /*check that code is running*/
+							sprintf(cmd_, "MG _XQ%d\n", i);
+							if (writeReadController(functionName) == asynSuccess)
+							{
+								if (atoi(resp_) == -1)
+								{
+									start_ok = 0;
+									errlogPrintf("\nThread %d failed to start on model %s, address %s\n", i, model_, address_);
+								}
+							}
+						}
+					}
+				}
+			else if (numAxes_ > 0) //Check code is running for all created GalilAxis
 				{
 				for (i=0;i<numAxes_;i++)
 					{		
@@ -3530,11 +3553,13 @@ extern "C" asynStatus GalilCreateCSAxes(const char *portName,     //specify whic
   * \param[in] code_file      	 Code file to deliver to hardware
   * \param[in] eeprom_write      EEPROM write options
   * \param[in] display_code	 Display code options
+  * \param[in] thread_mask	 Indicates which threads to expect running after code file has been delivered and thread 0 has been started. Bit 0 = thread 0 etc.
   */
 extern "C" asynStatus GalilStartController(const char *portName,        	//specify which controller by port name
 					   const char *code_file,
 					   int eeprom_write,
-					   int display_code)
+					   int display_code,
+					   unsigned thread_mask)
 {
   GalilController *pC;
   static const char *functionName = "GalilStartController";
@@ -3549,7 +3574,7 @@ extern "C" asynStatus GalilStartController(const char *portName,        	//speci
   }
   pC->lock();
   //Call GalilController::GalilStartController to do the work
-  pC->GalilStartController((char *)code_file, eeprom_write, display_code);
+  pC->GalilStartController((char *)code_file, eeprom_write, display_code, thread_mask);
   pC->unlock();
   return asynSuccess;
 }
@@ -3643,16 +3668,18 @@ static const iocshArg GalilStartControllerArg0 = {"Controller Port name", iocshA
 static const iocshArg GalilStartControllerArg1 = {"Code file", iocshArgString};
 static const iocshArg GalilStartControllerArg2 = {"EEPROM write", iocshArgInt};
 static const iocshArg GalilStartControllerArg3 = {"Display code", iocshArgInt};
+static const iocshArg GalilStartControllerArg4 = {"Thread mask", iocshArgInt};
 static const iocshArg * const GalilStartControllerArgs[] = {&GalilStartControllerArg0,
                                                             &GalilStartControllerArg1,
                                                             &GalilStartControllerArg2,
-                                                            &GalilStartControllerArg3};
+                                                            &GalilStartControllerArg3,
+                                                            &GalilStartControllerArg4};
                                                              
-static const iocshFuncDef GalilStartControllerDef = {"GalilStartController", 4, GalilStartControllerArgs};
+static const iocshFuncDef GalilStartControllerDef = {"GalilStartController", 5, GalilStartControllerArgs};
 
 static void GalilStartControllerCallFunc(const iocshArgBuf *args)
 {
-  GalilStartController(args[0].sval, args[1].sval, args[2].ival, args[3].ival);
+  GalilStartController(args[0].sval, args[1].sval, args[2].ival, args[3].ival, (unsigned)args[4].ival);
 }
 
 //Construct GalilController iocsh function register

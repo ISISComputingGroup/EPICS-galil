@@ -175,7 +175,7 @@ public:
   //asynStatus readbackProfile();
 
   /* These are the methods that are new to this class */
-  void GalilStartController(char *code_file, int eeprom_write, int display_code);
+  void GalilStartController(char *code_file, int eeprom_write, int display_code, unsigned thread_mask);
   void connectManager(void);
   void connect(void);
   void connected(void);
@@ -294,6 +294,7 @@ private:
   char model_[256];			//model string
   char code_file_[2048];			//Code file that user gave to GalilStartController, large as may be a list of files
   int eeprom_write_;			//eeprom_write_ that user gave to GalilStartController
+  unsigned thread_mask_;			//Mask detailing which threads are expected to be running after program download 
   bool connect_fail_reported_;		//Has initial connection failure been reported to iocShell
   int consecutive_timeouts_;		//Used for connection management
   bool code_assembled_;			//Has code for the GalilController hardware been assembled

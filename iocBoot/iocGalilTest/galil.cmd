@@ -37,7 +37,8 @@ dbLoadRecords("$(TOP)/db/galil_profileMoveAxis.db", "P=$(MYPVPREFIX)MOT:,CC=$(GC
 
 # Create a Galil controller
 GalilCreateController("Galil", "130.246.51.169", 20)
-
+# NOTE: Galil controller hardware must have XON/XOFF switched enabled for program download to work with RS232
+#GalilCreateController("Galil", "COM1 115200", 100)
 
 # Create a Galil controller
 #GalilCreateController("RIO", "192.168.0.101", 8)
@@ -99,7 +100,7 @@ GalilCreateCSAxes("Galil","I=(A+B)/2,J=B-A","A=I-J/2,B=I+J/2")
 # 4. int   display code. Set bit 1 to display generated code and or the code file specified.  Set bit 2 to display uploaded code
 
 # Start the controller
-GalilStartController("Galil", "$(GALIL)/gmc/galil_Default_Header.gmc;$(GALIL)/gmc/galil_Home_RevLimit.gmc!$(GALIL)/gmc/galil_Home_ForwLimit.gmc!$(GALIL)/gmc/galil_Home_Home.gmc!$(GALIL)/gmc/galil_Home_ForwLimit.gmc!$(GALIL)/gmc/galil_Piezo_Home.gmc!$(GALIL)/gmc/galil_Piezo_Home.gmc!$(GALIL)/gmc/galil_Piezo_Home.gmc!$(GALIL)/gmc/galil_Piezo_Home.gmc;$(GALIL)/gmc/galil_Default_Footer.gmc", 0, 0)
+GalilStartController("Galil", "$(GALIL)/gmc/galil_Default_Header.gmc;$(GALIL)/gmc/galil_Home_RevLimit.gmc!$(GALIL)/gmc/galil_Home_ForwLimit.gmc!$(GALIL)/gmc/galil_Home_Home.gmc!$(GALIL)/gmc/galil_Home_ForwLimit.gmc!$(GALIL)/gmc/galil_Piezo_Home.gmc!$(GALIL)/gmc/galil_Piezo_Home.gmc!$(GALIL)/gmc/galil_Piezo_Home.gmc!$(GALIL)/gmc/galil_Piezo_Home.gmc;$(GALIL)/gmc/galil_Default_Footer.gmc", 0, 0, 3)
 #GalilStartController("Galil", "", 0, 0)
 #GalilStartController("RIO", "rio.gmc", 1, 0)
 
