@@ -460,7 +460,7 @@ asynStatus GalilAxis::setLimitDecel(double velocity)
 			epicsSnprintf(pC_->cmd_, sizeof(pC_->cmd_), "%s", motor_prem);
 		    if (pC_->writeReadController(functionName) != asynSuccess)
 			{
-				std::cout << "Executing pre move commmand: " << motor_prem << std::endl;
+				std::cout << "Error executing pre move commmand: " << motor_prem << std::endl;
 			}
 		}
 		sprintf(pC_->cmd_, "BG%c", axisName_);

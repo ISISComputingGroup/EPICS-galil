@@ -902,7 +902,8 @@ asynStatus GalilController::buildLinearProfile()
 		//Check profile velocity less than mr vmax for this motor
 		if (fabs(velocity[j]) > maxAllowedVelocity[j])
 			{
-			sprintf(message, "Segment %d: Velocity too high for motor %c, increase time, or check profile loaded", i,  pAxis->axisName_);
+			sprintf(message, "Segment %d: Velocity too high for motor %c (%f > %f), increase time, or check profile loaded", 
+				i,  pAxis->axisName_, fabs(velocity[j]), maxAllowedVelocity[j]);
 			buildOK = false;
 			}
 
@@ -1176,15 +1177,20 @@ asynStatus GalilController::motorsToProfileStartPosition(FILE *profFile, char *a
 /* Convenience function to begin linear profile using specified coordinate system
    Called after filling the linear buffer
 */
-asynStatus GalilController::startLinearProfileCoordsys(char coordName)
+asynStatus GalilController::startLinearProfileCoordsys(char coordName, const char* axes)
 {
   static const char *functionName = "startProfileCoordsys";
   char message[MAX_MESSAGE_LEN];	//Profile execute message
   int status = asynSuccess;		//Start status
  
   //Start profile execution
-  std::cout << "Sending BG" << coordName << std::endl;
-  sprintf(cmd_, "BG %c \n", coordName);
+  cmd_[0] = '\0';
+  for(int i=0; i<strlen(axes); ++i)
+  {
+	  sprintf(cmd_ + strlen(cmd_), "SH%c;", axes[i]);
+  }
+  sprintf(cmd_ + strlen(cmd_), "BG %c \n", coordName);
+  std::cout << "Sending " << cmd_ << std::endl;
   status |= writeReadController(functionName);
   if (status)
 	{
@@ -1316,7 +1322,7 @@ asynStatus GalilController::runLinearProfile(FILE *profFile)
 			if (!profStarted && !motorsMoving(axes) && !status && !profileAbort_)
 				{
 				//Start the profile
-				status = startLinearProfileCoordsys(coordName);
+				status = startLinearProfileCoordsys(coordName, axes);
 				profStarted = (status) ? false : true;
 				//Pause until at least 1 segment has been processed
 				if (!status)
@@ -1389,7 +1395,7 @@ asynStatus GalilController::runLinearProfile(FILE *profFile)
   //Start short profiles that fit entirely in the controller buffer <= MAX_SEGMENTS
   if (!profStarted && !motorsMoving(axes) && !status && !profileAbort_)
   	{
-	status = startLinearProfileCoordsys(coordName);
+	status = startLinearProfileCoordsys(coordName, axes);
 	profStarted = (status) ? false : true;
 	//Pause until at least 1 segment has been processed
 	if (!status)
@@ -1449,6 +1455,14 @@ asynStatus GalilController::runLinearProfile(FILE *profFile)
 	}
   else  //Coordinate system didnt start, or aborted by user
 	setIntegerParam(profileExecuteStatus_, PROFILE_STATUS_FAILURE);
+
+  // turn off motors
+  for(int i=0; i<strlen(axes); ++i)
+  {
+      sprintf(cmd_, "MO%c", axes[i]);
+	  std::cout << cmd_ << std::endl;
+      writeReadController(functionName);
+  }
 
   //Update status
   setIntegerParam(profileExecuteState_, PROFILE_EXECUTE_DONE);

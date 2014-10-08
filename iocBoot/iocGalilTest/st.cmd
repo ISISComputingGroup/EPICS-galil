@@ -53,6 +53,8 @@ calc("IFDMC07", "$(GALILNUMCRATES) >= 7", 4)
 
 #< autosave.cmd
 
+dbLoadRecords("$(GALIL)/trajectory_test.db","P=$(MYPVPREFIX)")
+
 ## motor util package
 dbLoadRecords("$(MOTOR)/db/motorUtil.db","P=$(MYPVPREFIX)$(IOCNAME):, PVPREFIX=$(MYPVPREFIX)")
 

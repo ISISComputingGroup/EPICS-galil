@@ -1,0 +1,52 @@
+record(stringin, "$(P)PROF:XPTS") 
+{
+  field(FLNK, "$(P)PROF:GENDATA")
+}
+
+record(aSub, "$(P)PROF:GENDATA")
+{
+  field(SNAM, "genData")
+  field(INPA, "$(P)PROF:XPTS")
+  field(FTA, "STRING")
+  field(NOA, "1")
+  field(FTVA, "DOUBLE")
+  field(NOVA, "1441")
+  field(OUTA, "$(P)MOT:DMC01:Prof1:MTR0101:Positions PP NMS")
+  field(FTVB, "ULONG")
+  field(NOVB, "1")
+  field(FLNK, "$(P)PROF:CALCY")
+} 
+
+record(acalcout,"$(P)PROF:CALCY")
+{
+    field(DTYP,"Soft Channel") 
+    field(INAA, "$(P)PROF:GENDATA.VALA")
+	field(NELM, "1441")
+#	field(SIZE, "NUSE")
+	field(CALC, "SIN(AA)")
+	field(OOPT, "Every Time")
+	field(OUT, "$(P)MOT:DMC01:Prof1:MTR0102:Positions PP NMS")
+    field(FLNK, "$(P)PROF:SETNP")
+}
+
+record(longout, "$(P)PROF:SETNP")
+{
+    field(DTYP,"Soft Channel") 
+    field(DOL, "$(P)PROF:GENDATA.VALB")
+    field(OUT, "$(P)MOT:DMC01:Prof1:NumPoints NMS PP")
+	field(OMSL, "closed_loop")
+}	
+
+
+#record(waveform, "$(P)X") 
+#{
+#  field(FTVL, "DOUBLE") 
+#  field(NELM, "500")
+#}
+
+#record(waveform, "$(P)XPTS") 
+#{
+#  field(FTVL, "STRING") 
+#  field(NELM, "1")
+#  field(FLNK, "$(P)GENDATA")
+#}

@@ -196,7 +196,7 @@ public:
   asynStatus runProfile();
   asynStatus runLinearProfile(FILE *profFile);
   bool motorsMoving(char *axes);
-  asynStatus startLinearProfileCoordsys(char coordName);
+  asynStatus startLinearProfileCoordsys(char coordName, const char* axes);
   asynStatus motorsToProfileStartPosition(FILE *profFile, char *axes, bool move);
 
   /* Deferred moves functions.*/
