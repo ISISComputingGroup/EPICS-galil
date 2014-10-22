@@ -19,7 +19,7 @@ SP${AXIS}=(@ABS[hjgsp${AXIS}])*10
 HM${AXIS};SH${AXIS};WT100;BG${AXIS};hjog${AXIS}=1
 ENDIF
 IF ((hjog${AXIS}=1) & (_BG${AXIS}=0))
-hjog${AXIS}=0;home${AXIS}=0;
+hjog${AXIS}=0;home${AXIS}=0;homed${AXIS}=1;
 IF ((phreg${AXIS}=1))
 DE${AXIS}=enhmval${AXIS};DP${AXIS}=mrhmval${AXIS};
 ENDIF

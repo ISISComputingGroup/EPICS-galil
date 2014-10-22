@@ -42,7 +42,7 @@ ST${AXIS}
 hjog${AXIS}=5
 ENDIF
 IF ((hjog${AXIS}=5) & (_BG${AXIS}=0))
-hjog${AXIS}=0;home${AXIS}=0;
+hjog${AXIS}=0;home${AXIS}=0;homed${AXIS}=1;
 IF ((phreg${AXIS}=1))
 DE${AXIS}=enhmval${AXIS};DP${AXIS}=mrhmval${AXIS};
 ENDIF
