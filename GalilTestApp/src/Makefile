@@ -34,7 +34,7 @@ GalilTest_SRCS_DEFAULT += GalilTestMain.cpp
 GalilTest_LIBS += GalilSupport
 GalilTest_LIBS += motorSimSupport softMotor motor asyn busy calc sscan autosave pvcomplete asubFunctions
 GalilTest_LIBS += devIocStats pvdump easySQLite sqlite caPutLog icpconfig std
-GalilTest_LIBS += seq pv utilities
+GalilTest_LIBS += seq pv utilities pugixml
 GalilTest_LIBS += $(EPICS_BASE_IOC_LIBS)
 
 GalilTest_LIBS_WIN32 += Galil1 # galil2

@@ -19,6 +19,7 @@ TEMPLATE_TOP=$(EPICS_BASE)/templates/makeBaseApp/top
 BUSY=$(SUPPORT)/busy/1-4
 
 ## ISIS standard modules ##
+PUGIXML=$(SUPPORT)/pugixml
 ICPCONFIG=$(SUPPORT)/icpconfig
 PVDUMP=$(SUPPORT)/pvdump
 PVCOMPLETE=$(SUPPORT)/pvcomplete
