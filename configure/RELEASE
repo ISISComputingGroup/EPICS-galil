@@ -14,6 +14,7 @@ AUTOSAVE=$(SUPPORT)/autosave/R5_0
 ASYN=$(SUPPORT)/asyn/4-22
 ONCRPC=$(SUPPORT)/oncrpc/2
 UTILITIES=$(SUPPORT)/utilities
+PCRE=$(SUPPORT)/pcre
 ZLIB=$(SUPPORT)/zlib/1-2-8
 TEMPLATE_TOP=$(EPICS_BASE)/templates/makeBaseApp/top
 BUSY=$(SUPPORT)/busy/1-4
