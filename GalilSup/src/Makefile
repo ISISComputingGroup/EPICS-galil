@@ -37,6 +37,8 @@ GalilSupport_SYS_LIBS_Linux += Galil
 Galil1_DIR = $(LIBGALIL)/lib/$(EPICS_HOST_ARCH)
 galil2_DIR = $(LIBGALIL)/lib/$(EPICS_HOST_ARCH)
 GalilSupport_LIBS_WIN32 += Galil1 # galil2
+GalilSupport_SYS_LIBS_WIN32 += delayimp
+GalilSupport_LDFLAGS_WIN32 += /DELAYLOAD:Galil1.dll
 
 # Galil communications library from their website
 #GalilSupport_SYS_LIBS += Galil

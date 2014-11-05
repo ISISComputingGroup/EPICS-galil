@@ -32,7 +32,7 @@
 
 record(ai, "$(P):$(R)_MON") {
 	field(PREC, "$(PREC)")
-	field(EGU,  "V")
+	field(EGU,  "Volts")
 	field(SCAN, "I/O Intr")
 	field(DTYP, "asynFloat64")
 	field(INP,  "@asyn($(PORT),$(ADDR))ANALOG_OUTRBV")
@@ -40,7 +40,7 @@ record(ai, "$(P):$(R)_MON") {
 
 record(ao, "$(P):$(R)_SP") {
 	field(PREC, "$(PREC)")
-	field(EGU,  "V")
+	field(EGU,  "Volts")
 	field(LOPR, "$(LOPR)")
 	field(HOPR, "$(HOPR)")
 	field(DTYP, "asynFloat64")

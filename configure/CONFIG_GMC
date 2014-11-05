@@ -1,3 +1,4 @@
-# install rile for Galil program files
+# install file for Galil program files
 FILE_TYPE += GMC
 INSTALL_GMC = $(INSTALL_LOCATION)/gmc
+

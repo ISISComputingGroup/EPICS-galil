@@ -22,9 +22,16 @@
 
 #include "asynMotorController.h"
 #include "asynMotorAxis.h"
+#include "epicsMessageQueue.h"
 
-#define KPMAX		      1023.875
-#define KDMAX		      4095.875
+#define KPMAX			1023.875
+#define KDMAX			4095.875
+#define HOMING_TIMEOUT		1.5
+
+//pollServices request numbers
+static const int MOTOR_STOP = 0;
+static const int MOTOR_POST = 1;
+static const int MOTOR_OFF = 2;
 
 class GalilAxis : public asynMotorAxis
 {
@@ -75,6 +82,32 @@ public:
    asynStatus setLimitDecel(double velocity);
    //Extract axis data from GalilController data record
    asynStatus getStatus(void);
+   //Set poller status variables bassed on GalilController data record info
+   void setStatus(bool *moving);
+   //Verify encoder operation whilst moving for safety
+   void checkEncoder(void);
+   //Stop motor if wrong limit activated and wrongLimitProtection is enabled
+   void wrongLimitProtection(void);
+   //Sets time motor has been stopped for in GalilAxis::stopped_time_
+   void setStopTime(void);
+   //Reset homing if stopped_time_ great than
+   void checkHoming(void);
+   //Service slow and infrequent requests from poll thread to write to the controller
+   //We do this in a separate thread so the poll thread is not slowed
+   //Also poll thread doesnt have a lock and is not allowed to call writeReadController
+   void pollServices(void);
+   //Execute motor record prem function
+   void executePrem(void);
+   //Execute motor power auto on
+   void executeAutoOn(void);
+   //Execute motor record post function
+   void executePost(void);
+   //Execute motor power auto off
+   void executeAutoOff(void);
+   //Check velocity and wlp protection
+   asynStatus beginCheck(const char *functionName, double maxVelocity);
+   //Begin motor motion
+   asynStatus beginMotion(const char *caller);
 
   /* These are the methods we override from the base class */
   asynStatus move(double position, int relative, double min_velocity, double max_velocity, double acceleration);
@@ -91,12 +124,6 @@ public:
   asynStatus setIGain(double iGain);
   asynStatus setDGain(double dGain);
   asynStatus setClosedLoop(bool closedLoop);
-  asynStatus doneMove();
-
-//  asynStatus getMotorRecordFields(asynUser *pasynUser);
-private:
-  asynStatus beginMove();
-  asynStatus doneMoveMotorOff();
 
 private:
   GalilController *pC_;      		/**< Pointer to the asynMotorController to which this axis belongs.
@@ -106,33 +133,51 @@ private:
   int switch_type_;			//switch type for motor enable/disable function
   char *enables_string_;		//Motor enable/disable string specified by user
   int invert_ssi_;			//Invert ssi encoder.  Reverse -ve, and +ve direction of ssi
+
+  double highLimit_;			//High soft limit
+  double lowLimit_;			//Low soft limit
+  double encmratio_;			//Encoder/motor ratio
+  bool encmratioset_;			//Flag to indicate if the ratio has been set
+  int deferredCoordsys_;		//Coordinate system 0 (S) or 1 (T)
+  double deferredAcceleration_;		//Coordinate system acceleration
+  double deferredVelocity_;		//Coordinate system velocity
+  double deferredPosition_;		//Deferred move position
+  bool deferredMove_;			//Has a deferred move been set
+
+  epicsTimeStamp begin_nowt_;		//Used to track length of time motor begin takes
+  epicsTimeStamp begin_begint_;		//Used to track length of time motor begin takes
+ 
+  epicsTimeStamp pestall_nowt_;		//Used to track length of time encoder has been stalled for
+  epicsTimeStamp pestall_begint_;	//Time when possible encoder stall first detected
+  int ueip_;				//motorRecord ueip
+  int motorType_;			//MotorType set for this poll cycle
   double motor_position_;		//aux encoder or step count register
   double encoder_position_;		//main encoder register
   double last_motor_position_;		//aux encoder or step count register stored from previous poll.  Used to detect movement.
   double last_encoder_position_;	//main encoder register stored from previous poll.  Used to detect movement.
   int direction_;			//Movement direction
   bool inmotion_;			//Axis in motion status from controller
-  bool protectStop_;			//Used to flag that protected stop has occurred already
   bool fwd_;				//Forward limit status
   bool rev_;				//Reverse limit status
-  bool home_;				//Home status
-  double highLimit_;			//High soft limit
-  double lowLimit_;			//Low soft limit
-  double encmratio_;			//Encoder/motor ratio
-  bool encmratioset_;			//Flag to indicate if the ratio has been set
-  epicsTimeStamp pestall_nowt_;		//Used to track length of time encoder has been stalled for
-  epicsTimeStamp pestall_begint_;	//Time when possible encoder stall first detected
-  epicsTimeStamp done_begint_;	//Time when move completed, used to judge when to call POST move
+  bool home_;				//Home switch raw status direct from data record
+  int done_;				//Motor done status passed to motor record
+  int last_done_;			//Backup of done status at end of each poll.  Used to detect stop
+  bool homing_;				//Is motor homing now
+  epicsTimeStamp stop_nowt_;		//Used to track length of motor stopped for.
+  epicsTimeStamp stop_begint_;		//Used to track length of motor stopped for.
+  double stopped_time_;			//Time motor has been stopped for
+  bool encDirOk_;			//Encoder direction ok flag
+  bool motorMove_;			//Motor move status
+  bool encoderMove_;			//Encoder move status
   bool pestall_detected_;		//Possible encoder stall detected flag
-  int deferredCoordsys_;		//Coordinate system 0 (S) or 1 (T)
-  double deferredAcceleration_;		//Coordinate system acceleration
-  double deferredVelocity_;		//Coordinate system velocity
-  double deferredPosition_;		//Deferred move position
-  bool deferredMove_;			//Has a deferred move been set
-  int begin_move_count_;
-  bool home_in_progress_;
+  epicsMessageQueue pollRequest_;	//The service numbers poll would like done
+  bool stopSent_;			//Has motor stop mesg been sent to pollServices thread due to encoder stall or wrong limit protection
+  bool postSent_;			//Has post mesg been sent to pollServices thread after motor stop
+  bool autooffSent_;			//Has motor auto off mesg been sent to pollServices thread after motor stop
+  bool postExecuted_;			//Has pollServices executed post
+  bool autooffExecuted_;		//Has pollServices executed the autooff
+  bool autooffAllowed_;			//Block autoOff if autoOn has released lock for on delay
 
-  
 friend class GalilController;
 };
 

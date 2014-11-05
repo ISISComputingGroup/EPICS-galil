@@ -21,17 +21,22 @@
 #define GalilController_H
 
 #include "macLib.h"
-
 #include "GalilAxis.h"
 #include "GalilCSAxis.h"
 #include "GalilConnector.h"
 #include "GalilPoller.h"
 
+#if defined _WIN32 || _WIN64
+#define rint(x) floor((x)+0.5)
+#define lrint(x) floor((x)+0.5)
+#define finite(x) _finite(x)
+#endif /* _WIN32/_WIN64 */
 
+#define BEGIN_TIMEOUT 2.0
 #define AASCII 65
 #define QASCII 81
 #define SCALCARGS 16
-#define MAX_GALIL_STRING_SIZE 80
+#define MAX_GALIL_STRING_SIZE 256
 #define MAX_GALIL_AXES 8
 #define MAX_GALIL_VARS 10
 #define MAX_GALIL_CSAXES 8
@@ -46,88 +51,93 @@
 #define THREAD_CODE_LEN 80000
 
 // drvInfo strings for extra parameters that the Galil controller supports
-#define GalilAddressString		  	"CONTROLLER_ADDRESS"
-#define GalilHomeTypeString               	"CONTROLLER_HOMETYPE"
-#define GalilLimitTypeString              	"CONTROLLER_LIMITTYPE"
+#define GalilAddressString		"CONTROLLER_ADDRESS"
+#define GalilHomeTypeString		"CONTROLLER_HOMETYPE"
+#define GalilLimitTypeString		"CONTROLLER_LIMITTYPE"
+#define GalilCtrlErrorString		"CONTROLLER_ERROR"
+#define GalilCommunicationErrorString	"CONTROLLER_COMMERR"
+#define GalilModelString		"CONTROLLER_MODEL"
 
-#define GalilCoordSysString		  	"COORDINATE_SYSTEM"
-#define GalilCoordSysMotorsString         	"COORDINATE_SYSTEM_MOTORS"
-#define GalilCoordSysMovingString        	"COORDINATE_SYSTEM_MOVING"
-#define GalilCoordSysSegmentsString       	"COORDINATE_SYSTEM_SEGMENTS"
-#define GalilCoordSysMotorsStopString 	  	"COORDINATE_SYSTEM_MOTORS_STOP"
-#define GalilCoordSysMotorsGoString 	  	"COORDINATE_SYSTEM_MOTORS_GO"
+#define GalilCoordSysString		"COORDINATE_SYSTEM"
+#define GalilCoordSysMotorsString	"COORDINATE_SYSTEM_MOTORS"
+#define GalilCoordSysMovingString	"COORDINATE_SYSTEM_MOVING"
+#define GalilCoordSysSegmentsString	"COORDINATE_SYSTEM_SEGMENTS"
+#define GalilCoordSysMotorsStopString	"COORDINATE_SYSTEM_MOTORS_STOP"
+#define GalilCoordSysMotorsGoString	"COORDINATE_SYSTEM_MOTORS_GO"
 
-#define GalilCoordSysVarString	 	  	"COORDINATE_SYSTEM_VARIABLE"
+#define GalilCoordSysVarString		"COORDINATE_SYSTEM_VARIABLE"
 
-#define GalilProfileFileString       	  	"GALIL_PROFILE_FILE"
-#define GalilProfileMaxVelocityString     	"GALIL_PROFILE_MAX_VELOCITY"
-#define GalilProfileMaxAccelerationString 	"GALIL_PROFILE_MAX_ACCELERATION"
-#define GalilProfileMinPositionString     	"GALIL_PROFILE_MIN_POSITION"
-#define GalilProfileMaxPositionString     	"GALIL_PROFILE_MAX_POSITION"
-#define GalilProfileMoveModeString        	"GALIL_PROFILE_MOVE_MODE"
+#define GalilProfileFileString		"GALIL_PROFILE_FILE"
+#define GalilProfileMaxVelocityString	"GALIL_PROFILE_MAX_VELOCITY"
+#define GalilProfileMaxAccelerationString	"GALIL_PROFILE_MAX_ACCELERATION"
+#define GalilProfileMinPositionString	"GALIL_PROFILE_MIN_POSITION"
+#define GalilProfileMaxPositionString	"GALIL_PROFILE_MAX_POSITION"
+#define GalilProfileMoveModeString	"GALIL_PROFILE_MOVE_MODE"
 
-#define GalilOutputCompare1AxisString     	"OUTPUT_COMPARE_AXIS"
-#define GalilOutputCompare1StartString    	"OUTPUT_COMPARE_START"
-#define GalilOutputCompare1IncrString     	"OUTPUT_COMPARE_INCR"
-#define GalilOutputCompareMessageString   	"OUTPUT_COMPARE_MESSAGE"
+#define GalilOutputCompare1AxisString	"OUTPUT_COMPARE_AXIS"
+#define GalilOutputCompare1StartString	"OUTPUT_COMPARE_START"
+#define GalilOutputCompare1IncrString	"OUTPUT_COMPARE_INCR"
+#define GalilOutputCompareMessageString	"OUTPUT_COMPARE_MESSAGE"
 
-#define GalilMotorStopGoString		  	"MOTOR_STOPGO"
-#define GalilSSIConnectedString		  	"MOTOR_SSI_CONNECTED"
-#define GalilEncoderStallString           	"MOTOR_ENCODER_STALL"
-#define GalilEncoderStallTimeString       	"MOTOR_ENCODER_STALL_TIME"
-#define GalilStepSmoothString             	"MOTOR_STEPSMOOTH"
-#define GalilEncoderDeadBString		  	"MOTOR_EDEL"
-#define GalilCommunicationErrorString     	"CONTROLLER_COMMERR"
-#define GalilModelString		  	"CONTROLLER_MODEL"
-#define GalilMotorTypeString		  	"MOTOR_TYPE"
-#define GalilMotorOnString         	  	"MOTOR_ONOFF"
-#define GalilMotorConnectedString         	"MOTOR_MCONN"
-#define GalilProgramHomeString            	"MOTOR_PHOME"
-#define GalilAfterLimitString             	"MOTOR_EGUAFTLIMIT"
-#define GalilHomeValueString 		  	"MOTOR_HOMEVAL"
-#define GalilHomedString 		  	"MOTOR_HOMED"
-#define GalilWrongLimitProtectionString   	"MOTOR_WLP"
-#define GalilWrongLimitProtectionActiveString   "MOTOR_WLP_ACTIVE"
-#define GalilUserOffsetString 		  	"MOTOR_OFF"
-#define GalilEncoderResolutionString 	  	"MOTOR_ERES"
-#define GalilDirectionString 		  	"MOTOR_DIR"
-#define GalilUseEncoderString		  	"MOTOR_UEIP"
-#define GalilMotorPREMString		  	"MOTOR_PREM"
-#define GalilMotorPOSTString		  	"MOTOR_POST"
-#define GalilMotorDMOVString		  	"MOTOR_DMOV"
+#define GalilMotorStopGoString		"MOTOR_STOPGO"
+#define GalilSSIConnectedString		"MOTOR_SSI_CONNECTED"
+#define GalilEncoderStallString		"MOTOR_ENCODER_STALL"
+#define GalilEncoderStallTimeString	"MOTOR_ENCODER_STALL_TIME"
+#define GalilStepSmoothString		"MOTOR_STEPSMOOTH"
+#define GalilEncoderDeadBString		"MOTOR_EDEL"
+#define GalilMotorTypeString		"MOTOR_TYPE"
+#define GalilMotorOnString		"MOTOR_ONOFF"
+#define GalilMotorConnectedString	"MOTOR_MCONN"
+#define GalilProgramHomeString		"MOTOR_PHOME"
+#define GalilAfterLimitString		"MOTOR_EGUAFTLIMIT"
+#define GalilHomeValueString		"MOTOR_HOMEVAL"
+#define GalilHomedString		"MOTOR_HOMED"
+#define GalilWrongLimitProtectionString	"MOTOR_WLP"
+#define GalilWrongLimitProtectionActiveString	"MOTOR_WLP_ACTIVE"
+#define GalilUserOffsetString		"MOTOR_OFF"
+#define GalilEncoderResolutionString	"MOTOR_ERES"
+#define GalilDirectionString		"MOTOR_DIR"
+#define GalilUseEncoderString		"MOTOR_UEIP"
+#define GalilPremString			"MOTOR_PREM"
+#define GalilPostString			"MOTOR_POST"
+#define GalilUseIndexString		"MOTOR_USEINDEX"
+#define GalilDriveAfterHomeString	"MOTOR_DRIVE_AHOME"
+#define GalilDriveAfterHomeValueString	"MOTOR_DRIVE_AHOME_VALUE"
+#define GalilAutoOnOffString		"MOTOR_AUTO_ONOFF"
+#define GalilAutoOnDelayString		"MOTOR_AUTO_ONDELAY"
+#define GalilAutoOffDelayString		"MOTOR_AUTO_OFFDELAY"
 
-#define GalilMainEncoderString		  "MOTOR_MAIN_ENCODER"
-#define GalilAuxEncoderString		  "MOTOR_AUX_ENCODER"
-#define GalilMotorAcclString		  "MOTOR_ACCL"
-#define GalilMotorVeloString              "MOTOR_VELO"
-#define GalilMotorVmaxString              "MOTOR_VMAX"
-#define GalilAnalogInString		  "ANALOG_IN"
-#define GalilAnalogOutString		  "ANALOG_OUT"
-#define GalilAnalogOutRBVString		  "ANALOG_OUTRBV"
-#define GalilBinaryInString		  "BINARY_IN"
-#define GalilBinaryOutString		  "BINARY_OUT"
-#define GalilBinaryOutRBVString		  "BINARY_OUTRBV"
-#define GalilStopEventString		  "CONTROLLER_STOPE"
-#define GalilSSICapableString		  "CONTROLLER_SSICAPABLE"
-#define GalilSSIInputString		  "MOTOR_SSIINPUT"
-#define GalilSSITotalBitsString		  "MOTOR_SSITOTBITS"
-#define GalilSSISingleTurnBitsString	  "MOTOR_SSISINGLETBITS"
-#define GalilSSIErrorBitsString		  "MOTOR_SSIERRBITS"
-#define GalilSSITimeString		  "MOTOR_SSITIME"
-#define GalilSSIDataString		  "MOTOR_SSIDATA"
-#define GalilErrorLimitString		  "MOTOR_ERRLIM"
-#define GalilErrorString		  "MOTOR_ERR"
-#define GalilOffOnErrorString		  "MOTOR_OOE"
-#define GalilAxisString			  "MOTOR_AXIS"
+#define GalilMainEncoderString		"MOTOR_MAIN_ENCODER"
+#define GalilAuxEncoderString		"MOTOR_AUX_ENCODER"
+#define GalilMotorAcclString		"MOTOR_ACCL"
+#define GalilMotorVeloString		"MOTOR_VELO"
+#define GalilMotorVmaxString		"MOTOR_VMAX"
+#define GalilAnalogInString		"ANALOG_IN"
+#define GalilAnalogOutString		"ANALOG_OUT"
+#define GalilAnalogOutRBVString		"ANALOG_OUTRBV"
+#define GalilBinaryInString		"BINARY_IN"
+#define GalilBinaryOutString		"BINARY_OUT"
+#define GalilBinaryOutRBVString		"BINARY_OUTRBV"
+#define GalilStopEventString		"CONTROLLER_STOPE"
+#define GalilSSICapableString		"CONTROLLER_SSICAPABLE"
+#define GalilSSIInputString		"MOTOR_SSIINPUT"
+#define GalilSSITotalBitsString		"MOTOR_SSITOTBITS"
+#define GalilSSISingleTurnBitsString	"MOTOR_SSISINGLETBITS"
+#define GalilSSIErrorBitsString		"MOTOR_SSIERRBITS"
+#define GalilSSITimeString		"MOTOR_SSITIME"
+#define GalilSSIDataString		"MOTOR_SSIDATA"
+#define GalilErrorLimitString		"MOTOR_ERRLIM"
+#define GalilErrorString		"MOTOR_ERR"
+#define GalilOffOnErrorString		"MOTOR_OOE"
+#define GalilAxisString			"MOTOR_AXIS"
 
-#define GalilUserVarString		      "USERVAR"
-#define GalilUserVarInt32String		  "USERVARI32"
-#define GalilUserVarFloat64String	  "USERVARF64"
-#define GalilUserVarOctetString		  "USERVAROCT"
-#define GalilUserCmdString		      "USERCMD"
-#define GalilUserCmdOutString		  "USERCMDOUT"
-#define GalilEthAddrString		  	"CONTROLLER_ETHADDR"
-#define GalilSerialNumString		  	"CONTROLLER_SERIALNUM"
+#define GalilUserCmdString		"USER_CMD"
+#define GalilUserOctetString		"USER_OCTET"
+#define GalilUserOctetValString		"USER_OCTET_VAL"
+#define GalilUserVarString		"USER_VAR"
+
+#define GalilEthAddrString	  	"CONTROLLER_ETHADDR"
+#define GalilSerialNumString	  	"CONTROLLER_SERIALNUM"
 
 /* For each digital input, we maintain a list of motors, and the state the input should be in*/
 /* To disable the motor */
@@ -145,12 +155,11 @@ public:
   asynStatus setDeferredMoves(bool deferMoves);
   asynStatus writeInt32(asynUser *pasynUser, epicsInt32 value);
   asynStatus writeFloat64(asynUser *pasynUser, epicsFloat64 value);
-  asynStatus readOctet(asynUser* pasynUser,  char* value, size_t maxChars,  size_t* nActual,  int* eomReason);
+  asynStatus writeOctet(asynUser *pasynUser, const char*  value,  size_t  nChars,  size_t *  nActual);
   asynStatus readInt32(asynUser *pasynUser, epicsInt32 *value);
   asynStatus readFloat64(asynUser *pasynUser, epicsFloat64 *value);
-  asynStatus writeOctet(asynUser *pasynUser, const char*  value,  size_t  nChars,  size_t *  nActual); 
   asynStatus drvUserCreate(asynUser *pasynUser, const char* drvInfo, const char** pptypeName, size_t* psize); 
-  asynStatus drvUserDestroy(asynUser *pasynUser); 
+  asynStatus drvUserDestroy(asynUser *pasynUser);
   void report(FILE *fp, int level);
 
   //Real motors
@@ -185,8 +194,8 @@ public:
   void gen_card_codeend(void);
   void gen_motor_enables_code(void);
   void write_gen_codefile(const char* suffix);
-  void read_codefile(const char *code_file);
-  void read_codefile_part(const char *code_file, MAC_HANDLE* mac_handle);
+  asynStatus read_codefile(const char *code_file);
+  asynStatus read_codefile_part(const char *code_file, MAC_HANDLE* mac_handle);
   asynStatus writeReadController(const char *caller);
   void check_comms(bool reqd_comms, asynStatus status);
   asynStatus get_integer(int function, epicsInt32 *value, int axisNo);
@@ -196,8 +205,13 @@ public:
   asynStatus runProfile();
   asynStatus runLinearProfile(FILE *profFile);
   bool motorsMoving(char *axes);
-  asynStatus startLinearProfileCoordsys(char coordName, const char* axes);
+  asynStatus startLinearProfileCoordsys(int coordsys, char coordName, const char *axes);
   asynStatus motorsToProfileStartPosition(FILE *profFile, char *axes, bool move);
+  //Execute motor record prem function for motor list
+  void executePrem(const char *axes);
+  //Execute motor power auto on
+  void executeAutoOn(const char *axes);
+  void processUnsolicitedMesgs(void);
 
   /* Deferred moves functions.*/
   asynStatus processDeferredMovesInGroup(int coordsys, char *axes, char *moves, double acceleration, double velocity);
@@ -207,6 +221,7 @@ protected:
   int GalilAddress_;
   int GalilHomeType_;
   int GalilLimitType_;
+  int GalilCtrlError_;
   int GalilCoordSys_;
   int GalilCoordSysMotors_;
   int GalilCoordSysMoving_;
@@ -244,6 +259,15 @@ protected:
   int GalilUserOffset_;
   int GalilEncoderResolution_;
   int GalilUseEncoder_;
+  int GalilPrem_;
+  int GalilPost_;
+  int GalilUseIndex_;
+  int GalilDriveAfterHome_;
+  int GalilDriveAfterHomeValue_;
+  int GalilAutoOnOff_;
+  int GalilAutoOnDelay_;
+  int GalilAutoOffDelay_;
+
   int GalilMainEncoder_;
   int GalilAuxEncoder_;
   int GalilMotorAccl_;
@@ -269,19 +293,13 @@ protected:
   int GalilError_;
   int GalilOffOnError_;
   int GalilAxis_;
-//Add new parameters here
-  int GalilUserVar_;
-  int GalilUserVarInt32_;
-  int GalilUserVarFloat64_;
-  int GalilUserVarOctet_;
   int GalilUserCmd_;
-  int GalilUserCmdOut_;
+  int GalilUserOctet_;
+  int GalilUserOctetVal_;
+  int GalilUserVar_;
   int GalilEthAddr_;
   int GalilSerialNum_;
-  // values pushed from Motor record using a record in IOC database
-  int GalilMotorPREM_;
-  int GalilMotorPOST_;
-  int GalilMotorDMOV_;
+//Add new parameters here
 
   int GalilCommunicationError_;
   #define LAST_GALIL_PARAM GalilCommunicationError_
@@ -292,24 +310,31 @@ private:
   GalilPoller *poller_;			//GalilPoller to acquire a datarecord
   char address_[256];			//address string
   char model_[256];			//model string
-  char code_file_[2048];			//Code file that user gave to GalilStartController, large as may be a list of files
-  int eeprom_write_;			//eeprom_write_ that user gave to GalilStartController
-  unsigned thread_mask_;			//Mask detailing which threads are expected to be running after program download 
+  char code_file_[2048];		//Code file(s) that user gave to GalilStartController
+
+  int burn_program_;			//Burn program options that user gave to GalilStartController
+  int burn_parameters_;			//Burn parameters at shutdown.  Done if motor type changed on any axis.
+					//Wrong motor at pwr on is a problem
+					
   bool connect_fail_reported_;		//Has initial connection failure been reported to iocShell
   int consecutive_timeouts_;		//Used for connection management
-  bool code_assembled_;			//Has code for the GalilController hardware been assembled
+  bool code_assembled_;			//Has code for the GalilController hardware been assembled (ie. is card_code_ all set to send)
   bool async_records_;			//Are the data records obtained async(DR), or sync (QR)
   double updatePeriod_;			//Period between data records in ms
 
   epicsTimeStamp pollnowt_;		//Used for debugging, and tracking overall poll performance
   epicsTimeStamp polllastt_;		//Used for debugging, and tracking overall poll performance
 
+  epicsTimeStamp begin_nowt_;		//Used to track length of time motor begin takes
+  epicsTimeStamp begin_begint_;		//Used to track length of time motor begin takes
+
   bool movesDeferred_;			//Should moves be deferred for this controller
 
-  epicsEventId profileExecuteEvent_;    //Event for executing motion profiles
+  epicsEventId profileExecuteEvent_;	//Event for executing motion profiles
   bool profileAbort_;			//Abort profile request flag.  Aborts profile when set true
+  unsigned thread_mask_;		//Mask detailing which threads are expected to be running after program download Bit 0 = thread 0 etc
 
-  vector<char> recdata_;  		//Data record from controller
+  vector<char> recdata_;		//Data record from controller
   asynStatus recstatus_;		//Status of last record acquisition
   unsigned numAxesMax_;			//Number of axes actually supported by the controller
   unsigned numAxes_;			//Number of axes requested by developer
@@ -319,7 +344,8 @@ private:
   char *thread_code_;			//Code generated for every axis on this controller (eg. home code, stepper pos maintenance)
   char *limit_code_;			//Code generated for limit switches on this controller
   char *digital_code_;			//Code generated for digital inputs on this controller
-  char *card_code_;			//All code generated for the controller
+  char *card_code_;			//All code generated for the controller.  This is the buffer actually sent to controller
+  char *user_code_;			//Code supplied by user for the controller.  This is copied to card_code_ above if all goes well
 
   char cmd_[MAX_GALIL_STRING_SIZE];     //holds the assembled Galil cmd string
   char resp_[MAX_GALIL_STRING_SIZE];    //Response from Galil controller

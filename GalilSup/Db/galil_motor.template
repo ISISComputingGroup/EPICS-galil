@@ -44,7 +44,7 @@ grecord(motor,"$(P):$(M)")
 	field(DHLM,"$(DHLM)")
 	field(DLLM,"$(DLLM)")
 	field(UEIP,"$(UEIP)")
-        field(SREV,"$(SREV)")
+    field(SREV,"$(SREV)")
 	field(OFF,"$(OFF)")
 	field(RTRY,"$(RTRY)")
 	field(TWV,"1")
@@ -55,7 +55,7 @@ grecord(motor,"$(P):$(M)")
 	field(PCOF,"$(PCOF)")
 	field(ICOF,"$(ICOF)")
 	field(DCOF,"$(DCOF)")
-    info(archive,"VAL RBV DVAL DRBV OFF MSTA")
+	info(archive,"VAL RBV DVAL DRBV OFF MSTA")
 }
 
 alias("$(P):$(M)", "$(P):$(M):SP")
@@ -70,6 +70,14 @@ record(transform,"$(P):$(M)_ableput") {
   field(OUTC,"$(P):$(M).DISA NPP NMS")
 }
 
+record(bo,"$(P):$(M)_able") {
+  field(DESC,"motor enable")
+  field(PINI,"YES")
+  field(OUT,"$(P):$(M)_ableput.A PP MS")
+  field(ZNAM,"Enable")
+  field(ONAM,"Disable")
+}
+
 record(transform,"$(P):$(M)_lockput") {
   field(CLCB, "a = 0 ? 3 : 0")
   field(CMTB, "SPMG value")
@@ -82,18 +90,10 @@ record(transform,"$(P):$(M)_lockput") {
   field(OUTE,"$(P):$(M).SPMG NPP NMS")
 }
 
-record(bo,"$(P):$(M)_able") {
-  field(DESC,"motor enable")
-  field(PINI,"YES")
-  field(OUT,"$(P):$(M)_ableput.A PP MS")
-  field(ZNAM,"Enable")
-  field(ONAM,"Disable")
-}
-
 #Below records are used to extract data from MR
 #and pass to driver
 record(ao,"$(P):$(M)_ACCL_SP") {
-    field(DESC, "ACCL")
+    field(DESC, "Motor record ACCL")
     field(DOL,  "$(P):$(M).ACCL CP MS")
     field(OMSL, "closed_loop")
     field(DTYP, "asynFloat64")
@@ -102,7 +102,7 @@ record(ao,"$(P):$(M)_ACCL_SP") {
 }
 
 record(ao,"$(P):$(M)_VMAX_SP") {
-    field(DESC, "VMAX")
+    field(DESC, "Motor record VMAX")
     field(DOL,  "$(P):$(M).VMAX CP MS")
     field(OMSL, "closed_loop")
     field(DTYP, "asynFloat64")
@@ -111,7 +111,7 @@ record(ao,"$(P):$(M)_VMAX_SP") {
 }
 
 record(ao,"$(P):$(M)_VELO_SP") {
-    field(DESC, "VELO")
+    field(DESC, "Motor record VELO")
     field(DOL,  "$(P):$(M).VELO CP MS")
     field(OMSL, "closed_loop")
     field(DTYP, "asynFloat64")
@@ -120,7 +120,7 @@ record(ao,"$(P):$(M)_VELO_SP") {
 }
 
 record(ao,"$(P):$(M)_OFF_SP") {
-    field(DESC, "OFF")
+    field(DESC, "Motor record OFF")
     field(DOL,  "$(P):$(M).OFF CP MS")
     field(OMSL, "closed_loop")
     field(DTYP, "asynFloat64")
@@ -129,7 +129,7 @@ record(ao,"$(P):$(M)_OFF_SP") {
 }
 
 record(ao,"$(P):$(M)_MRES_SP") {
-    field(DESC, "MRES")
+    field(DESC, "Motor record MRES")
     field(DOL,  "$(P):$(M).MRES CP MS")
     field(OMSL, "closed_loop")
     field(DTYP, "asynFloat64")
@@ -138,7 +138,7 @@ record(ao,"$(P):$(M)_MRES_SP") {
 }
 
 record(ao,"$(P):$(M)_ERES_SP") {
-    field(DESC, "ERES")
+    field(DESC, "Motor record ERES")
     field(DOL,  "$(P):$(M).ERES CP MS")
     field(OMSL, "closed_loop")
     field(DTYP, "asynFloat64")
@@ -147,7 +147,7 @@ record(ao,"$(P):$(M)_ERES_SP") {
 }
 
 record(bo,"$(P):$(M)_DIR_SP") {
-    field(DESC, "DIR")
+    field(DESC, "Motor record DIR")
     field(DOL,  "$(P):$(M).DIR CP MS")
     field(OMSL, "closed_loop")
     field(DTYP, "asynInt32")
@@ -159,7 +159,7 @@ record(bo,"$(P):$(M)_DIR_SP") {
 }
 
 record(bo,"$(P):$(M)_UEIP_SP") {
-    field(DESC, "UEIP")
+    field(DESC, "Motor record UEIP")
     field(DOL,  "$(P):$(M).UEIP CP MS")
     field(OMSL, "closed_loop")
     field(DTYP, "asynInt32")
@@ -170,28 +170,22 @@ record(bo,"$(P):$(M)_UEIP_SP") {
     field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_UEIP")
 }
 
-record(stringout,"$(P):$(M)_PREM_SP") {
-    field(DESC, "PREM")
-    field(DOL,  "$(P):$(M).PREM CP MS")
-    field(OMSL, "closed_loop")
-    field(DTYP, "asynOctetWrite")
-    field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_PREM")
+record(stringout,"$(P):$(M)_PREM_CMD")
+{
+	field(DESC, "Motor record PREM")
+	field(OMSL, "closed_loop")
+	field(DTYP, "asynOctetWrite")
+	field(DOL,  "$(P):$(M).PREM CP MS")
+	field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_PREM")
 }
 
-record(stringout,"$(P):$(M)_POST_SP") {
-    field(DESC, "POST")
-    field(DOL,  "$(P):$(M).POST CP MS")
-    field(OMSL, "closed_loop")
-    field(DTYP, "asynOctetWrite")
-    field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_POST")
-}
-
-record(longout,"$(P):$(M)_DMOV_SP") {
-    field(DESC, "DMOV")
-    field(DOL,  "$(P):$(M).DMOV CP MS")
-    field(OMSL, "closed_loop")
-    field(DTYP, "asynInt32")
-    field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_DMOV")
+record(stringout,"$(P):$(M)_POST_CMD")
+{
+	field(DESC, "Motor record POST")
+	field(OMSL, "closed_loop")
+	field(DTYP, "asynOctetWrite")
+	field(DOL,  "$(P):$(M).POST CP MS")
+	field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_POST")
 }
 
 #driver to mr command to stop/go
@@ -200,7 +194,7 @@ record(ai,"$(P):$(M)_STOPGO_MON")
 {
 	field(DESC, "stop/go")
 	field(DTYP, "asynInt32")
-        field(SCAN, "I/O Intr")
+	field(SCAN, "I/O Intr")
 	field(INP,  "@asyn($(PORT),$(ADDR))MOTOR_STOPGO")
 }
 
@@ -210,7 +204,6 @@ record(ao, "$(P):$(M)_STOPGO_CMD")
 	field(DOL,  "$(P):$(M)_STOPGO_MON CP MS")
 	field(OUT,  "$(P):$(M).SPMG CA")
 }
-
 
 # monitor the motor status and update a string field with results
 record(aSub, "$(P):$(M):_MSTACALC")
@@ -244,5 +237,6 @@ record(stringin, "$(P):$(M)_STATUS")
 {
 	field(DESC, "Simple Text version of motor MSTA")
 }
+
 
 # end

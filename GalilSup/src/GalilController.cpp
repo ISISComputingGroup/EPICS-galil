@@ -15,14 +15,29 @@
 // Contact details:
 // mark.clift@synchrotron.org.au
 // 800 Blackburn Road, Clayton, Victoria 3168, Australia.
-//
+
+// Change log:
+// 16/09/14 M.Clift First release
+// 25/09/14 F.Akeroyd ISIS UK Added drvUserCreate/Destroy
+// 25/09/14 F.Akeroyd ISIS UK Added writeOctet
+// 25/09/14 F.Akeroyd ISIS UK Repaired some windows build issues
+// 29/09/14 M.Clift Modified writeOctet drvUserCreate/Destroy
+//			Modified userdef records
+// 09/10/14 M.Clift Repaired some more windows build issues
+// 09/10/14 M.Clift Repaired gcl problems under windows
+// 10/10/14 M.Clift Added Motor record PREM/POST support
+// 11/10/14 M.Clift & F.Akeroyd Added auto pwr on/off features
+// 02/11/14 F.Akeroyd & M.Clift Added ability to construct galil code from template
+// 02/11/14 F.Akeroyd & M.Clift enhanced GalilStartController handling of user code
+// 02/11/14 M.Clift Changed homing mechanism to use unsolicted messaging
+// 02/11/14 M.Clift Several bug fixes in autooff, GalilCSAxis, polling
 
 #include <stdio.h>
 #include <math.h>
 #include <float.h>
 #include <string.h>
 #include <stdlib.h>
-#ifdef _WIN32
+#if defined _WIN32 || _WIN64
 #include <process.h>
 #else
 #include <unistd.h>
@@ -55,10 +70,13 @@ static void GalilProfileThreadC(void *pPvt);
 GalilConnector *connector;
 
 //Block read functions during Iocinit
-//Prevent normal behaviour of output records getting initial value at iocInit from driver
+//Prevent normal behaviour of output records getting/reading initial value at iocInit from driver
 //Instead output records will write their db default or autosave value just after iocInit
 //This change in behaviour is anticipated by the asyn record device layer and causes no error mesgs
-bool readAllowed_ = false;
+bool dbInitialized = false;
+
+//Print the library version once per driver
+bool libverPrinted = false;
 
 //Number of communication retries
 #define MAX_RETRIES 1
@@ -75,12 +93,6 @@ bool readAllowed_ = false;
 #define MIN(a,b) ((a)<(b)? (a): (b))
 #endif
 
-#ifdef _WIN32
-#define rint(x) floor((x)+0.5)
-#define lrint(x) floor((x)+0.5)
-#endif /* _WIN32 */
-
-
 //EPICS exit handler
 extern "C" void shutdownCallback(void *pPvt)
 {
@@ -94,9 +106,9 @@ extern "C" void shutdownCallback(void *pPvt)
 //EPICS iocInit status
 extern "C" void myHookFunction(initHookState state)
 {
-  //Update readAllowed_ status for all GalilController instances
+  //Update dbInitialized status for all GalilController instances
   if (state >= initHookAfterInitDatabase)
-	readAllowed_ = true;
+	dbInitialized = true;
 }
 
 /** Creates a new GalilController object.
@@ -105,13 +117,13 @@ extern "C" void myHookFunction(initHookState state)
   * \param[in] updatePeriod  	 The time between polls when any axis is moving 
   */
 GalilController::GalilController(const char *portName, const char *address, double updatePeriod)
-  :  asynMotorController(portName, MAX_GALIL_AXES + MAX_GALIL_CSAXES, NUM_GALIL_PARAMS,	//MAX_GALIL_AXES paramLists are needed for binary IO at all times
-                         asynInt32Mask | asynFloat64Mask | asynUInt32DigitalMask | asynOctetMask | asynDrvUserMask, 
-                         asynInt32Mask | asynFloat64Mask | asynUInt32DigitalMask | asynOctetMask,
-                         ASYN_CANBLOCK | ASYN_MULTIDEVICE, 
-                         1, // autoconnect
-                         0, 0),  // Default priority and stack size
-						 numAxes_(0)
+  :  asynMotorController(portName, (int)(MAX_GALIL_AXES + MAX_GALIL_CSAXES), (int)NUM_GALIL_PARAMS,	//MAX_GALIL_AXES paramLists are needed for binary IO at all times
+                         (int)(asynInt32Mask | asynFloat64Mask | asynUInt32DigitalMask | asynOctetMask | asynDrvUserMask), 
+                         (int)(asynInt32Mask | asynFloat64Mask | asynUInt32DigitalMask | asynOctetMask),
+                         (int)(ASYN_CANBLOCK | ASYN_MULTIDEVICE), 
+                         (int)1, // autoconnect
+                         (int)0, (int)0),  // Default priority and stack size
+  numAxes_(0)
 {
   struct Galilmotor_enables *motor_enables = NULL;  //Convenience pointer to GalilController motor_enables[digport]
   unsigned i;
@@ -120,6 +132,7 @@ GalilController::GalilController(const char *portName, const char *address, doub
   createParam(GalilAddressString, asynParamOctet, &GalilAddress_);
   createParam(GalilHomeTypeString, asynParamInt32, &GalilHomeType_);
   createParam(GalilLimitTypeString, asynParamInt32, &GalilLimitType_);
+  createParam(GalilCtrlErrorString, asynParamOctet, &GalilCtrlError_);
 
   createParam(GalilCoordSysString, asynParamInt32, &GalilCoordSys_);
   createParam(GalilCoordSysMotorsString, asynParamOctet, &GalilCoordSysMotors_);
@@ -167,6 +180,17 @@ GalilController::GalilController(const char *portName, const char *address, doub
   createParam(GalilEncoderResolutionString, asynParamFloat64, &GalilEncoderResolution_);
   createParam(GalilUseEncoderString, asynParamInt32, &GalilUseEncoder_);
 
+  createParam(GalilPremString, asynParamOctet, &GalilPrem_);
+  createParam(GalilPostString, asynParamOctet, &GalilPost_);
+
+  createParam(GalilUseIndexString, asynParamInt32, &GalilUseIndex_);
+  createParam(GalilDriveAfterHomeString, asynParamInt32, &GalilDriveAfterHome_);
+  createParam(GalilDriveAfterHomeValueString, asynParamFloat64, &GalilDriveAfterHomeValue_);
+
+  createParam(GalilAutoOnOffString, asynParamInt32, &GalilAutoOnOff_);
+  createParam(GalilAutoOnDelayString, asynParamFloat64, &GalilAutoOnDelay_);
+  createParam(GalilAutoOffDelayString, asynParamFloat64, &GalilAutoOffDelay_);
+
   createParam(GalilMainEncoderString, asynParamInt32, &GalilMainEncoder_);
   createParam(GalilAuxEncoderString, asynParamInt32, &GalilAuxEncoder_);
   createParam(GalilMotorAcclString, asynParamFloat64, &GalilMotorAccl_);
@@ -196,25 +220,18 @@ GalilController::GalilController(const char *portName, const char *address, doub
   createParam(GalilErrorString, asynParamFloat64, &GalilError_);
   createParam(GalilOffOnErrorString, asynParamInt32, &GalilOffOnError_);
   createParam(GalilAxisString, asynParamInt32, &GalilAxis_);
-//Add new parameters here
-  createParam(GalilUserVarString, asynParamOctet, &GalilUserVar_);
-  createParam(GalilUserVarInt32String, asynParamInt32, &GalilUserVarInt32_);
-  createParam(GalilUserVarFloat64String, asynParamFloat64, &GalilUserVarFloat64_);
-  createParam(GalilUserVarOctetString, asynParamOctet, &GalilUserVarOctet_);
-  createParam(GalilUserCmdString, asynParamOctet, &GalilUserCmd_);
-  createParam(GalilUserCmdOutString, asynParamOctet, &GalilUserCmdOut_);
+
+  createParam(GalilUserCmdString, asynParamFloat64, &GalilUserCmd_);
+  createParam(GalilUserOctetString, asynParamOctet, &GalilUserOctet_);
+  createParam(GalilUserOctetValString, asynParamFloat64, &GalilUserOctetVal_);
+  createParam(GalilUserVarString, asynParamFloat64, &GalilUserVar_);
 
   createParam(GalilEthAddrString, asynParamOctet, &GalilEthAddr_);
   createParam(GalilSerialNumString, asynParamOctet, &GalilSerialNum_);
 
-  createParam(GalilMotorPREMString, asynParamOctet, &GalilMotorPREM_);
-  createParam(GalilMotorPOSTString, asynParamOctet, &GalilMotorPOST_);
-  createParam(GalilMotorDMOVString, asynParamInt32, &GalilMotorDMOV_);
+//Add new parameters here
 
   createParam(GalilCommunicationErrorString, asynParamInt32, &GalilCommunicationError_);
-
-  //Print Galil communication library version
-  cout << Galil::libraryVersion() << endl;
 
   //Store address
   strcpy(address_, address);
@@ -224,6 +241,8 @@ GalilController::GalilController(const char *portName, const char *address, doub
   gco_ = NULL;
   //Code for the controller has not been assembled yet
   code_assembled_ = false;
+  //No reason to burn parameters for this controller at shutdown yet (eg. user changed motor type)
+  burn_parameters_ = false;
   //We have not reported any connect failures
   connect_fail_reported_ = false;
   //We have not recieved a timeout yet
@@ -241,6 +260,7 @@ GalilController::GalilController(const char *portName, const char *address, doub
   limit_code_ = (char *)calloc(MAX_GALIL_AXES * (LIMIT_CODE_LEN),sizeof(char));
   digital_code_ = (char *)calloc(MAX_GALIL_AXES * (INP_CODE_LEN),sizeof(char));
   card_code_ = (char *)calloc(MAX_GALIL_AXES * (THREAD_CODE_LEN+LIMIT_CODE_LEN+INP_CODE_LEN),sizeof(char));
+  user_code_ = (char *)calloc(MAX_GALIL_AXES * (THREAD_CODE_LEN+LIMIT_CODE_LEN+INP_CODE_LEN),sizeof(char));
   //zero code buffers
   strcpy(thread_code_, "");
   strcpy(limit_code_, "");
@@ -269,9 +289,6 @@ GalilController::GalilController(const char *portName, const char *address, doub
 	initHookRegister(myHookFunction);
 	}
 
-	// only needed with Galil1 library, Galil2 does not have Qt bundled
-  connect(); // make a connection early so Qt library gets initialised from correct thread, otherwise we get problems on windows 
-
   //Register this GalilController instance with GalilConnector for connection management
   connector->registerController(this);
 
@@ -283,7 +300,7 @@ GalilController::GalilController(const char *portName, const char *address, doub
                     epicsThreadPriorityLow,
                     epicsThreadGetStackSize(epicsThreadStackMedium),
                     (EPICSTHREADFUNC)GalilProfileThreadC, (void *)this);
-  
+                    
   //Wait 2 sec for first connect, then keep going
   epicsThreadSleep(2.0);
 
@@ -301,29 +318,32 @@ GalilController::GalilController(const char *portName, const char *address, doub
 //Calls GalilController::connect when needed.
 void GalilController::connectManager(void)
 {
-     bool require_connect;
-     //Reset require_connect flag
-     require_connect = false;
-     //If we have received allowed timeouts
-     if (consecutive_timeouts_ > ALLOWED_TIMEOUTS)
-	require_connect = true;	
-     //If not connected
-     if (gco_ == NULL)
-	require_connect = true;	
-     //disconnect/connect is required
-     if (require_connect)
-	{
-	//Obtain mutex
-	lock();
-	//Wait until poller is in sleep mode
-	//Also stop async records from controller
-	poller_->sleepPoller(false);
-	//Disconnect if needed, and then attempt connect
-	connect();
-	//Wake poller,
-	poller_->wakePoller();
-	unlock();
-	}
+  bool require_connect;
+  //Reset require_connect flag
+  require_connect = false;
+
+  //If we have received allowed timeouts
+  if (consecutive_timeouts_ > ALLOWED_TIMEOUTS)
+	 require_connect = true;	
+
+  //If not connected
+  if (gco_ == NULL)
+     require_connect = true;
+
+  //disconnect/connect is required
+  if (require_connect)
+     {
+	 //Obtain mutex
+	 lock();
+	 //Wait until poller is in sleep mode
+	 //Also stop async records from controller
+	 poller_->sleepPoller(false);
+	 //Disconnect if needed, and then attempt connect
+	 connect();
+	 //Wake poller,
+	 poller_->wakePoller();
+	 unlock();
+	 }
 }
 
 //Disconnection/connection management
@@ -343,7 +363,17 @@ void GalilController::connect(void)
 	}
 
   //Attempt connection
-  try	{
+  try	
+	{
+	//Print gcl library version only once per driver
+	if (!libverPrinted)
+	   {
+	   //Must be in same thread as first new Galil(address_) statement
+	   //On windows this causes dll to load now
+	   cout << Galil::libraryVersion() << endl;
+	   libverPrinted = true;
+	   }
+		
 	//Open connection to address provided
 	gco_ = new Galil(address_);
 	//Success, continue
@@ -352,30 +382,28 @@ void GalilController::connect(void)
 	//A connection fail mesg not issued, because connect succeeded
 	connect_fail_reported_ = false;
 	}
-  catch (const std::string& e)
-      	{
-	//Ensure galil communications object is NULL on connect failure
-	gco_ = NULL;
-	if (!connect_fail_reported_)
+  catch (string e)
+     {
+	 //Ensure galil communications object is NULL on connect failure
+	 gco_ = NULL;
+	 if (!connect_fail_reported_)
 		{
 		//Couldnt connect mesg
-	      	cout << functionName << ":" << " " << e;
+	   	cout << functionName << ":" << " " << e;
 		//Assume 8 threads controller we cannot connect with
 		numThreads_ = 8;
 		//Connect fail has been reported to iocShell
 		connect_fail_reported_ = true;
 		}
-      	}
+     }
 
   //if connected
   if (gco_ != NULL)
-	{
-    // may configure a timeout option later, 500ms is the default
-    // gco_->timeout_ms = 500;
-	//Read controller model, firmware, stop all motors and threads
-  	connected();
-	callParamCallbacks();	//Pass changes to custom records (ai, ao, etc)
-	}
+	 {
+	 //Read controller model, firmware, stop all motors and threads
+  	 connected();
+	 callParamCallbacks();	//Pass changes to custom records (ai, ao, etc)
+	 }
 }
 
 void GalilController::setParamDefaults(void)
@@ -400,22 +428,10 @@ void GalilController::setParamDefaults(void)
   setStringParam(1, GalilCoordSysMotors_, "");
   //Put all motors in spmg go mode
   for (i = 0; i < MAX_GALIL_AXES + MAX_GALIL_CSAXES; i++)
-  {
 	setIntegerParam(i, GalilMotorStopGo_, 3);
-    setStringParam(i, GalilMotorPREM_, "");
-    setStringParam(i, GalilMotorPOST_, "");
-    setIntegerParam(i, GalilMotorDMOV_, 1);
-  }
   //Output compare is off
   for (i = 0; i < 2; i++)
 	setIntegerParam(i, GalilOutputCompareAxis_, 0);
-
-  setStringParam(GalilUserVar_, ""); // not used - redirected to values below based on read type
-  setIntegerParam(GalilUserVarInt32_, 999);  // value to return on unknown galil variable or read error
-  setDoubleParam(GalilUserVarFloat64_, 999.0); // value to return on unknown galil variable or read error
-  setStringParam(GalilUserVarOctet_, "<unknown>"); // value to return on unknown galil variable or read error
-  setStringParam(GalilUserCmd_, "<none>"); // last user cmd sent
-  setStringParam(GalilUserCmdOut_, "<empty>"); // output of last user cmd sent
   setStringParam(GalilSerialNum_, "");
   setStringParam(GalilEthAddr_, "");
 }
@@ -450,8 +466,18 @@ void GalilController::connected(void)
 	setStringParam(GalilModel_, model_);
 
 	//Print brief connection details
-	cout << "Connected to " << model_ << " at " << address_ << endl;
+	cout << "Connected to " << gco_->connection() << endl;
 	
+	//Read Ethernet handle details
+	strcpy(cmd_, "TH");
+	writeReadController(functionName);
+	setStringParam(GalilEthAddr_, resp_);
+
+	//Read serial number
+	strcpy(cmd_, "MG _BN");
+	writeReadController(functionName);
+	setStringParam(GalilSerialNum_, resp_);
+
 	//Read max number of axes the controller supports
 	strcpy(cmd_, "MG _BV");
 	writeReadController(functionName);
@@ -465,6 +491,7 @@ void GalilController::connected(void)
 		setIntegerParam(GalilSSICapable_, 0);
 	else
 		setIntegerParam(GalilSSICapable_, 1);
+	
 	//Determine number of threads supported
 	//RIO
 	numThreads_ = (strncmp(model_,"RIO",3) == 0)? 4 : numThreads_;
@@ -509,21 +536,29 @@ void GalilController::connected(void)
 	if (code_assembled_)
 		{
 	        //Deliver and start the code on controller
-		GalilStartController(code_file_, eeprom_write_, 0, thread_mask_);
+		GalilStartController(code_file_, burn_program_, 0, thread_mask_);
 		}
 	//Use async polling by default
 	try	{
+		//If RIO gives error here... power cycle it
+		//Error here often appears as driver sending bad strings
+		//It is not this driver misbehaving, rather the controller misbehaving.
 		//get controller to send a record at specified rate
 		gco_->recordsStart(updatePeriod_);
 		//Success, no exception
 		async_records_ = true;
 		}
-	catch  (const std::string& e) {
+	catch  (string e) {
 		//Upon any exception, use synchronous poll mechanism at rate specified in GalilCreateController as fall back strategy
 		//Fail.  Probably wrong bus.  RS-232 does not support async DR data record 
 		async_records_ = false;
 		//Print explanation
 		cout << "Asynchronous setup failed, swapping to synchronous poll " << model_ << " at " << address_ << endl;
+		//Extra warning for RIO for when 
+		//2010 COMMAND ERROR.  Galil::command("DR8.192,3") got ? instead of : response.  TC1 returned "6 Number out of range"
+		//occurs.  It is not driver corruption, it is the RIO.
+		if (strncmp(model_,"RIO",3) == 0)
+			cout << "RIO at address " << address_ << "may need power cycle " << endl;
 		cout << e << endl;
 		}
 }
@@ -651,9 +686,9 @@ asynStatus GalilController::setOutputCompare(int oc)
 	//Convert paramList ocaxis to 0-7 for axis A-H
 	axis = (oc) ? (ocaxis - 1 + 4) : (ocaxis - 1);
 	//Query motor type
-        sprintf(cmd_, "MT%c=?", axis + AASCII);
-        comstatus = writeReadController(functionName);
-        motor = atoi(resp_);	
+	sprintf(cmd_, "MT%c=?", axis + AASCII);
+	comstatus = writeReadController(functionName);
+	motor = atoi(resp_);	
 	//Retrieve ueip setting for this motor
 	paramstatus = getIntegerParam(axis, GalilUseEncoder_, &ueip);
 	//Check encoder settings
@@ -763,23 +798,23 @@ asynStatus GalilController::buildLinearProfile()
   double minProfilePosition[MAX_GALIL_AXES];	//Minimum profile position in absolute mode
   double maxProfileAcceleration[MAX_GALIL_AXES];//Maximum profile acceleration in any mode
   double vectorVelocity;			//Segment vector velocity
-  double incmove(0.0);				//Motor incremental move distance
-  double firstmove[MAX_GALIL_AXES];		//Used to normalize moves to relative, and prevent big jumps at profile start			
-  double apos[MAX_GALIL_AXES];			//Accumulated profile position calculated from integer rounded units (ie. steps/counts)
-  double aerr[MAX_GALIL_AXES];			//Accumulated error
-  int i, j;					//Loop counters
-  int zm_count;					//Zero segment move counter
-  int num_motors;				//Number of motors in trajectory
-  char message[MAX_MESSAGE_LEN];		//Profile build message
-  int useAxis[MAX_GALIL_AXES];  		//Use axis flag for profile moves
-  int moveMode[MAX_GALIL_AXES];  		//Move mode absolute or relative
-  char moves[MAX_MESSAGE_LEN];			//Segment move command assembled for controller
-  char axes[MAX_GALIL_AXES];    		//Motors involved in profile move
-  char startp[MAX_MESSAGE_LEN];			//Profile start positions written to file
-  char fileName[MAX_FILENAME_LEN];		//Filename to write profile data to
-  FILE *profFile;				//File handle for above file
-  bool buildOK=true;				//Was the trajectory built successfully
-  double mres;					//Motor resolution
+  double incmove = 0.0;				//Motor incremental move distance
+  double firstmove[MAX_GALIL_AXES];	//Used to normalize moves to relative, and prevent big jumps at profile start			
+  double apos[MAX_GALIL_AXES];		//Accumulated profile position calculated from integer rounded units (ie. steps/counts)
+  double aerr[MAX_GALIL_AXES];		//Accumulated error
+  int i, j;			        //Loop counters
+  int zm_count;				//Zero segment move counter
+  int num_motors;			//Number of motors in trajectory
+  char message[MAX_MESSAGE_LEN];	//Profile build message
+  int useAxis[MAX_GALIL_AXES];		//Use axis flag for profile moves
+  int moveMode[MAX_GALIL_AXES];		//Move mode absolute or relative
+  char moves[MAX_MESSAGE_LEN];		//Segment move command assembled for controller
+  char axes[MAX_GALIL_AXES];		//Motors involved in profile move
+  char startp[MAX_MESSAGE_LEN];		//Profile start positions written to file
+  char fileName[MAX_FILENAME_LEN];	//Filename to write profile data to
+  FILE *profFile;			//File handle for above file
+  bool buildOK=true;			//Was the trajectory built successfully
+  double mres;				//Motor resolution
   
   //No axis included yet
   strcpy(axes, "");
@@ -792,7 +827,7 @@ asynStatus GalilController::buildLinearProfile()
   getIntegerParam(profileNumPoints_, &nPoints);
 
   //Check provided fileName
-  if (strcmp(fileName, "") == 0)
+  if (!abs(strcmp(fileName, "")))
 	{
 	strcpy(message, "Bad trajectory file name");
 	return asynError;
@@ -812,7 +847,7 @@ asynStatus GalilController::buildLinearProfile()
 	//Retrieve profileUseAxis_ from ParamList
 	getIntegerParam(j, profileUseAxis_, &useAxis[j]);
 	//Decide to process this axis, or skip
-    	if (!useAxis[j] || !pAxis) continue;
+	if (!useAxis[j] || !pAxis) continue;
 	//Initialize accumulated position, and error
 	apos[j] = aerr[j] = velocity[j] = 0;
 	//Construct axis list
@@ -840,9 +875,7 @@ asynStatus GalilController::buildLinearProfile()
   fprintf(profFile,"%s\n", startp);
 
   //Determine number of motors in profile move
-  num_motors = strlen(axes);
-
-  printf("Axes %s startpos %s nPoints %d\n", axes, startp, nPoints);
+  num_motors = (int)strlen(axes);
 
   //Calculate motor segment velocities from profile positions, and common time base
   for (i=0; i<nPoints; i++)
@@ -861,7 +894,7 @@ asynStatus GalilController::buildLinearProfile()
 		//Retrieve profileUseAxis_ from ParamList
 		getIntegerParam(j, profileUseAxis_, &useAxis[j]);
 		//Decide to process this axis, or skip
-    		if (!useAxis[j] || !pAxis)
+		if (!useAxis[j] || !pAxis)
 			{
 			if (j < MAX_GALIL_AXES - 1)
 				sprintf(moves,  "%s,", moves);	 //Add axis relative move separator character ',' as needed
@@ -899,16 +932,16 @@ asynStatus GalilController::buildLinearProfile()
 			velocity[j] = incmove / profileTimes_[i];
 			}
 
+		//Retrieve motor resolution
+		getDoubleParam(j, motorResolution_, &mres);
+
 		//Check profile velocity less than mr vmax for this motor
 		if (fabs(velocity[j]) > maxAllowedVelocity[j])
 			{
-			sprintf(message, "Segment %d: Velocity too high for motor %c (%f > %f), increase time, or check profile loaded", 
-				i,  pAxis->axisName_, fabs(velocity[j]), maxAllowedVelocity[j]);
+			sprintf(message, "Seg %d: Velocity too high motor %c %2.2f > %2.2f, increase time, check profile", 
+                                          i,  pAxis->axisName_, fabs(velocity[j]*mres), maxAllowedVelocity[j]*mres);
 			buildOK = false;
 			}
-
-		//Retrieve motor resolution
-		getDoubleParam(j, motorResolution_, &mres);
 
 		//Find max profile velocity for this motor
 		if (fabs(velocity[j]*mres) > maxProfileVelocity[j])
@@ -949,25 +982,25 @@ asynStatus GalilController::buildLinearProfile()
 
 		if (j < MAX_GALIL_AXES - 1)
 			sprintf(moves,  "%s,", moves);	 //Add axis relative move separator character ',' as needed
-    		}
+		}
 
 	//Determine vector velocity for this segment
-        vectorVelocity = sqrt(vectorVelocity);
+	vectorVelocity = sqrt(vectorVelocity);
 
-        //Check for segment too short error
+	//Check for segment too short error
 	if (rint(vectorVelocity) == 0 && i != 0)
 		{
-		sprintf(message, "Segment %d: Vector velocity zero (%f), incmove=%f, reduce time, add motors, and ensure profile loaded", i, vectorVelocity, incmove);
+		sprintf(message, "Seg %d: Vector velocity zero, reduce time, add motors, and check profile", i);
 		buildOK = false;
 		}
 	if (zm_count == num_motors && i != 0)
 		{
-		sprintf(message, "Segment %d: %d/%d motors not moving, incmove=%f, reduce time, add motors, and ensure profile loaded", i, zm_count, num_motors, incmove);
+		sprintf(message, "Seg %d: Vector zero move distance, reduce time, add motors, and check profile", i);
 		buildOK = false;
 		}
 
-        //Trim trailing ',' characters from moves string
-	for (j=strlen(moves)-1; j>0; j--)
+	//Trim trailing ',' characters from moves string
+	for (j=(int)strlen(moves)-1; j>0; j--)
 		{
 		if (moves[j] != ',')
 			{
@@ -1109,6 +1142,48 @@ asynStatus GalilController::abortProfile()
   return asynSuccess;
 }
 
+//Execute prem for motor list
+//Obtain lock before calling
+void GalilController::executePrem(const char *axes)
+{
+   int i;
+   int axisNo;			//Axis number
+   GalilAxis *pAxis;		//GalilAxis
+    
+   //Iterate thru motor list and execute prem command for each
+   for (i = 0; i < (int)strlen(axes); i++)
+      {
+      //Determine axis number
+      axisNo = axes[i] - AASCII;
+      //Retrieve axis instance
+      pAxis = getAxis(axisNo);
+      //Execute prem for this axis
+      if (pAxis)
+         pAxis->executePrem();
+      }
+}
+
+//Execute motor auto on for motor list
+//Obtain lock before calling
+void GalilController::executeAutoOn(const char *axes)
+{
+   int i;
+   int axisNo;			//Axis number
+   GalilAxis *pAxis;		//GalilAxis
+    
+   //Iterate thru motor list and execute AutoOn for each
+   for (i = 0; i < (int)strlen(axes); i++)
+      {
+      //Determine axis number
+      axisNo = axes[i] - AASCII;
+      //Retrieve axis instance
+      pAxis = getAxis(axisNo);
+      //Execute AutoOn for this axis
+      if (pAxis)
+         pAxis->executeAutoOn();
+      }
+}
+
 /* For profile moves.  Convenience function to move motors to start or stop them moving to start
 */
 asynStatus GalilController::motorsToProfileStartPosition(FILE *profFile, char *axes, bool move = true)
@@ -1177,31 +1252,51 @@ asynStatus GalilController::motorsToProfileStartPosition(FILE *profFile, char *a
 /* Convenience function to begin linear profile using specified coordinate system
    Called after filling the linear buffer
 */
-asynStatus GalilController::startLinearProfileCoordsys(char coordName, const char* axes)
+asynStatus GalilController::startLinearProfileCoordsys(int coordsys, char coordName, const char *axes)
 {
   static const char *functionName = "startProfileCoordsys";
   char message[MAX_MESSAGE_LEN];	//Profile execute message
-  int status = asynSuccess;		//Start status
- 
-  //Start profile execution
-  cmd_[0] = '\0';
-  for(int i=0; i<strlen(axes); ++i)
-  {
-	  sprintf(cmd_ + strlen(cmd_), "SH%c;", axes[i]);
-  }
-  sprintf(cmd_ + strlen(cmd_), "BG %c \n", coordName);
-  std::cout << "Sending " << cmd_ << std::endl;
-  status |= writeReadController(functionName);
-  if (status)
-	{
-	strcpy(message, "Profile start failed...");		//Update message
-	//Store message in ParamList
-	setStringParam(profileExecuteMessage_, message);
-	}
+  double begin_time;			//Time taken to begin
+  int segprocessed = 0;			//Segments processed by the coordsys
 
-  //start fail
-  if (status)
-	return asynError;	//Return error
+  //Execute motor auto on function
+  executeAutoOn(axes);
+
+  //Execute motor record prem
+  executePrem(axes);
+
+  //Begin the move
+  //Get time when attempt motor begin
+  epicsTimeGetCurrent(&begin_begint_);
+  sprintf(cmd_, "BG%c", coordName);
+  if (writeReadController(functionName) == asynSuccess)
+     {
+     while (segprocessed < 1 && !profileAbort_) //Pause until 1 segment processed
+        {
+        epicsThreadSleep(.001);
+        epicsTimeGetCurrent(&begin_nowt_);
+        //Calculate time begin has taken so far
+        begin_time = epicsTimeDiffInSeconds(&begin_nowt_, &begin_begint_);
+        if (begin_time > BEGIN_TIMEOUT)
+           {
+           strcpy(message, "Profile start failed...\n");
+           //Store message in ParamList
+           setStringParam(profileExecuteMessage_, message);
+           callParamCallbacks();
+           return asynError;	//Return error
+           }
+        //Segments processed
+	getIntegerParam(coordsys, GalilCoordSysSegments_, &segprocessed);
+        }
+     }
+  else
+     {
+     strcpy(message, "Profile start failed...");
+     //Store message in ParamList
+     setStringParam(profileExecuteMessage_, message);
+     callParamCallbacks();
+     return asynError;	//Return error
+     }
 
   //Start success
   setIntegerParam(profileExecuteState_, PROFILE_EXECUTE_EXECUTING);
@@ -1219,16 +1314,16 @@ asynStatus GalilController::runLinearProfile(FILE *profFile)
 {
   static const char *functionName = "runLinearProfile";
   long maxAcceleration;			//Max acceleration for this controller
-  int segsent;				//Segments loaded to controller so far
-  char moves[MAX_MESSAGE_LEN];		//Segment move command assembled for controller
-  char message[MAX_MESSAGE_LEN];	//Profile execute message
-  char axes[MAX_GALIL_AXES];    	//Motors involved in profile move
-  int coordsys;				//Coordinate system S(0) or T(1)
-  int coordName;			//Coordinate system S or T
+  int segsent;				    //Segments loaded to controller so far
+  char moves[MAX_MESSAGE_LEN];	//Segment move command assembled for controller
+  char message[MAX_MESSAGE_LEN];//Profile execute message
+  char axes[MAX_GALIL_AXES];    //Motors involved in profile move
+  int coordsys;				    //Coordinate system S(0) or T(1)
+  int coordName;			    //Coordinate system S or T
   bool profStarted = false;		//Has profile execution started
-  int segprocessed;			//Segments processed by coordsys
-  int moving;				//Moving status of coordinate system
-  int retval;				//Return value from file read
+  int segprocessed;			    //Segments processed by coordsys
+  int moving;				    //Moving status of coordinate system
+  int retval;				    //Return value from file read
   bool bufferNext = true;		//Controller ready to buffer next segment
   asynStatus status;			//Error status
 
@@ -1291,8 +1386,6 @@ asynStatus GalilController::runLinearProfile(FILE *profFile)
 		//Coordsys moving status
 		getIntegerParam(coordsys, GalilCoordSysMoving_, &moving);
 
-		std::cout << "segements sent, processed " << segsent << " " << segprocessed << std::endl;
-
 		//Case where profile has started, but then stopped
 		if (profStarted && !moving)
 			{
@@ -1322,21 +1415,11 @@ asynStatus GalilController::runLinearProfile(FILE *profFile)
 			if (!profStarted && !motorsMoving(axes) && !status && !profileAbort_)
 				{
 				//Start the profile
-				status = startLinearProfileCoordsys(coordName, axes);
+				status = startLinearProfileCoordsys(coordsys, coordName, axes);
 				profStarted = (status) ? false : true;
-				//Pause until at least 1 segment has been processed
+				//Buffer next if started ok
 				if (!status)
-					{
-					unlock();
-					while (segprocessed < 1 && !profileAbort_)
-						{
-						epicsThreadSleep(.01);
-						//Segments processed
-						getIntegerParam(coordsys, GalilCoordSysSegments_, &segprocessed);
-						}
 					bufferNext = true;
-					lock();
-					}
 				}
 			}
 
@@ -1346,7 +1429,6 @@ asynStatus GalilController::runLinearProfile(FILE *profFile)
 			//Proceed to send next segment to controller
 			sprintf(cmd_, "LI %s\n", moves);
 			status = writeReadController(functionName);
-			std::cout << "Sending " << cmd_ << std::endl;
 			if (status)
 				{
 				strcpy(message, "Error downloading segment");
@@ -1382,33 +1464,19 @@ asynStatus GalilController::runLinearProfile(FILE *profFile)
   if (!profStarted && motorsMoving(axes) && !status && !profileAbort_)
 	{
 	//Pause till motors stop
-	std::cout << "Waiting for motors " << std::endl;
 	while (motorsMoving(axes))
 		{
 		unlock();
 		epicsThreadSleep(.01);
 		lock();
 		}
-	std::cout << "motors at start pos" << std::endl;
 	}
 
   //Start short profiles that fit entirely in the controller buffer <= MAX_SEGMENTS
   if (!profStarted && !motorsMoving(axes) && !status && !profileAbort_)
   	{
-	status = startLinearProfileCoordsys(coordName, axes);
+	status = startLinearProfileCoordsys(coordsys, coordName, axes);
 	profStarted = (status) ? false : true;
-	//Pause until at least 1 segment has been processed
-	if (!status)
-		{
-		while (segprocessed < 1)
-			{
-			unlock();
-			epicsThreadSleep(.01);
-			lock();
-			//Segments processed
-			getIntegerParam(coordsys, GalilCoordSysSegments_, &segprocessed);
-			}
-		}
 	}
 
   //User aborted while motors still moving to start
@@ -1456,14 +1524,6 @@ asynStatus GalilController::runLinearProfile(FILE *profFile)
   else  //Coordinate system didnt start, or aborted by user
 	setIntegerParam(profileExecuteStatus_, PROFILE_STATUS_FAILURE);
 
-  // turn off motors
-  for(int i=0; i<strlen(axes); ++i)
-  {
-      sprintf(cmd_, "MO%c", axes[i]);
-	  std::cout << cmd_ << std::endl;
-      writeReadController(functionName);
-  }
-
   //Update status
   setIntegerParam(profileExecuteState_, PROFILE_EXECUTE_DONE);
   callParamCallbacks();
@@ -1476,11 +1536,11 @@ asynStatus GalilController::runLinearProfile(FILE *profFile)
  * It needs to lock and unlock when it accesses class data. */ 
 asynStatus GalilController::runProfile()
 {
-  int status = asynError;		//Execute status
+  int status = asynError;		    //Execute status
   char fileName[MAX_FILENAME_LEN];	//Filename to read profile data from
   char profType[MAX_MESSAGE_LEN];	//Segment move command assembled for controller
   char message[MAX_MESSAGE_LEN];	//Profile run message
-  FILE *profFile;			//File handle for above file
+  FILE *profFile;			        //File handle for above file
 
   //Retrieve required attributes from ParamList
   getStringParam(GalilProfileFile_, (int)sizeof(fileName), fileName);
@@ -1499,7 +1559,7 @@ asynStatus GalilController::runProfile()
 	//LINEAR or PVT type
 	fscanf(profFile, "%s\n", profType);
 	//Call appropriate method to handle this profile type
-	if (strcmp(profType, "LINEAR")==0)
+	if (!abs(strcmp(profType, "LINEAR")))
 		status = runLinearProfile(profFile);
 	//Done, close the file
 	fclose(profFile);
@@ -1530,8 +1590,11 @@ asynStatus GalilController::processDeferredMovesInGroup(int coordsys, char *axes
   const char *functionName = "GalilController::processDeferredMovesInGroup";
   GalilAxis *pAxis;		//GalilAxis pointer
   char coordName;		//Coordinate system name
-  asynStatus status;		//Result
+  int csmoving = 0;		//Coordinate system moving status
+  asynStatus status;	//Result
   unsigned index;		//looping
+  char mesg[MAX_MESSAGE_LEN];	//Controller error mesg if begin fail
+  double begin_time;		//Time taken for motion to begin
 
   //Selected coordinate system name
   coordName = (coordsys == 0 ) ? 'S' : 'T';
@@ -1563,9 +1626,37 @@ asynStatus GalilController::processDeferredMovesInGroup(int coordsys, char *axes
   sprintf(cmd_, "LE");
   writeReadController(functionName);
 
+  //Execute motor auto on function
+  executeAutoOn(axes);
+
+  //Execute motor record prem
+  executePrem(axes);
+
   //move the coordinate system
+  //Get time when attempt motor begin
+  epicsTimeGetCurrent(&begin_begint_);
   sprintf(cmd_, "BG %c", coordName);
   status = writeReadController(functionName);
+  if (!status)
+     {  //Started without error.  Pause till cs is moving
+     while (!csmoving)
+        {
+        epicsThreadSleep(.001);
+        epicsTimeGetCurrent(&begin_nowt_);
+        //Calculate time begin has taken so far
+        begin_time = epicsTimeDiffInSeconds(&begin_nowt_, &begin_begint_);
+        if (begin_time > BEGIN_TIMEOUT)
+           {
+           sprintf(mesg, "%s begin failure coordsys %c\n", functionName, coordName);
+           //Set controller error mesg monitor
+           setStringParam(GalilCtrlError_, mesg);
+           status = asynError;
+           break;  //Something went wrong
+           }
+        //Retrieve coordinate system moving status as set by poll thread
+        getIntegerParam(coordsys, GalilCoordSysMoving_, &csmoving);
+        }
+     }
 
   //Loop through the axes list for this coordinate system
   //Turn off deferredMove_ for these axis as coordinated move has been started
@@ -1589,14 +1680,14 @@ asynStatus GalilController::processDeferredMovesInGroup(int coordsys, char *axes
 asynStatus GalilController::setDeferredMoves(bool deferMoves)
 {
   //const char *functionName = "GalilController::setDeferredMoves";
-  GalilAxis *pAxis;			//GalilAxis pointer
-  asynStatus status = asynError;	//Result
-  int coordsys;				//Coordinate system looping
-  unsigned axis;			//Axis looping
-  char axes[MAX_GALIL_AXES];		//Constructed list of axis in the coordinate system
-  char moves[MAX_MESSAGE_LEN];		//Constructed comma list of axis relative moves
-  double vectorAcceleration;		//Coordinate system acceleration
-  double vectorVelocity;		//Coordinate system velocity
+  GalilAxis *pAxis;			     //GalilAxis pointer
+  asynStatus status = asynError; //Result
+  int coordsys;				     //Coordinate system looping
+  unsigned axis;			     //Axis looping
+  char axes[MAX_GALIL_AXES];	 //Constructed list of axis in the coordinate system
+  char moves[MAX_MESSAGE_LEN];	 //Constructed comma list of axis relative moves
+  double vectorAcceleration;	 //Coordinate system acceleration
+  double vectorVelocity;		 //Coordinate system velocity
 
   // If we are not ending deferred moves then return
   if (deferMoves || !movesDeferred_)
@@ -1604,8 +1695,6 @@ asynStatus GalilController::setDeferredMoves(bool deferMoves)
 	movesDeferred_ = true;
 	return asynSuccess;
   	}
-
-  //callParamCallbacks();
 
   //We are ending deferred moves.  So process them
   asynPrint(this->pasynUserSelf, ASYN_TRACE_FLOW, 
@@ -1674,16 +1763,16 @@ void GalilController::check_comms(bool reqd_comms, asynStatus status)
    if (reqd_comms)
         {
         //Retrieve current GalilCommunicationError_
-	getIntegerParam(GalilCommunicationError_, &b4_status);
-	//Write to GalilCommunicationError_ parameter only on change
+        getIntegerParam(GalilCommunicationError_, &b4_status);
+        //Write to GalilCommunicationError_ parameter only on change
         //Note GalilCommunicationError_ record is boolean
-	if (b4_status != (bool)status)
-		{
-		setIntegerParam(GalilCommunicationError_, status ? 1:0);
-		/* Do callbacks so higher layers see any changes */
-	        callParamCallbacks();
-		}
-	}
+        if (b4_status != (int)status)
+           {
+           setIntegerParam(GalilCommunicationError_, status ? 1:0);
+           /* Do callbacks so higher layers see any changes */
+           callParamCallbacks();
+           }
+        }
 }
 
 /** Attempts to read value from controller, returns last value set if fails.  
@@ -1719,7 +1808,7 @@ asynStatus GalilController::readInt32(asynUser *pasynUser, epicsInt32 *value)
 
     //We dont retrieve values for records at iocInit.  
     //For output records autosave, or db defaults are pushed to hardware instead
-    if (!readAllowed_) return asynError;
+    if (!dbInitialized) return asynError;
 
     //Most functions require comms
     reqd_comms = true;
@@ -1775,7 +1864,7 @@ asynStatus GalilController::readInt32(asynUser *pasynUser, epicsInt32 *value)
 	sprintf(cmd_, "MG _MT%c", pAxis->axisName_);
 	if ((status = writeReadController(functionName)) == asynSuccess)
 		{
-		motorType = (epicsInt32)atof(resp_);
+		motorType = (float)atof(resp_);
 		//Upscale by factor 10 to create integer representing motor type 
 		*value = (int)(motorType * 10.0);
 		//Translate motor type into 0-5 value for mbbi record
@@ -1799,21 +1888,10 @@ asynStatus GalilController::readInt32(asynUser *pasynUser, epicsInt32 *value)
 	else    //Comms error, return last ParamList value set using setIntegerParam
 		getIntegerParam(pAxis->axisNo_, function, value);
 	}
-   else if (function == GalilProgramHome_)
+  else if (function == GalilProgramHome_)
 	{
 	sprintf(cmd_, "MG phreg%c", pAxis->axisName_);
 	status = get_integer(GalilProgramHome_, value, pAxis->axisNo_);
-	}
-  else if (function == GalilHomed_)
-	{
-	sprintf(cmd_, "MG homed%c", pAxis->axisName_);
-	status = get_integer(GalilHomed_, value, pAxis->axisNo_);
-	//Set motorRecord MSTA bit 15 motorStatusHomed_ too
-	//Homed is not part of Galil data record, we support it in galil code instead and must poll it
-	//We do it here so we don't slow GalilPoller thread in async mode
-	//We must use asynMotorAxis version of setIntegerParam to set MSTA bits for this MotorAxis
-	pAxis->setIntegerParam(motorStatusHomed_, (int)*value);
-	callParamCallbacks();
 	}
   else if (function >= GalilSSIInput_ && function <= GalilSSIData_)
 	{
@@ -1838,11 +1916,6 @@ asynStatus GalilController::readInt32(asynUser *pasynUser, epicsInt32 *value)
         //Set any external changes in coordsys in paramList
 	setIntegerParam(0, GalilCoordSys_, *value);
 	}
-  else if (function == GalilUserVar_)
-  {
-	epicsSnprintf(cmd_, sizeof(cmd_), "%s=?", (const char*)pasynUser->userData);
-	status = get_integer(GalilUserVarInt32_, value);
-  }
    else 
 	{
 	status = asynPortDriver::readInt32(pasynUser, value);
@@ -1879,46 +1952,53 @@ asynStatus GalilController::get_double(int function, epicsFloat64 *value, int ax
   * \param[in] value Address of the value to read. */
 asynStatus GalilController::readFloat64(asynUser *pasynUser, epicsFloat64 *value)
 {
-    int function = pasynUser->reason;		 //function requested
-    asynStatus status;				 //Used to work out communication_error_ status.  asynSuccess always returned
-    GalilAxis *pAxis = getAxis(pasynUser);	 //Retrieve the axis instance
-    bool reqd_comms;				 //Check for comms error only when function reqd comms
+  int function = pasynUser->reason;		 //function requested
+  asynStatus status;				 //Used to work out communication_error_ status.  asynSuccess always returned
+  GalilAxis *pAxis = getAxis(pasynUser);	 //Retrieve the axis instance
+  bool reqd_comms;				 //Check for comms error only when function reqd comms
 
-    if (!pAxis) return asynError;
+  if (!pAxis) return asynError;
 
-    //We dont retrieve values for records at iocInit.  
-    //For output records autosave, or db defaults are pushed to hardware instead
-    if (!readAllowed_) return asynError;
+  //We dont retrieve values for records at iocInit.  
+  //For output records autosave, or db defaults are pushed to hardware instead
+  if (!dbInitialized) return asynError;
 
-    //Most functions require comms
-    reqd_comms = true;
+  //Most functions require comms
+  reqd_comms = true;
     
-    if (function == GalilStepSmooth_)
-	{
-	sprintf(cmd_, "MG _KS%c", pAxis->axisName_);
-	status = get_double(GalilStepSmooth_, value, pAxis->axisNo_);
-	}
-    else if (function == GalilErrorLimit_)
-	{
-	sprintf(cmd_, "MG _ER%c", pAxis->axisName_);
-	status = get_double(GalilErrorLimit_, value, pAxis->axisNo_);
-	}
-    else if (function == GalilUserVar_)
-    {
-	  epicsSnprintf(cmd_, sizeof(cmd_), "%s=?", (const char*)pasynUser->userData);
-	  status = get_double(GalilUserVarFloat64_, value);
-    }
-    else
-	{
-	status = asynPortDriver::readFloat64(pasynUser, value);
-	reqd_comms = false;
-	}
+  if (function == GalilStepSmooth_)
+     {
+     sprintf(cmd_, "MG _KS%c", pAxis->axisName_);
+     status = get_double(GalilStepSmooth_, value, pAxis->axisNo_);
+     }
+  else if (function == GalilErrorLimit_)
+     {
+     sprintf(cmd_, "MG _ER%c", pAxis->axisName_);
+     status = get_double(GalilErrorLimit_, value, pAxis->axisNo_);
+     }
+  else if (function == GalilUserCmd_)
+     {
+     //For when input records are set to periodic scan not I/O Intr
+     epicsSnprintf(cmd_, sizeof(cmd_), "%s", (const char*)pasynUser->userData);
+     status = get_double(GalilUserVar_, value);
+     }
+  else if (function == GalilUserVar_)
+     {
+     //For when input records are set to periodic scan not I/O Intr
+     epicsSnprintf(cmd_, sizeof(cmd_), "%s=?", (const char*)pasynUser->userData);
+     status = get_double(GalilUserVar_, value);
+     }
+  else
+     {
+     status = asynPortDriver::readFloat64(pasynUser, value);
+     reqd_comms = false;
+     }
     
-    //Flag comms error only if function reqd comms
-    check_comms(reqd_comms, status);
+  //Flag comms error only if function reqd comms
+  check_comms(reqd_comms, status);
   
-    //Always return success. Dont need more error mesgs
-    return asynSuccess;	
+  //Always return success. Dont need more error mesgs
+  return asynSuccess;	
 }
 
 /** Called when asyn clients call pasynUInt32Digital->write().
@@ -1993,16 +2073,16 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
 {
   const char *functionName = "GalilController::writeInt32";
   int function = pasynUser->reason;		//Function requested
-  int addr=0;					//Address requested
+  int addr=0;				        //Address requested
   asynStatus status;				//Used to work out communication_error_ status.  asynSuccess always returned
   GalilAxis *pAxis = getAxis(pasynUser);	//Retrieve the axis instance
   int hometype, limittype;			//The home, and limit switch type
   int mainencoder, auxencoder, encoder_setting; //Main, aux encoder setting
-  bool reqd_comms;				//Check for comms error only when function reqd comms
+  bool reqd_comms;			        //Check for comms error only when function reqd comms
   char coordinate_system;			//Coordinate system S or T
   char axes[MAX_GALIL_AXES];			//Coordinate system axis list
   double eres, mres;				//mr eres, and mres
-  int motor;					//Motor type.  May use Galil numbering, or database numbering, so be aware
+  float oldmotor;				//Motor type before changing it.  Use Galil numbering
   unsigned i;					//Looping
 
   status = getAddress(pasynUser, &addr); 
@@ -2015,11 +2095,8 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
    
   /* Set the parameter and readback in the parameter library.  This may be overwritten when we read back the
    * status at the end, but that's OK */
-  if (function != GalilUserVar_)
-  {
-      status = setIntegerParam(pAxis->axisNo_, function, value);
-  }
-
+  status = setIntegerParam(pAxis->axisNo_, function, value);
+  
   if (function == GalilHomeType_ || function == GalilLimitType_)
   	{
 	//Retrieve the limit type and home type
@@ -2060,45 +2137,50 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
 		status = pAxis->setClosedLoop(true);
 	else
 		status = pAxis->setClosedLoop(false);
-	printf("GalilMotorOn_ cmd:%s value=%d\n", cmd_, value);
+	//printf("GalilMotorOn_ cmd:%s value=%d\n", cmd_, value);
 	}
   else if (function == GalilMotorType_)
 	{
-	char buf[10];
+	float newmtr;
 
 	//Query motor type before changing setting
-        sprintf(cmd_, "MT%c=?", pAxis->axisName_);
-        writeReadController(functionName);
-        motor = atof(resp_);
+	sprintf(cmd_, "MT%c=?", pAxis->axisName_);
+	writeReadController(functionName);
+	oldmotor = (float)atof(resp_);
 
 	//Assemble command to change motor type
 	switch (value)
 		{
-		case 0: strcpy(buf, "1");
+		case 0: newmtr = 1.0;
 			break;
-		case 1: strcpy(buf, "-1");
+		case 1: newmtr = -1.0;
 			break;
-		case 2: strcpy(buf, "-2");
+		case 2: newmtr = -2.0;
 			break;
-		case 3: strcpy(buf, "2");
+		case 3: newmtr = 2.0;
 			break;
-		case 4: strcpy(buf, "-2.5");
+		case 4: newmtr = -2.5;
 			break;
-		case 5: strcpy(buf, "2.5");
+		case 5: newmtr = 2.5;
 			break;
-		default:break;
+		default: newmtr = 1.0;
+			break;
 		}
 
 	//Change motor type
-	sprintf(cmd_, "MT%c=%s", pAxis->axisName_, buf);
-        //printf("GalilMotorType_ cmd:%s value %d\n", cmd_, value);
-	//Write setting to controller
-	status = writeReadController(functionName);
+    	sprintf(cmd_, "MT%c=%1.1f", pAxis->axisName_, newmtr);
+    	//printf("GalilMotorType_ cmd:%s value %d\n", cmd_, value);
+    	//Write setting to controller
+    	status = writeReadController(functionName);
 
-	//IF motor was servo, and now stepper
-        //Galil hardware MAY push main encoder to aux encoder (stepper count reg)
-	//We re-do this, but apply encoder/motor scaling
-        if (abs(motor) == 1 && value > 1)
+	//After changing motor type, burn parameters at shutdown
+	if (oldmotor != newmtr)
+	        burn_parameters_ = true;
+
+    	//IF motor was servo, and now stepper
+    	//Galil hardware MAY push main encoder to aux encoder (stepper count reg)
+    	//We re-do this, but apply encoder/motor scaling
+    	if (fabs(oldmotor) == 1.0 && value > 1)
 		{
 		getDoubleParam(pAxis->axisNo_, GalilEncoderResolution_, &eres);
 		getDoubleParam(pAxis->axisNo_, motorResolution_, &mres);
@@ -2110,7 +2192,7 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
 
 	//IF motor was stepper, and now servo
 	//Set reference position equal to main encoder, which sets initial error to 0
-	if (abs(motor) > 1 && value < 2)
+	if (fabs(oldmotor) > 1.0 && value < 2)
 		{
 		//Calculate step count from existing encoder_position, construct mesg to controller_
 		sprintf(cmd_, "DP%c=%.0lf", pAxis->axisName_, pAxis->encoder_position_);
@@ -2129,6 +2211,20 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
 	{
 	sprintf(cmd_, "ueip%c=%d", pAxis->axisName_, value);
         //printf("GalilUseEncoder_ %s value %d\n", cmd_, value);
+	//Write setting to controller
+	status = writeReadController(functionName);
+	}
+  else if (function == GalilUseIndex_)
+	{
+	sprintf(cmd_, "ui%c=%d", pAxis->axisName_, value);
+        //printf("GalilUseIndex_ %s value %d\n", cmd_, value);
+	//Write setting to controller
+	status = writeReadController(functionName);
+	}
+  else if (function == GalilDriveAfterHome_)
+	{
+	sprintf(cmd_, "dah%c=%d", pAxis->axisName_, value);
+        //printf("GalilDriveAfterHome_ %s value %d\n", cmd_, value);
 	//Write setting to controller
 	status = writeReadController(functionName);
 	}
@@ -2185,23 +2281,11 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
 	{
 	status = setOutputCompare(addr);
 	}
-  else if (function == GalilMotorDMOV_)
-  {
-	  if (value == 1)
-	  {
-		  status = pAxis->doneMove();
-	  }
-  }
-  else if (function == GalilUserVar_)
-  {
-	    epicsSnprintf(cmd_, sizeof(cmd_), "%s=%d", (const char*)pasynUser->userData, value);
-		status = writeReadController(functionName);
-  }
   else 
   	{
     	/* Call base class method */
     	status = asynMotorController::writeInt32(pasynUser, value);
-	    reqd_comms = false;
+	reqd_comms = false;
   	}
 
   //Flag comms error only if function reqd comms
@@ -2235,55 +2319,62 @@ asynStatus GalilController::writeFloat64(asynUser *pasynUser, epicsFloat64 value
   reqd_comms = true;
 
   /* Set the parameter and readback in the parameter library. */
-  if (function != GalilUserVar_)
-  {
-    if (pAxis)
-  	  status = setDoubleParam(pAxis->axisNo_, function, value);	//DMC (digital motor controller) axis
-    else
-	  status = setDoubleParam(addr, function, value);			//Rio analog output when no axis are defined
-  }
+  if (function != GalilUserCmd_)
+     {
+     if (pAxis)
+  	    status = setDoubleParam(pAxis->axisNo_, function, value);	//DMC (digital motor controller) axis
+     else
+	    status = setDoubleParam(addr, function, value);			//Rio analog output when no axis are defined
+     }
+     
   if (function == GalilStepSmooth_)
+     {
+     if (pAxis)
         {
-	if (pAxis)
-		{
-		//Write new stepper smoothing factor to GalilController
-		sprintf(cmd_, "KS%c=%lf",pAxis->axisName_, value);
-		//printf("GalilStepSmooth_ cmd:%s value %lf\n", cmd, value);
-		status = writeReadController(functionName);
-		}
-	}
+        //Write new stepper smoothing factor to GalilController
+        sprintf(cmd_, "KS%c=%lf",pAxis->axisName_, value);
+        //printf("GalilStepSmooth_ cmd:%s value %lf\n", cmd, value);
+        status = writeReadController(functionName);
+        }
+     }
   else if (function == GalilErrorLimit_)
-	{
-	if (pAxis)
-		{
-		//Write new error limit to GalilController
-		sprintf(cmd_, "ER%c=%lf",pAxis->axisName_, value);
-		//printf("GalilErrorLimit_ cmd:%s value %lf\n", cmd, value);
-		status = writeReadController(functionName);
-		}
-	}
+     {
+     if (pAxis)
+        {
+        //Write new error limit to GalilController
+        sprintf(cmd_, "ER%c=%lf",pAxis->axisName_, value);
+        //printf("GalilErrorLimit_ cmd:%s value %lf\n", cmd, value);
+        status = writeReadController(functionName);
+        }
+     }
   else if (function == GalilAnalogOut_)
-	{
-	//Write new analog value to specified output (addr)
-	sprintf(cmd_, "AO %d, %f", addr, value);
-	//printf("GalilAnalogOut_ cmd:%s value %lf\n", cmd, value);
-	status = writeReadController(functionName);
-	}
+     {
+     //Write new analog value to specified output (addr)
+     sprintf(cmd_, "AO %d, %f", addr, value);
+     //printf("GalilAnalogOut_ cmd:%s value %lf\n", cmd, value);
+     status = writeReadController(functionName);
+     }
   else if (function == GalilOutputCompareStart_ || function == GalilOutputCompareIncr_)
-	{
-	status = setOutputCompare(addr);
-	}
+     {
+     status = setOutputCompare(addr);
+     }
+  else if (function == GalilUserCmd_)
+     {
+     epicsSnprintf(cmd_, sizeof(cmd_), "%s", (const char*)pasynUser->userData);
+     if ( (status = writeReadController(functionName)) == asynSuccess)
+        setDoubleParam(0, function, atof(resp_));  //For when input records set to I/O Intr
+     }
   else if (function == GalilUserVar_)
-  {
-	    epicsSnprintf(cmd_, sizeof(cmd_), "%s=%f", (const char*)pasynUser->userData, value);
-		status = writeReadController(functionName);
-  }
+     {
+     epicsSnprintf(cmd_, sizeof(cmd_), "%s=%lf", (const char*)pasynUser->userData, value);
+     status = writeReadController(functionName);
+     }
   else
-	{
-        /* Call base class method */
-	status = asynMotorController::writeFloat64(pasynUser, value);
-	reqd_comms = false;
-	}
+     {
+     /* Call base class method */
+	 status = asynMotorController::writeFloat64(pasynUser, value);
+	 reqd_comms = false;
+     }
     
   //Flag comms error only if function reqd comms
   check_comms(reqd_comms, status);
@@ -2295,60 +2386,44 @@ asynStatus GalilController::writeFloat64(asynUser *pasynUser, epicsFloat64 value
 asynStatus GalilController::writeOctet(asynUser *pasynUser, const char*  value,  size_t  nChars,  size_t *  nActual)
 {
   int function = pasynUser->reason;		//Function requested
-  asynStatus status;				//Used to work out communication_error_ status.  asynSuccess always returned
-  GalilAxis *pAxis = getAxis(pasynUser);	//Retrieve the axis instance
+  asynStatus status;				    //Used to work out communication_error_ status.  asynSuccess always returned
   const char *functionName = "GalilController::writeOctet";
-  bool reqd_comms;				//Check for comms error only when function reqd comms
-  int addr=0;					//Address requested
+  bool reqd_comms;				        //Check for comms error only when function reqd comms
+  double aivalue;				        //Convert response to value
 
   std::string value_s(value, nChars);  // in case value is not NULL terminated
 
-  //Retrieve address.  Used for analog IO
-  status = getAddress(pasynUser, &addr); 
-  if (status != asynSuccess) return(status);
-
   //Most functions require comms
   reqd_comms = true;
-
-  if (pAxis)
-  	  status = setStringParam(pAxis->axisNo_, function, value_s.c_str());	
-  else
-	  status = setStringParam(addr, function, value_s.c_str());			
-
+	
   /* Set the parameter and readback in the parameter library. */
-  if (function == GalilUserCmd_)
-  {
-	  status = setStringParam(function, value_s.c_str());			
-	  epicsSnprintf(cmd_, sizeof(cmd_), "%s", value_s.c_str());
-	  if ( (status = writeReadController(functionName)) == asynSuccess )
-	  {
-		  setStringParam(GalilUserCmdOut_, resp_);
-	      *nActual = nChars;
-	  }
-	  else
-	  {
-		  setStringParam(GalilUserCmdOut_, "<error>");
-	      *nActual = 0;
-	  }
-  }
-  else if (function == GalilUserVar_)
-  {
-	    epicsSnprintf(cmd_, sizeof(cmd_), "%s=%s", (const char*)pasynUser->userData, value_s.c_str());
-	    if ( (status = writeReadController(functionName)) == asynSuccess )
-		{
-	      *nActual = nChars;
-		}
-	    else
-	    {
-	      *nActual = 0;
-	    }
-  }
+  if (function == GalilUserOctet_)
+     {			
+     epicsSnprintf(cmd_, sizeof(cmd_), "%s", value_s.c_str());
+     if ( (status = writeReadController(functionName)) == asynSuccess )
+        {
+        //Set readback value(s) = response from controller
+        //String monitor
+        setStringParam(GalilUserOctet_, resp_);
+        //ai monitor
+        aivalue = atof(resp_);
+        setDoubleParam(0, GalilUserOctetVal_, aivalue);
+        //Num of chars written to controller
+        *nActual = nChars;
+        }
+     else
+        {
+        //Set readback value = response from controller
+        setStringParam(GalilUserOctet_, "<error>");
+        *nActual = 0;
+        }
+     }
   else
-  {
-        /* Call base class method */
-	status = asynMotorController::writeOctet(pasynUser, value,  nChars, nActual);
-	reqd_comms = false;
-  }
+     {
+     /* Call base class method */
+     status = asynMotorController::writeOctet(pasynUser, value,  nChars, nActual);
+     reqd_comms = false;
+     }
     
   //Flag comms error only if function reqd comms
   check_comms(reqd_comms, status);
@@ -2357,99 +2432,60 @@ asynStatus GalilController::writeOctet(asynUser *pasynUser, const char*  value, 
   return asynSuccess;
 }
 
-asynStatus GalilController::readOctet(asynUser* pasynUser,  char* value, size_t maxChars,  size_t* nActual,  int* eomReason)
+//Process unsolicited message from the controller
+//Called by poll thread.  Must not lock, or use writeReadController
+void GalilController::processUnsolicitedMesgs(void)
 {
-    int function = pasynUser->reason;		 //function requested
-    asynStatus status;				 //Used to work out communication_error_ status.  asynSuccess always returned
-    GalilAxis *pAxis = getAxis(pasynUser);	 //Retrieve the axis instance
-    const char *functionName = "GalilController::readOctet";
-    bool reqd_comms;				 //Check for comms error only when function reqd comms
-	int addr = 0;
+   char *charstr;		//The current token
+   GalilAxis *pAxis;	 	//GalilAxis
+   char rawbuf[MAX_MESSAGE_LEN];//Unsolicited mesg buf
+   char mesg[MAX_MESSAGE_LEN];	//The message
+   char axisName;		//Axis number message is for
+   int value;			//The value contained in the message
 
-    status = getAddress(pasynUser, &addr); 
-    if (status != asynSuccess) return(status);
+   //Collect unsolicted message   
+   strcpy(rawbuf, gco_->message(0).c_str());
 
-    //We dont retrieve values for records at iocInit.  
-    //For output records autosave, or db defaults are pushed to hardware instead
-    if (!readAllowed_) return asynError;
+   //Break message into tokens
+   charstr = strtok(rawbuf, " \n");
+   while (charstr != NULL)
+      {
+      //Determine axis message is for
+      axisName = (char)charstr[strlen(charstr)-1];
+      //Extract the message
+      strncpy(mesg, charstr, strlen(charstr)-1);
+      //Null terminate the message
+      mesg[strlen(charstr)-1] = '\0';
+      //Retrieve GalilAxis instance for the correct axis
+      pAxis = getAxis(axisName - AASCII);
+      //Retrieve the value
+      charstr = strtok(NULL, " \n");
+      if (charstr != NULL && pAxis)
+         {
+         value = atoi(charstr);
+         //Process known messages
+         //Motor homed message
+         if (!abs(strcmp(mesg, "homed")))
+            {
+            //Set homed status for this axis
+            pAxis->setIntegerParam(GalilHomed_, value);
+            //Set motorRecord MSTA bit 15 motorStatusHomed_ too
+            //Homed is not part of Galil data record, we support it using Galil code and unsolicited messages over tcp instead
+            //We must use asynMotorAxis version of setIntegerParam to set MSTA bits for this MotorAxis
+            pAxis->setIntegerParam(motorStatusHomed_, value);
+            callParamCallbacks();
+            }
 
-    //Most functions require comms
-    reqd_comms = true;
-  if (function == GalilUserVar_)
-  {
-	epicsSnprintf(cmd_, sizeof(cmd_), "%s=?", (const char*)pasynUser->userData);
-	if ((status = writeReadController(functionName)) == asynSuccess)
-	{
-		strncpy(value, resp_, maxChars-1);
-		value[maxChars-1] = '\0';
-	}
-	else
-	{
-		strncpy(value, "<error>", maxChars-1);
-	}
-	*nActual = strlen(value);
-	if ( strlen(value) == (maxChars - 1) )
-	{
-	    *eomReason = ASYN_EOM_CNT;
-	}
-	else
-	{
-		*eomReason = ASYN_EOM_EOS;
-	}
-  }
-  else if (function == GalilEthAddr_)
-  {
-	  strcpy(cmd_, "TH");
-	  if ( (status = writeReadController(functionName)) == asynSuccess )
-	  {
-		  strncpy(value, resp_, maxChars-1);
-		  value[maxChars-1] = '\0';
-		  setStringParam(GalilEthAddr_, resp_);
-	      *nActual = strlen(value);
-		  *eomReason = ASYN_EOM_EOS;
-	  }
-	  else
-	  {
-		  value[0] = '\0';
-		  setStringParam(GalilEthAddr_, "<error>");
-	      *nActual = 0;
-	      *eomReason = ASYN_EOM_CNT;
-	  }
+         //Motor homing status message
+         if (!abs(strcmp(mesg, "home")))
+            pAxis->homing_ = false;
+         }
 
-  }
-  else if (function == GalilSerialNum_)
-  {
-	  strcpy(cmd_, "MG _BN");
-	  if ( (status = writeReadController(functionName)) == asynSuccess )
-	  {
-		  strncpy(value, resp_, maxChars-1);
-		  value[maxChars-1] = '\0';
-		  setStringParam(GalilSerialNum_, resp_);
-	      *nActual = strlen(value);
-		  *eomReason = ASYN_EOM_EOS;
-	  }
-	  else
-	  {
-		  value[0] = '\0';
-		  setStringParam(GalilSerialNum_, "<error>");
-	      *nActual = 0;
-	      *eomReason = ASYN_EOM_CNT;
-	  }
-  }
-  else 
-  {
-	status = asynPortDriver::readOctet(pasynUser, value, maxChars, nActual, eomReason);
-	reqd_comms = false;
-  }
-
-   //Flag comms error only if function reqd comms
-   check_comms(reqd_comms, status);
-
-   //Always return success. Dont need more error mesgs
-   return asynSuccess;	
+      //Retrieve next mesg
+      charstr = strtok(NULL, " \n");
+      }
 }
 
-	
 //Extract controller data from GalilController data record
 //Return status of GalilController data record acquisition
 void GalilController::getStatus(void)
@@ -2459,8 +2495,8 @@ void GalilController::getStatus(void)
    int addr;				    //addr or byte of binary IO
    int coordsys;			    //Coordinate system currently selected
    int profstate;			    //Profile running state
-   double paramDouble;			    //For passing asynFloat64 to ParamList
-   unsigned paramUDig;		    	    //For passing UInt32Digital to ParamList
+   double paramDouble;			//For passing asynFloat64 to ParamList
+   unsigned paramUDig;		    //For passing UInt32Digital to ParamList
   
    //If data record query success in GalilController::acquireDataRecord
    if (recstatus_ == asynSuccess)
@@ -2476,7 +2512,10 @@ void GalilController::getStatus(void)
 				sprintf(src, "_TI%d", addr);
 				paramUDig = (unsigned)gco_->sourceValue(recdata_, src);
 				//ValueMask = 0xFF because a byte is 8 bits
+				//Callbacks happen on value change
 				setUIntDigitalParam(addr, GalilBinaryIn_, paramUDig, 0xFF );
+				//Example showing forced callbacks even if no value change
+				//setUIntDigitalParam(addr, GalilBinaryIn_, paramUDig, 0xFF, 0xFF );
 				}
 			//data record has digital outputs in banks of 16 bits for dmc, 8 bits for rio
 			for (addr=0;addr<BINARYOUT_WORDS;addr++)
@@ -2484,7 +2523,10 @@ void GalilController::getStatus(void)
 				sprintf(src, "_OP%d", addr);
 				paramUDig = (unsigned)gco_->sourceValue(recdata_, src);
 				//ValueMask = 0xFFFF because a word is 16 bits
+				//Callbacks happen on value change
 				setUIntDigitalParam(addr, GalilBinaryOutRBV_, paramUDig, 0xFFFF );
+				//Example showing forced callbacks even if no value change
+				//setUIntDigitalParam(addr, GalilBinaryOutRBV_, paramUDig, 0xFFFF, 0xFFFF );
 				}
 			//Analog ports on rio
 			for (addr=0;addr<ANALOG_PORTS;addr++)
@@ -2499,13 +2541,16 @@ void GalilController::getStatus(void)
 				setDoubleParam(addr, GalilAnalogOutRBV_, paramDouble);
 				}
 
+			//Process unsolicited mesgs from controller
+			processUnsolicitedMesgs();
+
 			//Retrieve currently selected coordinate system 
 			getIntegerParam(GalilCoordSys_, &coordsys);
 
-                        //Retrieve profile execute status
-  			getIntegerParam(profileExecuteState_, &profstate);
+			//Retrieve profile execute status
+			getIntegerParam(profileExecuteState_, &profstate);
 
-                        //Coordinate system status
+			//Coordinate system status
 			for (addr=0;addr<COORDINATE_SYSTEMS;addr++)
 				{
 				//Move/done status
@@ -2525,7 +2570,7 @@ void GalilController::getStatus(void)
 				}
 			}
 		}
-	catch (const std::string& e) 
+	catch (string e) 
 		{
 		//Print exception mesg
 		cout << functionName << ":" << e;
@@ -2534,11 +2579,10 @@ void GalilController::getStatus(void)
 	//Allows us to poll without lock
 	catch (const std::bad_typeid& e)
 		{
-		cout << "Caught bad_typeid GalilController::getStatus" << endl;
+		cout << "Caught bad_typeid GalilController::getStatus" << e.what() << endl;
 		}
 	}
 }
-
 
 //Override asynMotorController::poll
 //Acquire a data record from controller, store in GalilController instance
@@ -2554,12 +2598,11 @@ asynStatus GalilController::poll(void)
 	//Store current time for next cycle
 	polllastt_.secPastEpoch = pollnowt_.secPastEpoch;
 	polllastt_.nsec = pollnowt_.nsec;
-	
-	//if (time_taken > 0.01)
+
+	//if (time_taken > 0.02)
 	//	{
 	//	printf("%s GalilController::poll %2.3lfs\n", model_, time_taken);
 	//	}
-	//
 
 	//Acquire a data record
 	if (async_records_)
@@ -2577,63 +2620,64 @@ asynStatus GalilController::poll(void)
 //Acquire data record from controller
 asynStatus GalilController::acquireDataRecord(string cmd)
 {
-	const char *functionName="acquireDataRecord";
-	epicsTimeStamp endt_;		//Used for debugging, and tracking overall performance
-	epicsTimeStamp startt_;		//Used for debugging, and tracking overall performance
-	double time_taken;		//Used for debugging, and tracking overall performance
+  const char *functionName="acquireDataRecord";
+  epicsTimeStamp endt_;		//Used for debugging, and tracking overall performance
+  epicsTimeStamp startt_;	//Used for debugging, and tracking overall performance
+  double time_taken;		//Used for debugging, and tracking overall performance
 
-	try {
-	    //If connected, then ask controller for a data record
-	    if (gco_ != NULL)
-	        {
-		//Get acquisition start time
-		epicsTimeGetCurrent(&startt_);
-		//Get the data record
-		recdata_ = gco_->record(cmd);
- 		//Get acquisition end time
-		epicsTimeGetCurrent(&endt_);
-		//Calculate acquistion time
-		time_taken = epicsTimeDiffInSeconds(&endt_, &startt_);
+  try 
+    {
+    //If connected, then ask controller for a data record
+    if (gco_ != NULL)
+      {
+      //Get acquisition start time
+      epicsTimeGetCurrent(&startt_);
+      //Get the data record
+      recdata_ = gco_->record(cmd);
+      //Get acquisition end time
+      epicsTimeGetCurrent(&endt_);
+      //Calculate acquistion time
+      time_taken = epicsTimeDiffInSeconds(&endt_, &startt_);
+
+      //if (time_taken > 0.01)
+      //  {
+      //  printf("%s GalilController::acquire %2.3lfs\n", model_, time_taken);
+      //  }
+
+      //Success.  Set status in GalilController instance
+      recstatus_ = asynSuccess;
+      }
+    else //Failure.  Not connected
+      {
+      recstatus_ = asynError;
+      }
+    }
+  catch (string e)
+    {
+    //Failure.  Print exception mesg
+    cout << functionName << ":" << model_ << ":" << address_ << ":" << e;
+    //Failure.  Set status in GalilController instance
+    recstatus_ = asynError;
+    //Check for timeout errors
+    if (strstr(e.c_str(), "TIMEOUT") != NULL)
+       {
+       //Increment consecutive timeout counter
+       //GalilController::connectManager thread watches this 
+       consecutive_timeouts_++;
+       }
+    }
+    //Forgiveness is cheap.
+    //Allows us to poll without lock
+    catch (const std::bad_typeid& e)
+       {
+       cout << "Caught bad_typeid acquireDataRecord" << e.what() << endl;
+       }
 	
-		//if (time_taken > 0.01)
-		//	{
-			//printf("%s GalilController::acquire %2.3lfs\n", model_, time_taken);
-		//	}
-		//
-	
-		//Success.  Set status in GalilController instance
-		recstatus_ = asynSuccess;
-	        }
-	    else //Failure.  Not connected
-		{
-	        recstatus_ = asynError;
-		}
-	    }
-	catch (const std::string& e)
-	    {
-	    //Failure.  Print exception mesg
-	    cout << functionName << ":" << model_ << ":" << address_ << ":" << e;
-	    //Failure.  Set status in GalilController instance
-	    recstatus_ = asynError;
-	    //Check for timeout errors
-	    if (strstr(e.c_str(), "TIMEOUT") != NULL)
-		{
-		//Increment consecutive timeout counter
-		//GalilController::connectManager thread watches this 
-		consecutive_timeouts_++;
-		}
-	    }
-	 //Forgiveness is cheap.
-	 //Allows us to poll without lock
-         catch (const std::bad_typeid& e)
-		{
-		cout << "Caught bad_typeid acquireDataRecord" << endl;
-		}
-	
-	//Return value is not monitored
-	return asynSuccess;
+    //Return value is not monitored
+    return asynSuccess;
 }
 
+//  Caller must have lock
 /** Writes a string to the Galil controller and reads a response.
   * \param[in] caller functionName
   * \param[in] cmd to write to controller
@@ -2645,12 +2689,13 @@ asynStatus GalilController::writeReadController(const char *caller)
   bool done = false;
   asynStatus status;
   int ex_count;
-  static const char* debug_file_name = macEnvExpand("$(GALIL_DEBUG_FILE)");
-  static FILE* debug_file = ( (debug_file_name != NULL && strlen(debug_file_name) > 0) ? fopen(debug_file_name,"at") : NULL);
+  static const char* debug_file_name = macEnvExpand("$(GALIL_DEBUG_FILE=)");
+  static FILE* debug_file = ( (debug_file_name != NULL && strlen(debug_file_name) > 0) ? fopen(debug_file_name, "at") : NULL);
 
   asynPrint(this->pasynUserSelf, ASYN_TRACE_FLOW, 
           "%s: caller=\"%s\" command=\"%s\"\n", 
 		  functionName, caller, cmd_);
+
   //Count the number of exceptions
   ex_count = 0;
   
@@ -2672,10 +2717,16 @@ asynStatus GalilController::writeReadController(const char *caller)
 		else 	//Not connected
 		       	return asynError;
 		}
-	catch (const std::string& e) 
+	catch (string e) 
 		{
 		//Print exception mesg
 		cout << caller << ":" << functionName << ":" << cmd_ << ":" << e;
+		//Extract controller mesg from exception mesg
+		std::size_t found = e.find("TC1 returned \"");
+		std::string errmsg = e.substr(found + 14, e.size()-found-14-2);
+		//Set controller error mesg monitor
+		setStringParam(GalilCtrlError_, errmsg.c_str());
+		//Inc exception counter
 		ex_count++;
 		//flag error
 		status = asynError;
@@ -2707,18 +2758,20 @@ asynStatus GalilController::writeReadController(const char *caller)
 			  }
 		}
       }
-      asynPrint(this->pasynUserSelf, ASYN_TRACEIO_DRIVER, 
+
+   asynPrint(this->pasynUserSelf, ASYN_TRACEIO_DRIVER, 
           "%s: caller=\"%s\", command=\"%s\", response=\"%s\", status=%s\n", 
 		      functionName, caller, cmd_, resp_, (status == asynSuccess ? "OK" : "ERROR"));
-	  if (debug_file != NULL)
-	  {
-		  time_t now;
-		  time(&now);
-		  char time_buffer[64];
-		  strftime(time_buffer, sizeof(time_buffer), "%Y-%m-%d %H:%M:%S", localtime(&now));
-		  fprintf(debug_file, "%s (%d) %s: caller=\"%s\", command=\"%s\", response=\"%s\", status=%s\n", 
-		      time_buffer, getpid(), functionName, caller, cmd_, resp_, (status == asynSuccess ? "OK" : "ERROR"));
-	  }
+
+   if (debug_file != NULL)
+   	{
+	time_t now;
+	time(&now);
+	char time_buffer[64];
+	strftime(time_buffer, sizeof(time_buffer), "%Y-%m-%d %H:%M:%S", localtime(&now));
+	fprintf(debug_file, "%s (%d) %s: caller=\"%s\", command=\"%s\", response=\"%s\", status=%s\n", 
+	      time_buffer, getpid(), functionName, caller, cmd_, resp_, (status == asynSuccess ? "OK" : "ERROR"));
+	}
 
   return status;
 }
@@ -2726,7 +2779,7 @@ asynStatus GalilController::writeReadController(const char *caller)
 /*--------------------------------------------------------------*/
 /* Start the card requested by user   */
 /*--------------------------------------------------------------*/
-void GalilController::GalilStartController(char *code_file, int eeprom_write, int display_code, unsigned thread_mask)
+void GalilController::GalilStartController(char *code_file, int burn_program, int display_code, unsigned thread_mask)
 {
 	const char *functionName = "GalilStartController";
 	unsigned i;					 //General purpose looping
@@ -2738,7 +2791,9 @@ void GalilController::GalilStartController(char *code_file, int eeprom_write, in
 	//Backup parameters used by developer for later re-start attempts of this controller
 	//This allows full recovery after disconnect of controller
 	strncpy(code_file_, code_file, sizeof(code_file_));
-	eeprom_write_ = eeprom_write;
+	code_file_[sizeof(code_file_) - 1] = '\0';
+	burn_program_ = burn_program;
+        thread_mask_ = thread_mask;
 
 	//Assemble code for download to controller.  This is generated, or user specified code.
         if (!code_assembled_)
@@ -2754,17 +2809,25 @@ void GalilController::GalilStartController(char *code_file, int eeprom_write, in
 			strcat(card_code_, thread_code_);
 			strcat(card_code_, limit_code_);
 			strcat(card_code_, digital_code_);
-	
+			// dump generated codefile, which we may or may not actually use
+			write_gen_codefile("_gen"); 
 			}
 
-		write_gen_codefile("_gen"); // dump generated codefile, which we may or may not actually use
+		//load up code file specified by user, if any
+                if (strcmp(code_file, ""))
+			{
+			if (read_codefile(code_file) == asynSuccess)
+				{
+				//Copy the user code into card code buffer
+				//Ready for delivery to controller
+				strcpy(card_code_, user_code_);
+				}
+			else
+				thread_mask_ = 0;  //Forced to use generated code
+			}
 
-		//load up code file specified by user (ie. generated, or generated & user edited, or complete user code)
-		read_codefile(code_file);
-
-		//Dump code we will send to the controller, which may be either generated or user specified
+		//Dump card_code_ to file
 		write_gen_codefile("");
-
 		}
 
 	/*print out the generated/user code for the controller*/
@@ -2781,19 +2844,17 @@ void GalilController::GalilStartController(char *code_file, int eeprom_write, in
 		//Put, and wait until poller is in sleep mode
 		//Also stop async records from controller
 		poller_->sleepPoller();			
-		/*Upload code currently in controller for comparison to generated code */
+		/*Upload code currently in controller for comparison to generated/user code */
 		try	{
 			uc = gco_->programUpload();
-			//Remove the \r characters - \r\n is returned
+			//Remove the \r characters - \r\n is returned by galil controller
 			uc.erase (std::remove(uc.begin(), uc.end(), '\r'), uc.end());
-			//Remove ' characters
-//			uc.erase (std::remove(uc.begin(), uc.end(), '\''), uc.end());
 			}
-		catch (const std::string& e)
-		      	{
+		catch (string e)
+			{
 			//Upload failed
-		      	cout << "GalilStartController:Upload failed:" << " " << e;
-		      	}
+			cout << "GalilStartController:Upload failed:" << " " << e;
+			}
 
 		if ((display_code == 2) || (display_code == 3))
 			{
@@ -2804,14 +2865,15 @@ void GalilController::GalilStartController(char *code_file, int eeprom_write, in
 
 		//Copy card_code_ into download code buffer
 		dc = card_code_;
-		//Remove ' characters
-//		dc.erase (std::remove(dc.begin(), dc.end(), '\''), dc.end());
 
-		/*If generated code differs from controller current code then download generated code*/
+		//Remove the \r characters
+		dc.erase (std::remove(dc.begin(), dc.end(), '\r'), dc.end());
+
+		/*If code we wish to download differs from controller current code then download the new code*/
 		if (dc.compare(uc) != 0 && dc.compare("") != 0)
 			{
-		    //Change \n to \r - Galil Communications Library expects \r separated lines
-		    std::replace(dc.begin(), dc.end(), '\n', '\r');
+			//Change \n to \r (Galil Communications Library expects \r separated lines)
+			std::replace(dc.begin(), dc.end(), '\n', '\r');
 			size_t pos;
 			if ( (pos = dc.find_last_not_of(" \t\f\v\n\r")) != std::string::npos )
 			{
@@ -2822,7 +2884,7 @@ void GalilController::GalilStartController(char *code_file, int eeprom_write, in
 				//Do the download
 				gco_->programDownload(dc);
 				}
-			catch (const std::string& e)
+			catch (string e)
 				{
 				//Donwload failed
 				errlogPrintf("\nError downloading code model %s, address %s msg %s\n",model_, address_, e.c_str());
@@ -2832,8 +2894,8 @@ void GalilController::GalilStartController(char *code_file, int eeprom_write, in
 			if (download_ok)
 				{
 				printf("Code transfer successful to model %s, address %s\n",model_, address_);	
-				/*burn code to eeprom if eeprom_write is 1*/
-				if (eeprom_write == 1)
+				/*burn program code to eeprom if burn_program is 1*/
+				if (burn_program == 1)
 					{
 					/*Burn program to EEPROM*/
 					sprintf(cmd_, "BP");
@@ -2865,31 +2927,43 @@ void GalilController::GalilStartController(char *code_file, int eeprom_write, in
 				}
 			}
 
-		//Start code on motor controllers, not rio
-		if (strncmp(model_, "RIO", 3) != 0)
+		/*Upload code currently in controller to see whats there now*/
+		try	{
+			uc = gco_->programUpload();
+			//Remove the \r characters - \r\n is returned by galil controller
+			uc.erase (std::remove(uc.begin(), uc.end(), '\r'), uc.end());
+			}
+		catch (string e)
 			{
-			//last thing, we start thread 0
-			//Note that thread 0 starts any other required threads on the motor controller
+			//Upload failed
+			cout << "GalilStartController:Upload failed:" << " " << e;
+			}
+
+		//Start thread 0 if upload reveals code exists on controller
+		//Its assumed that thread 0 starts any other required threads on controller
+		if ((int)uc.length()>2)
+			{
 			sprintf(cmd_, "XQ 0,0");
 			if (writeReadController(functionName) != asynSuccess)
 				errlogPrintf("Thread 0 failed to start on model %s address %s\n\n",model_, address_);
 					
 			epicsThreadSleep(1);
 			
+			//Check threads on controller
 			if (thread_mask != 0) // is we gave a mask, only check for these threads
 				{
 				for (i=0; i<32; ++i)
 					{
-						if ( (thread_mask & (1 << i)) != 0 )
+					if ( (thread_mask & (1 << i)) != 0 )
 						{
 					        /*check that code is running*/
-							sprintf(cmd_, "MG _XQ%d\n", i);
-							if (writeReadController(functionName) == asynSuccess)
+						sprintf(cmd_, "MG _XQ%d\n", i);
+						if (writeReadController(functionName) == asynSuccess)
 							{
-								if (atoi(resp_) == -1)
+							if (atoi(resp_) == -1)
 								{
-									start_ok = 0;
-									errlogPrintf("\nThread %d failed to start on model %s, address %s\n", i, model_, address_);
+								start_ok = 0;
+								errlogPrintf("\nThread %d failed to start on model %s, address %s\n", i, model_, address_);
 								}
 							}
 						}
@@ -2912,7 +2986,7 @@ void GalilController::GalilStartController(char *code_file, int eeprom_write, in
 					}
 				}
 		
-			if (start_ok == 0)
+			if (start_ok == 0 && strncmp(model_, "RIO", 3) != 0)
 				{
 				/*stop all motors on the crashed controller*/
 				sprintf(cmd_, "AB 1\n");
@@ -2939,6 +3013,7 @@ void GalilController::GalilStartController(char *code_file, int eeprom_write, in
 		free(thread_code_);
 		free(limit_code_);
 		free(digital_code_);
+		free(user_code_);
 		//The GalilController code is fully assembled, and stored in GalilController::card_code_
 		code_assembled_ = true;
 		}
@@ -3002,13 +3077,7 @@ void GalilController::gen_card_codeend(void)
 			strcat(limit_code_, "RE 1\nEN\n");   /*we have written limit code, and we are done with LIMSWI and is prog end*/
 					
 		//Add command error handler
-		strcat(thread_code_, "#CMDERR\n");
-		strcat(thread_code_, "errstr=_ED\n");
-		strcat(thread_code_, "errcde=_TC\n");
-		strcat(thread_code_, "cmderr=cmderr+1\n");
-		//restart crashed thread, skipping the faulty line that caused the fault
-		strcat(thread_code_, "XQ _ED3,_ED1,1\n");
-		strcat(thread_code_, "EN\n");
+		sprintf(thread_code_, "%s#CMDERR\nerrstr=_ED;errcde=_TC;cmderr=cmderr+1\nEN\n", thread_code_);
 		
 		//Set cmderr counter to 0
 		sprintf(cmd_, "cmderr=0");
@@ -3086,78 +3155,116 @@ void GalilController::write_gen_codefile(const char* suffix)
 		fclose(fp);
 		}
 	else
-		errlogPrintf("Could not open %s",filename);
+		errlogPrintf("Could not open for write file: %s",filename);
 }
 
-/// as well as a single code_file, also handles extended syntax of:
-///          "header_file;first_axis_file!second_axis_file!third_axis_file;footer_file"
-/// this allows the downloaded program to be assembed from on-disk templates that are tailored to the
-/// specific e.g. homing required. Within an axis_file, $(AXIS) is replaced by the relevant axis letter
-void GalilController::read_codefile(const char *code_file)
+// Load file(s) specified by user into GalilController instance
+// The result is stored in GalilController->user_code_ 
+// as well as a single code_file, also handles extended syntax of:
+//          "header_file;first_axis_file!second_axis_file!third_axis_file;footer_file"
+// this allows the downloaded program to be assembed from on-disk templates that are tailored to the
+// specific e.g. homing required. Within an axis_file, $(AXIS) is replaced by the relevant axis letter
+asynStatus GalilController::read_codefile(const char *code_file)
 {
-	if (strcmp(code_file,"") == 0)
-	{
-		return;
-	}
-	card_code_[0] = '\0';
-	if (strchr(code_file, ';') == NULL)
-	{
-		read_codefile_part(code_file, NULL); // only one part (whole code file specified)
-		return;
-	}
-	char* code_file_copy = strdup(code_file); // as strtok() modifies string
-	const char* header_file = strtok(code_file_copy, ";");
+	MAC_HANDLE *mac_handle = NULL;			//Used for macro substitution
+	char axis_value[MAX_GALIL_AXES];		//Axis letter to substitute in
+	char *code_file_copy1 = strdup(code_file);	// as strtok() modifies string
+	char *code_file_copy2 = strdup(code_file);	// as strtok() modifies string
+        char *body_files[MAX_GALIL_AXES];		//List of body file names
+	string str;					//For easy string manipulation
+	int i, j;					//Looping
+
+	//Empty the user code buffer
+	user_code_[0] = '\0';
+
+	//Case where entire code specified in a single file
+	if (strchr(code_file, ';') == NULL)  	
+		return read_codefile_part(code_file, NULL);
+
+	//Case where code is specified using templates
+	//Get header file name
+	const char* header_file = strtok(code_file_copy1, ";");
 	if (header_file == NULL)
 	{
 		errlogPrintf("\nread_codefile: no header file\n\n");
-		return;
+		return asynError;
 	}
-	read_codefile_part(header_file, NULL);
-	char* body_files = strtok(NULL, ";");
-	if (body_files == NULL)
-	{
-		errlogPrintf("\nread_codefile: no body files\n\n");
-		return;
-	}
-	body_files = strdup(body_files);  // make copy in case further calls to strtok() are an issue
+	//Read the header file contents
+	if (read_codefile_part(header_file, NULL))
+		return asynError;	//Cant read header
+	//Skip the body file names for now
+	strtok(NULL, ";");
+	//Get the footer file name
 	const char* footer_file = strtok(NULL, ";");
 	if (footer_file == NULL)
 	{
 		errlogPrintf("\nread_codefile: no footer file\n\n");
-		return;
+		return asynError;
 	}
-	MAC_HANDLE *mac_handle = NULL;
+
+	//Get the body file names
+	i = 0;
+	//Skip the header file name
+	strtok(code_file_copy2, ";");
+	body_files[i] = strtok(NULL, "!");
+	//Make sure we have some body file names
+	if (body_files[i] == NULL)
+		{
+			errlogPrintf("\nread_codefile: no body files\n\n");
+			return asynError;
+		}
+	//Retrieve the entire list of body file names
+	while (body_files[i] != NULL && i < MAX_GALIL_AXES)
+		{
+		//Strip the footer if its in this token
+		str.assign(body_files[i]);
+		if (str.find_first_of(";") != string::npos)
+			str.erase(str.find_first_of(";"));
+		//Copy possibly modified string back into body_files
+		strcpy(body_files[i], str.c_str());
+		i++;
+		//Read the body file names
+		body_files[i] = strtok(NULL, "!");
+		}
+
+	//Read the body files
 	macCreateHandle(&mac_handle, NULL);
-	char axis_value[MAX_GALIL_AXES];
-	const char* body_file = strtok(body_files, "!");
-	for(int i = 0; body_file != NULL; ++i) // i will loop over axis index, 0=A,1=B etc.
-	{
+	for (j = 0; j < i; j++)
+		{
 		macPushScope(mac_handle);
 		// define the macros we will substitute in the included codefile
-		sprintf(axis_value, "%c", i + 'A');
+		sprintf(axis_value, "%c", j + 'A');
 		macPutValue(mac_handle, "AXIS", axis_value);  // substitute $(AXIS) for axis letter 
-		read_codefile_part(body_file, mac_handle);
+		if (read_codefile_part(body_files[j], mac_handle))
+			return asynError;	//Cant read the body file
 		macPopScope(mac_handle);
-		body_file = strtok(NULL, "!");
-	}
+		}
 	macDeleteHandle(mac_handle);
-	read_codefile_part(footer_file, NULL);
-	free(body_files);
-	free(code_file_copy);
+	
+	//Read the footer file
+	if (read_codefile_part(footer_file, NULL))
+		return asynError;	//Cant read footer file
+
+	//Free the ram we used
+        free(code_file_copy1);
+	free(code_file_copy2);
+	//All ok
+	return asynSuccess;
 }
 
 /*-----------------------------------------------------------------------------------*/
 /*  Load the galil code specified into the controller class
 */
 
-void GalilController::read_codefile_part(const char *code_file, MAC_HANDLE* mac_handle)
+asynStatus GalilController::read_codefile_part(const char *code_file, MAC_HANDLE* mac_handle)
 {
 	int i = 0;
+	char file[MAX_FILENAME_LEN];
+	FILE *fp;
+	//local temp code buffers
 	int max_size = MAX_GALIL_AXES * (THREAD_CODE_LEN+LIMIT_CODE_LEN+INP_CODE_LEN);
 	char* user_code = (char*)calloc(max_size,sizeof(char));
 	char* user_code_exp = (char*)calloc(max_size,sizeof(char));
-	char file[MAX_FILENAME_LEN];
-	FILE *fp;
 
 	if (strcmp(code_file,"")!=0)
 		{
@@ -3191,20 +3298,26 @@ void GalilController::read_codefile_part(const char *code_file, MAC_HANDLE* mac_
 			user_code[i-1] = '\0';
 			//Load galil code into the GalilController instance
 			if (mac_handle != NULL) // substitute macro definitios for e.g. $(AXIS)
-			{
+				{
 				macExpandString(mac_handle, user_code, user_code_exp, max_size);
-				strcat(card_code_, user_code_exp);
-			}
+				//Copy code into GalilController temporary area
+				strcat(user_code_, user_code_exp);
+				}
 			else
-			{
-				strcat(card_code_, user_code);
-			}
+				{
+				//Copy code into GalilController temporary area
+				strcat(user_code_, user_code);
+				}
 			}
 		else
-			errlogPrintf("\ngread_codefile: Can't open user code file \"%s\", using generated code\n\n", code_file);
+			{
+			errlogPrintf("\nread_codefile_part: Can't open user code file \"%s\", using generated code\n\n", code_file);
+			return asynError;
+			}
 		}
 	free(user_code);
 	free(user_code_exp);
+	return asynSuccess;
 }
 
 /** Find kinematic variables Q-X and substitute them for variable in range A-P for sCalcPerform
@@ -3363,40 +3476,55 @@ asynStatus GalilController::breakupTransform(char *raw, char *axes, char **equat
 
 asynStatus GalilController::drvUserCreate(asynUser *pasynUser, const char* drvInfo, const char** pptypeName, size_t* psize)
 {
-    const char *functionName = "drvUserCreate";
-	char uservar[64];
-    
-	if ( 1 == sscanf(drvInfo, "USERVAR_%64s", uservar) )
-	{
-		pasynUser->reason = GalilUserVar_; 
-		pasynUser->userData = strdup(uservar);
-		asynPrint(pasynUser, ASYN_TRACE_FLOW,
-              "%s:%s: drvInfo=%s, index=%d, uservar=%s\n", 
-              driverName, functionName, drvInfo, pasynUser->reason, (const char*)pasynUser->userData);
-		return(asynSuccess);
-	}
-	else
-	{
-	    return asynMotorController::drvUserCreate(pasynUser, drvInfo, pptypeName, psize);
-	}
+   //const char *functionName = "drvUserCreate";
+   char *drvInfocpy;				  //copy of drvInfo
+   char *charstr;		                  //The current token
+
+   //Check if USER_CMD, USER_VAR, USER_OCTET, or USER_OCTET_VAL
+   if (strncmp(drvInfo, "USER_", 5) == 0)
+     {
+     //take a copy of drvInfo
+     drvInfocpy = epicsStrDup((const char *)drvInfo);
+     //split drvInfocpy into tokens
+     //first token is DRVCMD = CMD, OCTET, OCTET_VAL, or VAR
+     charstr = strtok((char *)drvInfocpy, " ");
+     if (!abs(strcmp(charstr, GalilUserCmdString)))
+        pasynUser->reason = GalilUserCmd_;
+     if (!abs(strcmp(charstr, GalilUserOctetString)))
+        pasynUser->reason = GalilUserOctet_;
+     if (!abs(strcmp(charstr, GalilUserOctetValString)))
+        pasynUser->reason = GalilUserOctetVal_;
+     if (!abs(strcmp(charstr, GalilUserVarString)))
+        pasynUser->reason = GalilUserVar_;
+     //Second token is GalilStr
+     charstr = strtok(NULL, "\n");
+     //Store copy of GalilStr in pasynuser userdata
+     if (charstr != NULL)
+        pasynUser->userData = epicsStrDup(charstr);
+     return asynSuccess;
+     }
+  else
+     {
+     return asynMotorController::drvUserCreate(pasynUser, drvInfo, pptypeName, psize);
+     }
 }
 
 asynStatus GalilController::drvUserDestroy(asynUser *pasynUser)
 {
-    const char *functionName = "drvUserDestroy";
-	if ( GalilUserVar_ == pasynUser->reason )
-	{
-		asynPrint(pasynUser, ASYN_TRACE_FLOW,
-              "%s:%s: index=%d uservar=%s\n", 
-              driverName, functionName, pasynUser->reason, (const char*)pasynUser->userData);
-		free(pasynUser->userData);
-		pasynUser->userData = NULL;
-		return(asynSuccess);
-	}
-	else
-	{
-	    return asynMotorController::drvUserDestroy(pasynUser);
-	}
+   const char *functionName = "drvUserDestroy";
+   if ( pasynUser->reason >= GalilUserCmd_ && pasynUser->reason <= GalilUserVar_ )
+      {
+      asynPrint(pasynUser, ASYN_TRACE_FLOW,
+          "%s:%s: index=%d uservar=%s\n", 
+          driverName, functionName, pasynUser->reason, (const char*)pasynUser->userData);
+      free(pasynUser->userData);
+      pasynUser->userData = NULL;
+      return(asynSuccess);
+      }
+  else
+      {
+      return asynMotorController::drvUserDestroy(pasynUser);
+      }
 }
 
 //IocShell functions
@@ -3436,8 +3564,7 @@ extern "C" asynStatus GalilCreateAxis(const char *portName,        	/*specify wh
   pC = (GalilController*) findAsynPortDriver(portName);
 
   if (!pC) {
-    printf("%s:%s: Error port %s not found\n",
-           driverName, functionName, portName);
+    printf("%s:%s: Error port %s not found\n", driverName, functionName, portName);
     return asynError;
   }
   
@@ -3565,14 +3692,14 @@ extern "C" asynStatus GalilCreateCSAxes(const char *portName,     //specify whic
   * Configuration command, called directly or from iocsh
   * \param[in] portName          The name of the asyn port that has already been created for this driver
   * \param[in] code_file      	 Code file to deliver to hardware
-  * \param[in] eeprom_write      EEPROM write options
+  * \param[in] burn_program      Burn program to EEPROM
   * \param[in] display_code	 Display code options
   * \param[in] thread_mask	 Indicates which threads to expect running after code file has been delivered and thread 0 has been started. Bit 0 = thread 0 etc.
   */
 extern "C" asynStatus GalilStartController(const char *portName,        	//specify which controller by port name
 					   const char *code_file,
-					   int eeprom_write,
-					   int display_code,
+					   int burn_program,
+					   int display_code, 
 					   unsigned thread_mask)
 {
   GalilController *pC;
@@ -3588,7 +3715,7 @@ extern "C" asynStatus GalilStartController(const char *portName,        	//speci
   }
   pC->lock();
   //Call GalilController::GalilStartController to do the work
-  pC->GalilStartController((char *)code_file, eeprom_write, display_code, thread_mask);
+  pC->GalilStartController((char *)code_file, burn_program, display_code, thread_mask);
   pC->unlock();
   return asynSuccess;
 }
@@ -3680,7 +3807,7 @@ static void GalilCreateProfileCallFunc(const iocshArgBuf *args)
 //GalilStartController iocsh function
 static const iocshArg GalilStartControllerArg0 = {"Controller Port name", iocshArgString};
 static const iocshArg GalilStartControllerArg1 = {"Code file", iocshArgString};
-static const iocshArg GalilStartControllerArg2 = {"EEPROM write", iocshArgInt};
+static const iocshArg GalilStartControllerArg2 = {"Burn program", iocshArgInt};
 static const iocshArg GalilStartControllerArg3 = {"Display code", iocshArgInt};
 static const iocshArg GalilStartControllerArg4 = {"Thread mask", iocshArgInt};
 static const iocshArg * const GalilStartControllerArgs[] = {&GalilStartControllerArg0,
