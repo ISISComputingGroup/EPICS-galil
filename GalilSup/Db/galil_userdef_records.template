@@ -30,7 +30,7 @@
 
 record(ai,"$(P):$(EPICSName)_MONITOR")
 {
-	field(DESC,"$(EPICSName) monitor")
+	field(DESC,"$(DESC=$(EPICSName)) monitor")
 	field(SCAN,"$(SCAN)")
 	field(DTYP,"asynFloat64")
 	field(PINI,"$(PINI)")
@@ -50,7 +50,7 @@ record(ai,"$(P):$(EPICSName)_MONITOR")
 
 record(bi,"$(P):$(EPICSName)_STATUS")
 {
-	field(DESC,"$(EPICSName) status")
+	field(DESC,"$(DESC=$(EPICSName)) status")
 	field(INP, "$(P):$(EPICSName)_MONITOR")
 
 # Alarm thresholds
@@ -62,7 +62,7 @@ record(bi,"$(P):$(EPICSName)_STATUS")
 
 record(ao,"$(P):$(EPICSName)_SP")
 {
-	field(DESC,"$(EPICSName) setpoint")
+	field(DESC,"$(DESC=$(EPICSName)) setpoint")
 	field(DTYP,"asynFloat64")
 	
 	field(EGU, "$(EGU)")
@@ -87,7 +87,7 @@ record(ao,"$(P):$(EPICSName)_SP")
 
 record(bo,"$(P):$(EPICSName)_CMD")
 {
-	field(DESC,"$(EPICSName) cmd")
+	field(DESC,"$(DESC=$(EPICSName)) cmd")
 	field(OUT, "$(P):$(EPICSName)_SP")
 	field(FLNK,"$(P):$(EPICSName)_SP")
 

@@ -1189,6 +1189,7 @@ void GalilAxis::checkEncoder(void)
             //Flag the motor has been stopped
             stopSent_ = true;
             //Inform user
+			std::cout << "Slip/stall detected, estall time = " << pestall_time << "(limit=" << estall_time << ") stopping axis " << axisName_ << std::endl;
             sprintf(message, "Encoder stall stop motor %c", axisName_);
             //Set controller error mesg monitor
             pC_->setStringParam(0, pC_->GalilCtrlError_, message);
@@ -1221,7 +1222,9 @@ void GalilAxis::wrongLimitProtection(void)
             stopSent_ = true;
             //Inform user
             sprintf(message, "Wrong limit protect stop motor %c", axisName_);
-            //Set controller error mesg monitor
+ 			std::cout << "Wrong limit protection activated, stopping axis "<< axisName_ << std::endl;
+			std::cout << "You can disable this protection by setting $(MOTOR)_WLP_CMD to 0" << std::endl;
+           //Set controller error mesg monitor
             pC_->setStringParam(0, pC_->GalilCtrlError_, message);
             }
          }

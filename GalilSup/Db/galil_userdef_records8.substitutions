@@ -41,15 +41,16 @@
 file "$(TOP)/galilSup/Db/galil_userdef_records.template"
 {
 pattern
-{ P, PORT, ADDR, EPICSName, GalilStr }
-{ "\$(P)", "\$(PORT)", 0, "\$(EN)01_\$(GS)",     "\$(GS)A" }  
-{ "\$(P)", "\$(PORT)", 1, "\$(EN)02_\$(GS)",     "\$(GS)B" }  
-{ "\$(P)", "\$(PORT)", 2, "\$(EN)03_\$(GS)",     "\$(GS)C" }  
-{ "\$(P)", "\$(PORT)", 3, "\$(EN)04_\$(GS)",     "\$(GS)D" }  
-{ "\$(P)", "\$(PORT)", 4, "\$(EN)05_\$(GS)",     "\$(GS)E" }  
-{ "\$(P)", "\$(PORT)", 5, "\$(EN)06_\$(GS)",     "\$(GS)F" }  
-{ "\$(P)", "\$(PORT)", 6, "\$(EN)07_\$(GS)",     "\$(GS)G" }  
-{ "\$(P)", "\$(PORT)", 7, "\$(EN)08_\$(GS)",     "\$(GS)H" }
+{ P, PORT, DRVCMD, EPICSName, GalilStr, DESC }
+{ "\$(P)", "\$(PORT)", "VAR", "\$(EN)01_\$(GS)",     "\$(GS)A", "\$(DESC)" }  
+{ "\$(P)", "\$(PORT)", "VAR", "\$(EN)02_\$(GS)",     "\$(GS)B", "\$(DESC)" }  
+{ "\$(P)", "\$(PORT)", "VAR", "\$(EN)03_\$(GS)",     "\$(GS)C", "\$(DESC)" }  
+{ "\$(P)", "\$(PORT)", "VAR", "\$(EN)04_\$(GS)",     "\$(GS)D", "\$(DESC)" }  
+{ "\$(P)", "\$(PORT)", "VAR", "\$(EN)05_\$(GS)",     "\$(GS)E", "\$(DESC)" }  
+{ "\$(P)", "\$(PORT)", "VAR", "\$(EN)06_\$(GS)",     "\$(GS)F", "\$(DESC)" }  
+{ "\$(P)", "\$(PORT)", "VAR", "\$(EN)07_\$(GS)",     "\$(GS)G", "\$(DESC)" }  
+{ "\$(P)", "\$(PORT)", "VAR", "\$(EN)08_\$(GS)",     "\$(GS)H", "\$(DESC)" }
 }  
 
 # end
+

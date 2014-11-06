@@ -3170,7 +3170,7 @@ asynStatus GalilController::read_codefile(const char *code_file)
 	char axis_value[MAX_GALIL_AXES];		//Axis letter to substitute in
 	char *code_file_copy1 = strdup(code_file);	// as strtok() modifies string
 	char *code_file_copy2 = strdup(code_file);	// as strtok() modifies string
-        char *body_files[MAX_GALIL_AXES];		//List of body file names
+        char *body_files[MAX_GALIL_AXES+1];		//List of body file names
 	string str;					//For easy string manipulation
 	int i, j;					//Looping
 

@@ -58,6 +58,8 @@ dbLoadRecords("$(GALIL)/trajectory_test.db","P=$(MYPVPREFIX)")
 ## motor util package
 dbLoadRecords("$(MOTOR)/db/motorUtil.db","P=$(MYPVPREFIX)$(IOCNAME):, PVPREFIX=$(MYPVPREFIX)")
 
+#dbLoadRecords("AutosaveTriggers.db","P=$(MYPVPREFIX)")
+
 ##ISIS## Stuff that needs to be done after all records are loaded but before iocInit is called 
 < $(IOCSTARTUP)/preiocinit.cmd
 
@@ -65,6 +67,8 @@ dbLoadRecords("$(MOTOR)/db/motorUtil.db","P=$(MYPVPREFIX)$(IOCNAME):, PVPREFIX=$
 #asynSetTraceMask("Galil",-1,0x9)
 #asynSetTraceFile("Galil",-1,"galil.trace")
 #asynSetTraceIOMask("Galil",-1,0x2)
+
+#set_pass1_restoreFile("c:/Motor_Limits.sav")
 
 # Start the IOC
 iocInit()
@@ -79,6 +83,11 @@ create_monitor_set("$(IOCNAME)_positions.req", 5, "P=$(MYPVPREFIX)MOT:,IFDMC01=$
 
 # Save motor settings every 30 seconds
 create_monitor_set("$(IOCNAME)_settings.req", 30, "P=$(MYPVPREFIX)MOT:,IFDMC01=$(IFDMC01),IFDMC02=$(IFDMC02),IFDMC03=$(IFDMC03),IFDMC04=$(IFDMC04),IFDMC05=$(IFDMC05),IFDMC06=$(IFDMC06),IFDMC07=$(IFDMC07)")
+
+#create_triggered_set("Motor_Limits.req", "$(MYPVPREFIX)MOT:TRIG", "P=$(MYPVPREFIX)MOT:,SAVENAMEPV=$(MYPVPREFIX)MOT:SAVENAME,SAVEPATHPV=$(MYPVPREFIX)MOT:SAVEPATH,IFDMC01=$(IFDMC01),IFDMC02=$(IFDMC02),IFDMC03=$(IFDMC03),IFDMC04=$(IFDMC04),IFDMC05=$(IFDMC05),IFDMC06=$(IFDMC06),IFDMC07=$(IFDMC07)")
+#create_manual_set("Motor_Limits.req", "P=$(MYPVPREFIX)MOT:,SAVEPATHPV=$(MYPVPREFIX)MOT:SAVEPATH,SAVENAMEPV=$(MYPVPREFIX)MOT:SAVENAME,IFDMC01=$(IFDMC01),IFDMC02=$(IFDMC02),IFDMC03=$(IFDMC03),IFDMC04=$(IFDMC04),IFDMC05=$(IFDMC05),IFDMC06=$(IFDMC06),IFDMC07=$(IFDMC07)")
+
+#fdbrestoreX("c:/Motor_Limits.sav")
 
 # Save motor positions every 5 seconds
 #create_monitor_set("galilTest_positions.req", 5,"P=DMC01:")
