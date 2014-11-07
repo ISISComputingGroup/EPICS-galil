@@ -38,9 +38,9 @@ GalilTest_LIBS += seq pv utilities pugixml pcre
 GalilTest_LIBS += $(EPICS_BASE_IOC_LIBS)
 
 ifeq ($(STATIC_BUILD),YES)
-GalilSupport_LIBS_WIN32 += Galil1 # galil2
-GalilSupport_SYS_LIBS_WIN32 += delayimp
-GalilSupport_LDFLAGS_WIN32 += /DELAYLOAD:Galil1.dll
+GalilTest_LIBS_WIN32 += Galil1 # galil2
+GalilTest_SYS_LIBS_WIN32 += delayimp
+GalilTest_LDFLAGS_WIN32 += /DELAYLOAD:Galil1.dll
 endif
 
 #GalilTest_LIBS_WIN32 += Galil1 # galil2
