@@ -212,6 +212,7 @@ public:
   //Execute motor power auto on
   void executeAutoOn(const char *axes);
   void processUnsolicitedMesgs(void);
+  static std::string extractEthAddr(const char* str);
 
   /* Deferred moves functions.*/
   asynStatus processDeferredMovesInGroup(int coordsys, char *axes, char *moves, double acceleration, double velocity);
