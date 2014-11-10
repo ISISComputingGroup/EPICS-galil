@@ -6,7 +6,7 @@ TEMPLATE_TOP=$(EPICS_BASE)/templates/makeBaseApp/top
 
 SNCSEQ=$(SUPPORT)/seq/2-1-11
 
-CALC=$(SUPPORT)/calc/2-9
+CALC=$(SUPPORT)/calc/3-4
 SSCAN=$(SUPPORT)/sscan/2-8
 MOTOR=$(SUPPORT)/motor/R6-8-1
 GALIL=$(SUPPORT)/galil/3-0
