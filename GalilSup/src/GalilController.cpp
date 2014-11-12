@@ -252,7 +252,7 @@ GalilController::GalilController(const char *portName, const char *address, doub
   //We have not recieved a timeout yet
   consecutive_timeouts_ = 0;
   //Store period in ms between data records
-  updatePeriod_ = abs(updatePeriod);
+  updatePeriod_ = fabs(updatePeriod);
   //Code generator has not been initialized
   codegen_init_ = false;		
   digitalinput_init_ = false;
