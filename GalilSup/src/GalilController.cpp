@@ -252,7 +252,7 @@ GalilController::GalilController(const char *portName, const char *address, doub
   //We have not recieved a timeout yet
   consecutive_timeouts_ = 0;
   //Store period in ms between data records
-  updatePeriod_ = updatePeriod;
+  updatePeriod_ = abs(updatePeriod);
   //Code generator has not been initialized
   codegen_init_ = false;		
   digitalinput_init_ = false;
@@ -271,6 +271,12 @@ GalilController::GalilController(const char *portName, const char *address, doub
   strcpy(digital_code_, "");
   strcpy(card_code_, "");
  
+  if (updatePeriod < 0) {
+      try_async_ = false;
+  } else {
+      try_async_ = true;
+  }
+
   //Set defaults in Paramlist before connect
   setParamDefaults();
 
@@ -562,28 +568,36 @@ void GalilController::connected(void)
 		GalilStartController(code_file_, burn_program_, 0, thread_mask_);
 		}
 	//Use async polling by default
-	try	{
-		//If RIO gives error here... power cycle it
-		//Error here often appears as driver sending bad strings
-		//It is not this driver misbehaving, rather the controller misbehaving.
-		//get controller to send a record at specified rate
-		gco_->recordsStart(updatePeriod_);
-		//Success, no exception
-		async_records_ = true;
-		}
-	catch  (string e) {
-		//Upon any exception, use synchronous poll mechanism at rate specified in GalilCreateController as fall back strategy
-		//Fail.  Probably wrong bus.  RS-232 does not support async DR data record 
+	if (try_async_)
+	{
+		try	{
+			//If RIO gives error here... power cycle it
+			//Error here often appears as driver sending bad strings
+			//It is not this driver misbehaving, rather the controller misbehaving.
+			//get controller to send a record at specified rate
+			gco_->recordsStart(updatePeriod_);
+			//Success, no exception
+			async_records_ = true;
+			}
+		catch  (string e) {
+			//Upon any exception, use synchronous poll mechanism at rate specified in GalilCreateController as fall back strategy
+			//Fail.  Probably wrong bus.  RS-232 does not support async DR data record 
+			async_records_ = false;
+			//Print explanation
+			cout << "Asynchronous setup failed, swapping to synchronous poll " << model_ << " at " << address_ << endl;
+			//Extra warning for RIO for when 
+			//2010 COMMAND ERROR.  Galil::command("DR8.192,3") got ? instead of : response.  TC1 returned "6 Number out of range"
+			//occurs.  It is not driver corruption, it is the RIO.
+			if (strncmp(model_,"RIO",3) == 0)
+				cout << "RIO at address " << address_ << "may need power cycle " << endl;
+			cout << e << endl;
+			}
+	}
+	else
+	{
 		async_records_ = false;
-		//Print explanation
-		cout << "Asynchronous setup failed, swapping to synchronous poll " << model_ << " at " << address_ << endl;
-		//Extra warning for RIO for when 
-		//2010 COMMAND ERROR.  Galil::command("DR8.192,3") got ? instead of : response.  TC1 returned "6 Number out of range"
-		//occurs.  It is not driver corruption, it is the RIO.
-		if (strncmp(model_,"RIO",3) == 0)
-			cout << "RIO at address " << address_ << "may need power cycle " << endl;
-		cout << e << endl;
-		}
+		cout << "Using synchronous poll " << model_ << " at " << address_ << endl;
+	}
 }
 
 /** Reports on status of the driver

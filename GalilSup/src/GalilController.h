@@ -322,6 +322,7 @@ private:
   bool code_assembled_;			//Has code for the GalilController hardware been assembled (ie. is card_code_ all set to send)
   bool async_records_;			//Are the data records obtained async(DR), or sync (QR)
   double updatePeriod_;			//Period between data records in ms
+  bool try_async_;              // where to try async polling (DR) - if not, will just go straight to sync (QR)   
 
   epicsTimeStamp pollnowt_;		//Used for debugging, and tracking overall poll performance
   epicsTimeStamp polllastt_;		//Used for debugging, and tracking overall poll performance
