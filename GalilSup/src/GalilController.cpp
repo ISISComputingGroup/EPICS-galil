@@ -1687,6 +1687,7 @@ asynStatus GalilController::processDeferredMovesInGroup(int coordsys, char *axes
            sprintf(mesg, "%s begin failure coordsys %c", functionName, coordName);
            //Set controller error mesg monitor
            setStringParam(GalilCtrlError_, mesg);
+		   std::cout << mesg << std::endl;
            status = asynError;
            break;  //Something went wrong
            }
@@ -2471,6 +2472,7 @@ void GalilController::processUnsolicitedMesgs(void)
 
    //Collect unsolicted message   
    strcpy(rawbuf, gco_->message(0).c_str());
+   std::cout << "Unsolicited message: \"" << rawbuf << "\"" << std::endl;
 
    //Break message into tokens
    charstr = epicsStrtok_r(rawbuf, " \n", &tokSave);
@@ -2490,6 +2492,7 @@ void GalilController::processUnsolicitedMesgs(void)
          {
          value = atoi(charstr);
          //Process known messages
+		 std::cout << "Unsolicited message: \"" << mesg << "\"" << std::endl;
 
          //Motor homed message
          if (!abs(strcmp(mesg, "homed")))
@@ -2761,6 +2764,7 @@ asynStatus GalilController::writeReadController(const char *caller)
 		std::string errmsg = e.substr(found + 14, e.size()-found-14-2);
 		//Set controller error mesg monitor
 		setStringParam(GalilCtrlError_, errmsg.c_str());
+		std::cout << errmsg << std::endl;
 		//Inc exception counter
 		ex_count++;
 		//flag error

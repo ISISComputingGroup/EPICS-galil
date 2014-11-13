@@ -1170,6 +1170,7 @@ void GalilAxis::checkEncoder(void)
             sprintf(message, "Encoder stall stop motor %c", axisName_);
             //Set controller error mesg monitor
             pC_->setStringParam(0, pC_->GalilCtrlError_, message);
+			std::cout << message << std::endl;
             }
          }
       }
@@ -1201,6 +1202,7 @@ void GalilAxis::wrongLimitProtection(void)
             sprintf(message, "Wrong limit protect stop motor %c", axisName_);
             //Set controller error mesg monitor
             pC_->setStringParam(0, pC_->GalilCtrlError_, message);
+			std::cout << message << std::endl;
             }
          }
       else if (inmotion_)
@@ -1251,6 +1253,7 @@ void GalilAxis::checkHoming(void)
         sprintf(message, "Homing timed out motor %c", axisName_);
         //Set controller error mesg monitor
         pC_->setStringParam(0, pC_->GalilCtrlError_, message);
+		std::cout << message << std::endl;
 	}
 }
 
@@ -1497,6 +1500,7 @@ asynStatus GalilAxis::beginMotion(const char *caller)
             sprintf(mesg, "%s begin failure axis %c", caller, axisName_);
             //Set controller error mesg monitor
             pC_->setStringParam(0, pC_->GalilCtrlError_, mesg);
+			std::cout << mesg << std::endl;
             return asynError;
             }
          }
