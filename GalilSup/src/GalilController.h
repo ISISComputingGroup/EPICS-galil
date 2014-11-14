@@ -213,6 +213,7 @@ public:
   void executeAutoOn(const char *axes);
   void processUnsolicitedMesgs(void);
   static std::string extractEthAddr(const char* str);
+  void setCtrlError(const char* mesg);
 
   /* Deferred moves functions.*/
   asynStatus processDeferredMovesInGroup(int coordsys, char *axes, char *moves, double acceleration, double velocity);

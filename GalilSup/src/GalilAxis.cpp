@@ -546,10 +546,9 @@ asynStatus GalilAxis::move(double position, int relative, double minVelocity, do
 		if (!pos_ok)
 			{
 			//Dont start if wlp is on, and its been activated
-			std::cout << functionName << " failed, bad position request axis " << axisName_ << std::endl;
 			sprintf(mesg, "%s failed, bad position axis %c", functionName, axisName_);
 			//Set controller error mesg monitor
-			pC_->setStringParam(0, pC_->GalilCtrlError_, mesg);
+			pC_->setCtrlError(mesg);
 			return asynSuccess;  //Nothing to do 
 			}
 
@@ -680,29 +679,26 @@ asynStatus GalilAxis::beginCheck(const char *functionName, double maxVelocity)
   if (!axisReady_)
 	{
 	sprintf(mesg, "%s failed, autosave still restoring axis %c", functionName, axisName_);
-	std::cout << functionName << " failed, Autosave still restoring axis " << axisName_ << std::endl;
 	//Set controller error mesg monitor
-	pC_->setStringParam(0, pC_->GalilCtrlError_, mesg);
+	pC_->setCtrlError(mesg);
 	return asynError;  //Nothing to do 
 	}
 
   //Dont start if wlp is on, and its been activated
   if (wlp && wlpactive)
 	{
-	std::cout << functionName << " failed, wrong limit protection active for axis " << axisName_ << std::endl;
 	sprintf(mesg, "%s failed, wlp active for axis %c", functionName, axisName_);
 	//Set controller error mesg monitor
-	pC_->setStringParam(0, pC_->GalilCtrlError_, mesg);
+	pC_->setCtrlError(mesg);
 	return asynError;  //Nothing to do 
 	}
 
   //Dont start if velocity 0
   if (lrint(maxVelocity) == 0)
 	{
-	std::cout << functionName << " failed, velocity 0 for axis " << axisName_ << std::endl;
 	sprintf(mesg, "%s failed, velocity 0 for axis %c", functionName, axisName_);
 	//Set controller error mesg monitor
-	pC_->setStringParam(0, pC_->GalilCtrlError_, mesg);
+	pC_->setCtrlError(mesg);
 	return asynError;  //Nothing to do 
 	}
 
@@ -1169,8 +1165,7 @@ void GalilAxis::checkEncoder(void)
             //Inform user
             sprintf(message, "Encoder stall stop motor %c", axisName_);
             //Set controller error mesg monitor
-            pC_->setStringParam(0, pC_->GalilCtrlError_, message);
-			std::cout << message << std::endl;
+			pC_->setCtrlError(message);
             }
          }
       }
@@ -1201,8 +1196,7 @@ void GalilAxis::wrongLimitProtection(void)
             //Inform user
             sprintf(message, "Wrong limit protect stop motor %c", axisName_);
             //Set controller error mesg monitor
-            pC_->setStringParam(0, pC_->GalilCtrlError_, message);
-			std::cout << message << std::endl;
+	        pC_->setCtrlError(message);
             }
          }
       else if (inmotion_)
@@ -1252,8 +1246,7 @@ void GalilAxis::checkHoming(void)
         //Inform user
         sprintf(message, "Homing timed out motor %c", axisName_);
         //Set controller error mesg monitor
-        pC_->setStringParam(0, pC_->GalilCtrlError_, message);
-		std::cout << message << std::endl;
+	    pC_->setCtrlError(message);
 	}
 }
 
@@ -1297,6 +1290,7 @@ void GalilAxis::pollServices(void)
         {
         //Poll will wait for POST, and OFF completion but not STOP
         case MOTOR_STOP: stop(1);
+						 std::cout << "Poll services: STOP" << std::endl;
                          break;
         case MOTOR_POST: if (pC_->getStringParam(axisNo_, pC_->GalilPost_, (int)sizeof(post), post) == asynSuccess)
                             {
@@ -1304,6 +1298,7 @@ void GalilAxis::pollServices(void)
                             strcpy(pC_->cmd_, post);
                             //Write command to controller
                             pC_->writeReadController(functionName);
+							std::cout << "Poll services: POST " << post << std::endl;
                             postExecuted_ = true;
                             }
                          break;
@@ -1311,6 +1306,7 @@ void GalilAxis::pollServices(void)
                          if (!inmotion_ && autooffAllowed_)
                             {
                             //Execute the motor off command
+							std::cout << "Poll services: MOTOR OFF " << post << std::endl;
                             setClosedLoop(false);
                             autooffExecuted_ = true;
                             }
@@ -1328,6 +1324,7 @@ void GalilAxis::pollServices(void)
                          status |= pC_->getIntegerParam(axisNo_, pC_->GalilJogAfterHome_, &jah);
                          status |= pC_->getIntegerParam(axisNo_, pC_->GalilUseEncoder_, &ueip);
 
+						 std::cout << "Poll services: HOMED " << std::endl;
                          //Program home register
                          if (!status && phreg)
                             {
@@ -1345,11 +1342,13 @@ void GalilAxis::pollServices(void)
                                mrhmval = 0.0;
                                }
                             //Program motor position register
+						    std::cout << "Poll services: applying motor home position " << mrhmval << std::endl;
                             sprintf(pC_->cmd_, "DP%c=%.0lf\n", axisName_, mrhmval);
                             pC_->writeReadController(functionName);
                             //Program encoder position register
                             if (ueip)
                                {
+						       std::cout << "Poll services: applying encoder home position " << enhmval << std::endl;
                                sprintf(pC_->cmd_, "DE%c=%.0lf\n", axisName_, enhmval);
                                pC_->writeReadController(functionName);
                                }
@@ -1358,6 +1357,7 @@ void GalilAxis::pollServices(void)
                          //Do jog after home move
                          if (!status && jah)
                             {
+						    std::cout << "Poll services: jog after home" << std::endl;
                             //Calculate position, velocity and acceleration
                             velocity = velo/mres;
                             acceleration = velocity/accl;
@@ -1391,6 +1391,7 @@ void GalilAxis::executePrem(void)
         //Copy prem to cmd
         strcpy(pC_->cmd_, prem);
         //Execute the prem string
+		std::cout << "Premove " << prem << std::endl;
         pC_->writeReadController(functionName);
         }
      }
@@ -1499,8 +1500,7 @@ asynStatus GalilAxis::beginMotion(const char *caller)
             {
             sprintf(mesg, "%s begin failure axis %c", caller, axisName_);
             //Set controller error mesg monitor
-            pC_->setStringParam(0, pC_->GalilCtrlError_, mesg);
-			std::cout << mesg << std::endl;
+            pC_->setCtrlError(mesg);
             return asynError;
             }
          }

@@ -1686,8 +1686,7 @@ asynStatus GalilController::processDeferredMovesInGroup(int coordsys, char *axes
            {
            sprintf(mesg, "%s begin failure coordsys %c", functionName, coordName);
            //Set controller error mesg monitor
-           setStringParam(GalilCtrlError_, mesg);
-		   std::cout << mesg << std::endl;
+		   setCtrlError(mesg);
            status = asynError;
            break;  //Something went wrong
            }
@@ -2472,12 +2471,12 @@ void GalilController::processUnsolicitedMesgs(void)
 
    //Collect unsolicted message   
    strcpy(rawbuf, gco_->message(0).c_str());
-   std::cout << "Unsolicited message: \"" << rawbuf << "\"" << std::endl;
 
    //Break message into tokens
    charstr = epicsStrtok_r(rawbuf, " \n", &tokSave);
    while (charstr != NULL)
       {
+      std::cout << "Raw unsolicited message: \"" << charstr << "\"" << std::endl;
       //Determine axis message is for
       axisName = (char)charstr[strlen(charstr)-1];
       //Extract the message
@@ -2492,7 +2491,6 @@ void GalilController::processUnsolicitedMesgs(void)
          {
          value = atoi(charstr);
          //Process known messages
-		 std::cout << "Unsolicited message: \"" << mesg << "\"" << std::endl;
 
          //Motor homed message
          if (!abs(strcmp(mesg, "homed")))
@@ -2763,8 +2761,7 @@ asynStatus GalilController::writeReadController(const char *caller)
 		std::size_t found = e.find("TC1 returned \"");
 		std::string errmsg = e.substr(found + 14, e.size()-found-14-2);
 		//Set controller error mesg monitor
-		setStringParam(GalilCtrlError_, errmsg.c_str());
-		std::cout << errmsg << std::endl;
+		setCtrlError(errmsg.c_str());
 		//Inc exception counter
 		ex_count++;
 		//flag error
@@ -3565,6 +3562,13 @@ asynStatus GalilController::drvUserDestroy(asynUser *pasynUser)
       return asynMotorController::drvUserDestroy(pasynUser);
       }
 }
+
+void GalilController::setCtrlError(const char* mesg)
+{
+	std::cout << mesg << std::endl;   // or maybe use errlogSevPrintf() ?
+	setStringParam(0, GalilCtrlError_, mesg);
+}
+
 
 //IocShell functions
 
