@@ -187,6 +187,7 @@ public:
   void GalilStartController(char *code_file, int eeprom_write, int display_code, unsigned thread_mask);
   void connectManager(void);
   void connect(void);
+  void disconnect(void);
   void connected(void);
   asynStatus acquireDataRecord(string cmd);
   void getStatus(void);
@@ -217,6 +218,9 @@ public:
 
   /* Deferred moves functions.*/
   asynStatus processDeferredMovesInGroup(int coordsys, char *axes, char *moves, double acceleration, double velocity);
+
+  void shutdownController();
+  ~GalilController();
 
 protected:
   #define FIRST_GALIL_PARAM GalilAddress_
@@ -323,7 +327,7 @@ private:
   bool code_assembled_;			//Has code for the GalilController hardware been assembled (ie. is card_code_ all set to send)
   bool async_records_;			//Are the data records obtained async(DR), or sync (QR)
   double updatePeriod_;			//Period between data records in ms
-  bool try_async_;              // where to try async polling (DR) - if not, will just go straight to sync (QR)   
+  bool try_async_;              // where to try async (DR) for data record - if not, will just go straight to polling/sync (QR)   
 
   epicsTimeStamp pollnowt_;		//Used for debugging, and tracking overall poll performance
   epicsTimeStamp polllastt_;		//Used for debugging, and tracking overall poll performance
