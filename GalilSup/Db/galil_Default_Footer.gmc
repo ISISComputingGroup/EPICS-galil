@@ -5,10 +5,10 @@ EN
 errstr=_ED;errcde=_TC;cmderr=cmderr+1
 RE 1
 EN
-#LIMSWI                                                 
-IF (((_SCA=2) | (_SCA=3)) & (_BGA=1))                   
-oldecelA=_DCA;DCA=limdcA;WT2;STA;DCA=oldecelA;ENDIF     
-IF (((_SCB=2) | (_SCB=3)) & (_BGB=1))                   
+#LIMSWI
+IF (((_SCA=2) | (_SCA=3)) & (_BGA=1))
+oldecelA=_DCA;DCA=limdcA;WT2;STA;DCA=oldecelA;ENDIF
+IF (((_SCB=2) | (_SCB=3)) & (_BGB=1))
 oldecelB=_DCB;DCB=limdcB;WT2;STB;DCB=oldecelB;ENDIF
 IF (((_SCC=2) | (_SCC=3)) & (_BGC=1))
 oldecelC=_DCC;DCC=limdcC;WT2;STC;DCC=oldecelC;ENDIF
