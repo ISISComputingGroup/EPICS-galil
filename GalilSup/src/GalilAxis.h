@@ -175,6 +175,7 @@ private:
   epicsMessageQueue pollRequest_;	//The service numbers poll would like done
   bool stopSent_;			//Has motor stop mesg been sent to pollServices thread due to encoder stall or wrong limit protection
   bool postSent_;			//Has post mesg been sent to pollServices thread after motor stop
+  bool premExecuted_;			//Has a premove been executed
   bool autooffSent_;			//Has motor auto off mesg been sent to pollServices thread after motor stop
   bool postExecuted_;			//Has pollServices executed post
   bool autooffExecuted_;		//Has pollServices executed the autooff

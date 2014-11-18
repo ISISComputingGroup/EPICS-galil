@@ -2480,8 +2480,8 @@ void GalilController::processUnsolicitedMesgs(void)
 {
    char *charstr;		//The current token
    GalilAxis *pAxis;	 	//GalilAxis
-   char rawbuf[MAX_MESSAGE_LEN*8];//Unsolicited mesg buf
-   char mesg[MAX_MESSAGE_LEN];	//The message
+   char rawbuf[MAX_MESSAGE_LEN * 8];//Unsolicited message(s) buffer
+   char mesg[MAX_MESSAGE_LEN];	//An individual message
    char axisName;		//Axis number message is for
    int value;			//The value contained in the message
    char *tokSave = NULL;	//Remaining tokens

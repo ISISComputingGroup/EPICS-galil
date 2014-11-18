@@ -165,11 +165,13 @@ asynStatus GalilAxis::setDefaults(int limit_as_home, char *enables_string, int s
 	//Motor record post mesg not sent to pollServicess thread after stop yet  
 	postExecuted_ = postSent_ = false;
 
+	premExecuted_ = false;
+
 	//Homed mesg not sent to pollServices thread
 	homedExecuted_ = homedSent_ = false;
 
-	//Motor power auto on/off mesg not sent to pollServices thread yet
-	autooffExecuted_ = autooffSent_ = false;
+	//Pretend Motor power auto on/off mesg sent to pollServices so we don't turn motor off on IOC startup
+	autooffExecuted_ = autooffSent_ = true;
 
 	//AutoOn delay not in progress so autooff allowed
 	autooffAllowed_ = true;
@@ -1051,7 +1053,7 @@ asynStatus GalilAxis::getStatus(void)
 	//Allows us to poll without lock
 	catch (const std::bad_typeid& e)
 		{
-		cout << "Caught bad_typeid GalilAxis::getStatus" << endl;
+		cout << "Caught bad_typeid GalilAxis::getStatus" << e.what() << endl;
 		}
 	}
   return pC_->recstatus_;
@@ -1163,9 +1165,10 @@ void GalilAxis::checkEncoder(void)
             //Flag the motor has been stopped
             stopSent_ = true;
             //Inform user
-            sprintf(message, "Encoder stall stop motor %c", axisName_);
+            sprintf(message, "Encoder stalled stop motor %c", pestall_time, axisName_);
             //Set controller error mesg monitor
 			pC_->setCtrlError(message);
+			std::cout << "STALL: pestall_time=" << pestall_time << "(>" << estall_time << ") motorMove_=" << motorMove_ << " encoderMove_=" << encoderMove_ << " encDirOk_=" << encDirOk_ << " inmotion_=" << inmotion_ << std::endl;
             }
          }
       }
@@ -1290,7 +1293,7 @@ void GalilAxis::pollServices(void)
         {
         //Poll will wait for POST, and OFF completion but not STOP
         case MOTOR_STOP: stop(1);
-						 std::cout << "Poll services: STOP" << std::endl;
+						 std::cout << "Poll services: STOP " << axisName_ << std::endl;
                          break;
         case MOTOR_POST: if (pC_->getStringParam(axisNo_, pC_->GalilPost_, (int)sizeof(post), post) == asynSuccess)
                             {
@@ -1298,7 +1301,7 @@ void GalilAxis::pollServices(void)
                             strcpy(pC_->cmd_, post);
                             //Write command to controller
                             pC_->writeReadController(functionName);
-							std::cout << "Poll services: POST " << post << std::endl;
+							std::cout << "Poll services: POST " << axisName_ << " " << post << std::endl;
                             postExecuted_ = true;
                             }
                          break;
@@ -1306,7 +1309,7 @@ void GalilAxis::pollServices(void)
                          if (!inmotion_ && autooffAllowed_)
                             {
                             //Execute the motor off command
-							std::cout << "Poll services: MOTOR OFF " << post << std::endl;
+							std::cout << "Poll services: MOTOR OFF " << axisName_ << std::endl;
                             setClosedLoop(false);
                             autooffExecuted_ = true;
                             }
@@ -1324,7 +1327,7 @@ void GalilAxis::pollServices(void)
                          status |= pC_->getIntegerParam(axisNo_, pC_->GalilJogAfterHome_, &jah);
                          status |= pC_->getIntegerParam(axisNo_, pC_->GalilUseEncoder_, &ueip);
 
-						 std::cout << "Poll services: HOMED " << std::endl;
+						 std::cout << "Poll services: HOMED " << axisName_ << std::endl;
                          //Program home register
                          if (!status && phreg)
                             {
@@ -1383,6 +1386,7 @@ void GalilAxis::executePrem(void)
 {
   static const char *functionName = "GalilAxis::executePrem";
   char prem[MAX_GALIL_STRING_SIZE];		//Motor record prem field
+  premExecuted_ = true; // need to set this even if no PREM as it is used by POST
 
   if (pC_->getStringParam(axisNo_, pC_->GalilPrem_, (int)sizeof(prem), prem) == asynSuccess)
      {
@@ -1446,16 +1450,17 @@ void GalilAxis::executePost(void)
 {
   char post[MAX_GALIL_STRING_SIZE];	//Motor record post field
 
-  //Process motor record post field
-  if (pC_->getStringParam(axisNo_, pC_->GalilPost_, (int)sizeof(post), post) == asynSuccess)
-     {
-     if (!homing_ && !homedSent_ && done_ && strcmp(post, "") && !postSent_)
-        {
+  if (!homing_ && !homedSent_ && done_ && premExecuted_ && !postSent_)
+  {
+      premExecuted_ = false;
+      //Process motor record post field
+      if ( (pC_->getStringParam(axisNo_, pC_->GalilPost_, (int)sizeof(post), post) == asynSuccess) && strcmp(post, "") )
+      {
         //Send the post command
         pollRequest_.send((void*)&MOTOR_POST, sizeof(int));
         postSent_ = true;
-        }
      }
+  }
 }
 
 //Send motor auto power off mesg to pollServices thread
