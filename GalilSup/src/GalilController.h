@@ -88,7 +88,6 @@
 #define GalilMotorTypeString		"MOTOR_TYPE"
 #define GalilMotorOnString		"MOTOR_ONOFF"
 #define GalilMotorConnectedString	"MOTOR_MCONN"
-#define GalilProgramHomeString		"MOTOR_PHOME"
 #define GalilAfterLimitString		"MOTOR_EGUAFTLIMIT"
 #define GalilHomeValueString		"MOTOR_HOMEVAL"
 #define GalilHomedString		"MOTOR_HOMED"
@@ -109,6 +108,7 @@
 
 #define GalilMainEncoderString		"MOTOR_MAIN_ENCODER"
 #define GalilAuxEncoderString		"MOTOR_AUX_ENCODER"
+
 #define GalilMotorAcclString		"MOTOR_ACCL"
 #define GalilMotorVeloString		"MOTOR_VELO"
 #define GalilMotorVmaxString		"MOTOR_VMAX"
@@ -256,7 +256,6 @@ protected:
   int GalilMotorType_;
   int GalilMotorOn_;
   int GalilMotorConnected_;
-  int GalilProgramHome_;
   int GalilAfterLimit_;
   int GalilHomeValue_;
   int GalilHomed_;
@@ -319,8 +318,6 @@ private:
   char code_file_[2048];		//Code file(s) that user gave to GalilStartController
 
   int burn_program_;			//Burn program options that user gave to GalilStartController
-  int burn_parameters_;			//Burn parameters at shutdown.  Done if motor type changed on any axis.
-					//Wrong motor at pwr on is a problem
 					
   bool connect_fail_reported_;		//Has initial connection failure been reported to iocShell
   int consecutive_timeouts_;		//Used for connection management

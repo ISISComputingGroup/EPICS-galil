@@ -26,13 +26,14 @@
 
 #define KPMAX			1023.875
 #define KDMAX			4095.875
-#define HOMING_TIMEOUT		3
+#define HOMING_TIMEOUT		3.5
 
 //pollServices request numbers
 static const int MOTOR_STOP = 0;
 static const int MOTOR_POST = 1;
 static const int MOTOR_OFF = 2;
 static const int MOTOR_HOMED = 3;
+static const int MOTOR_CANCEL_HOME = 4;
 
 class GalilAxis : public asynMotorAxis
 {
@@ -169,7 +170,6 @@ private:
   epicsTimeStamp stop_begint_;		//Used to track length of motor stopped for.
   double stopped_time_;			//Time motor has been stopped for
   bool encDirOk_;			//Encoder direction ok flag
-  bool motorMove_;			//Motor move status
   bool encoderMove_;			//Encoder move status
   bool pestall_detected_;		//Possible encoder stall detected flag
   epicsMessageQueue pollRequest_;	//The service numbers poll would like done
@@ -182,6 +182,7 @@ private:
   bool autooffAllowed_;			//Block autoOff if autoOn has released lock for on delay
   bool homedSent_;			//Homed message sent to pollServices
   bool homedExecuted_;			//Homed message has been executed by pollServices
+  bool cancelHomeSent_;			//Cancel home process message sent to pollServices
 
 friend class GalilController;
 };
