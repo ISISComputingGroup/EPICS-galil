@@ -170,8 +170,7 @@ asynStatus GalilAxis::setDefaults(int limit_as_home, char *enables_string, int s
 	//Homed mesg not sent to pollServices thread
 	homedExecuted_ = homedSent_ = false;
 
-	//Pretend Motor power auto on/off mesg sent to pollServices so we don't turn motor off on IOC startup
-	autooffExecuted_ = autooffSent_ = true;
+	autooffExecuted_ = autooffSent_ = false;
 
 	//AutoOn delay not in progress so autooff allowed
 	autooffAllowed_ = true;
