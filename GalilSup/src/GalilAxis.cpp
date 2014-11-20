@@ -1418,13 +1418,14 @@ void GalilAxis::executeAutoOn(void)
         pC_->lock();
         //Reset stop timer for auto off
         stop_begint_ = stop_nowt_;
-        autooffSent_ = false;
         //Autooff now allowed as we have lock now anyway
         autooffAllowed_ = true;
         }
      else //AutoOn delay too short to bother releasing lock to other threads
         epicsThreadSleep(ondelay);
      }
+  // allow a motor off to be sent at a later time
+  autooffSent_ = false;
 }
 
 //Send motor record post mesg to pollServices thread
