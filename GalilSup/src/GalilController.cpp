@@ -2589,7 +2589,6 @@ void GalilController::processUnsolicitedMesgs(void)
    charstr = epicsStrtok_r(rawbuf, " \r\n", &tokSave);
    while (charstr != NULL)
       {
-      std::cout << "Raw unsolicited message: \"" << charstr << "\"" << std::endl;
       //Determine axis message is for
       axisName = (char)charstr[strlen(charstr)-1];
       //Extract the message
@@ -2603,6 +2602,7 @@ void GalilController::processUnsolicitedMesgs(void)
       if (charstr != NULL && pAxis)
          {
          value = atoi(charstr);
+         std::cout << "Unsolicited message: \"" << mesg << axisName << "\"" << "=" << value << std::endl;
          //Process known messages
 
          //Motor homed message
@@ -2629,6 +2629,10 @@ void GalilController::processUnsolicitedMesgs(void)
          if (!abs(strcmp(mesg, "home")))
             pAxis->homing_ = false;
          }
+	  else
+	     {
+             std::cout << "Discarding unsolicited message: \"" << mesg << axisName << "\"" << std::endl;
+	     }
 
       //Retrieve next mesg
       charstr = epicsStrtok_r(NULL, " \r\n", &tokSave);

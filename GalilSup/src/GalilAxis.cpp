@@ -55,7 +55,7 @@ GalilAxis::GalilAxis(class GalilController *pC, //Pointer to controller instance
 		     char *enables_string,	//digital input(s) to use for motor enable/disable function
 		     int switch_type)		//motor enable/disable switch type
   : asynMotorAxis(pC, (toupper(axisname[0]) - AASCII)),
-    pC_(pC), pollRequest_(10, sizeof(int))
+    pC_(pC), last_encoder_position_(0), pollRequest_(10, sizeof(int))
 {
   char axis_limit_code[LIMIT_CODE_LEN];   	//Code generated for limits interrupt on this axis
   char axis_digital_code[INP_CODE_LEN];	     	//Code generated for digital interrupt related to this axis
@@ -1567,8 +1567,13 @@ asynStatus GalilAxis::poll(bool *moving)
    if (fwd_ && limit_as_home_)
       home = 1;
 
-   //Save encoder position, and done for next poll cycle
-   last_encoder_position_ = encoder_position_;
+   // Save encoder position, and done for next poll cycle
+   // only update last_encoder_position_ if we think encoder has moved, otherwise if we move 
+   // slower than "edel/eres" per poll it will not register as a move and might cause a stall
+   if (encoderMove_)
+   {
+       last_encoder_position_ = encoder_position_;
+   }
    last_done_ = done_;
 
 skip:
