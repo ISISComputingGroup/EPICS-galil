@@ -19,7 +19,7 @@ DC${AXIS}=(@ABS[hjgdc${AXIS}])
 JG${AXIS}=((@ABS[hjgsp${AXIS}])*-0.1)
 FI${AXIS};SH${AXIS};WT100;BG${AXIS};hjog${AXIS}=2
 ENDIF
-IF ((hjog${AXIS}=2) & (_BG${AXIS}=0) & (home${AXIS}=1) & (_SC${AXIS}=1))
+IF ((hjog${AXIS}=2) & (_BG${AXIS}=0) & (home${AXIS}=1) & (_SC${AXIS}=10))
 hjog${AXIS}=0;home${AXIS}=0;homed${AXIS}=1
 MG "home${AXIS}", home${AXIS};MG "homed${AXIS}", homed${AXIS}
 ENDIF
