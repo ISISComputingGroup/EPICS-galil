@@ -23,7 +23,7 @@ ENDIF
 IF ((hjog${AXIS}=2) & (_BG${AXIS}=0) & (home${AXIS}=1) & (_SC${AXIS}=10))
 AC${AXIS}=(@ABS[hjgdc${AXIS}])
 DC${AXIS}=(@ABS[hjgdc${AXIS}])
-PR$(AXIS)=((hjgsp$(AXIS))*-1)
+PR$(AXIS)=((@ABS[hjgsp${AXIS}])*-1)
 SH${AXIS};WT100;BG${AXIS};hjog${AXIS}=3
 ENDIF
 IF ((hjog${AXIS}=3) & (_BG${AXIS}=0) & (home${AXIS}=1) & (_SC${AXIS}=1))
