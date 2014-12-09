@@ -1,5 +1,6 @@
 NO*****************AXIS ${AXIS}********************
 NO***HOME - Home Switch, FI pos************
+NO************FE, FI, PR, FI***************
 #HOME${AXIS}
 IF (((_LR${AXIS}=0) | (_LF${AXIS}=0)) & (home${AXIS}=1))
 home${AXIS}=0;MG "home${AXIS}", home${AXIS};ENDIF
@@ -13,7 +14,7 @@ DC${AXIS}=(@ABS[hjgdc${AXIS}])
 SP${AXIS}=(@ABS[hjgsp${AXIS}])
 FE${AXIS};SH${AXIS};WT100;BG${AXIS};hjog${AXIS}=1
 ENDIF
-IF ((hjog${AXIS}=1) & (_BG${AXIS}=0) & (home${AXIS}=1) & (_SC${AXIS}=10))
+IF ((hjog${AXIS}=1) & (_BG${AXIS}=0) & (home${AXIS}=1) & (_SC${AXIS}=9))
 AC${AXIS}=(@ABS[hjgdc${AXIS}])
 DC${AXIS}=(@ABS[hjgdc${AXIS}])
 JG${AXIS}=((@ABS[hjgsp${AXIS}])*1)
