@@ -15,9 +15,11 @@ dbLoadRecords("$(TOP)/db/galil_motor_extras.db", "P=$(MYPVPREFIX)MOT,CC=$(GCID),
 
 #Load digital IO databases
 #dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_digital_ports.substitutions")
+dbLoadRecords("$(TOP)/db/galil_digital_ports.db", "P=$(MYPVPREFIX)MOT,CC=$(GCID),CCP=$(GALILCRATE),IFSIM=#,IFNOTSIM=")
 
 #Load analog IO databases
 #dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_analog_ports.substitutions")
+dbLoadRecords("$(TOP)/db/galil_analog_ports.db", "P=$(MYPVPREFIX)MOT,CC=$(GCID),CCP=$(GALILCRATE),IFSIM=#,IFNOTSIM=")
 
 #Load user defined functions
 #dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_userdef_records.substitutions")
