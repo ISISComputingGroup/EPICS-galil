@@ -16,7 +16,7 @@ LIBRARY_IOC += GalilSupport
 #  LibGalil-vs2010-x64/debug/Galil1.lib -> $(LIBGALIL)/lib/windows-x64-debug/Galil1.lib
 #  LibGalil-vs2010-x64/release/Galil1.dll -> $(LIBGALIL)/bin/windows-x64/Galil1.dll
 #  LibGalil-vs2010-x64/debug/Galil1.dll -> $(LIBGALIL)/bin/windows-x64-debug/Galil1.dll
-LIBGALIL = $(TOP)/../1-6/LibGalil/$(VCVERSION)
+LIBGALIL = $(TOP)/LibGalil/$(VCVERSION)
 
 USR_CXXFLAGS += -I$(LIBGALIL)/include
 # For sCalcPostfix.h
