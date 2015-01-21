@@ -1,15 +1,24 @@
 TOP = ..
 include $(TOP)/configure/CONFIG
 
-include $(TOP)/configure/RULES
+LIBGALIL_VERSION = 1.6.4
 
-install :
-ifeq ($(OS_CLASS),"WIN32")
-	xcopy /E /Q /I /Y /D "\\isis\inst$$\Kits$$\CompGroup\ICP\Binaries\LibGalil\$(VCVERSION)\*" "$(VCVERSION)"
+ifneq ($(findstring windows,$(EPICS_HOST_ARCH)),) 
+ISWIN32=YES
+endif
+ifneq ($(findstring win32,$(EPICS_HOST_ARCH)),) 
+ISWIN32=YES
 endif
 
-clean ::
-ifeq ($(OS_CLASS),"WIN32")
+include $(TOP)/configure/RULES_DIRS
+
+install :
+ifneq ($(ISWIN32),) 
+	xcopy /E /Q /I /Y /D "\\isis\inst$$\Kits$$\CompGroup\ICP\Binaries\LibGalil\$(LIBGALIL_VERSION)\$(VCVERSION)\*" "$(VCVERSION)"
+endif
+
+clean :
+ifneq ($(VCVERSION),)
 	$(RMDIR) "$(VCVERSION)"
 endif
 
