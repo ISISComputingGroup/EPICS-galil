@@ -90,6 +90,14 @@ record(transform,"$(P):$(M)_lockput") {
   field(OUTE,"$(P):$(M).SPMG NPP NMS")
 }
 
+record(bo,"$(P):$(M)_lock") {
+  field(DESC,"Motor lock")
+#  field(PINI,"YES")
+  field(OUT,"$(P):$(M)_lockput.A PP MS")
+  field(ZNAM,"Unlocked")
+  field(ONAM,"Locked")
+}
+
 #Below records are used to extract data from MR
 #and pass to driver
 record(ao,"$(P):$(M)_ACCL_SP") {
