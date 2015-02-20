@@ -8,7 +8,7 @@ SNCSEQ=$(SUPPORT)/seq/2-1-11
 
 CALC=$(SUPPORT)/calc/3-4
 SSCAN=$(SUPPORT)/sscan/2-8
-MOTOR=$(SUPPORT)/motor/R6-8-1
+MOTOR=$(SUPPORT)/motor/R6-9
 GALIL=$(SUPPORT)/galil/3-0
 AUTOSAVE=$(SUPPORT)/autosave/R5_4_2
 ASYN=$(SUPPORT)/asyn/4-26
