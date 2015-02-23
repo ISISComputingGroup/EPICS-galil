@@ -19,7 +19,7 @@ PCRE=$(SUPPORT)/pcre
 MYSQL=$(SUPPORT)/MySQL
 ZLIB=$(SUPPORT)/zlib/1-2-8
 TEMPLATE_TOP=$(EPICS_BASE)/templates/makeBaseApp/top
-BUSY=$(SUPPORT)/busy/1-4
+BUSY=$(SUPPORT)/busy/1-6-1
 
 ## ISIS standard modules ##
 PUGIXML=$(SUPPORT)/pugixml
