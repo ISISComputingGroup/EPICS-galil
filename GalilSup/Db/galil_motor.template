@@ -55,7 +55,7 @@ grecord(motor,"$(P):$(M)")
 	field(PCOF,"$(PCOF)")
 	field(ICOF,"$(ICOF)")
 	field(DCOF,"$(DCOF)")
-	info(archive,"VAL RBV DVAL DRBV OFF MSTA")
+	info(archive,"0.1 VAL RBV DVAL DRBV OFF MSTA")
 }
 
 alias("$(P):$(M)", "$(P):$(M):SP")
