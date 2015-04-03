@@ -382,7 +382,7 @@ void GalilController::disconnect(void)
 	    //Stop GalilController class use of Galil communication object
 	    gco_ = NULL;
 	    //Print brief disconnection details
-	    cout << "Disconnected from " << model_ << " at " << address_ << endl;
+	    errlogSevPrintf(errlogInfo, "Disconnected from %s at %s\n", model_, address_);
 	}
 }
 
@@ -420,7 +420,7 @@ void GalilController::connect(void)
 	 if (!connect_fail_reported_)
 		{
 		//Couldnt connect mesg
-	   	cout << functionName << ":" << " " << e;
+	   	errlogSevPrintf(errlogMajor, "%s: %s\n", functionName, e.c_str());
 		//Assume 8 threads controller we cannot connect with
 		numThreads_ = 8;
 		//Connect fail has been reported to iocShell
@@ -514,7 +514,7 @@ void GalilController::connected(void)
 	setStringParam(GalilModel_, model_);
 
 	//Print brief connection details
-	cout << "Connected to " << gco_->connection() << endl;
+	errlogSevPrintf(errlogInfo, "Connected to %s\n", gco_->connection().c_str());
 	
 	//Read Ethernet handle details
 	strcpy(cmd_, "TH");
@@ -2726,7 +2726,8 @@ void GalilController::getStatus(void)
 	catch (string e) 
 		{
 		//Print exception mesg
-		cout << functionName << ":" << e;
+		//cout << functionName << ":" << e;
+		errlogSevPrintf(errlogMajor, "%s\n", e.c_str());
 		}
 	//Forgiveness is cheap
 	//Allows us to poll without lock
@@ -2808,7 +2809,7 @@ asynStatus GalilController::acquireDataRecord(string cmd)
   catch (string e)
     {
     //Failure.  Print exception mesg
-    cout << functionName << ":" << model_ << ":" << address_ << ":" << e;
+    errlogSevPrintf(errlogMajor, "%s:%s:%s: %s\n", functionName, model_, address_, e.c_str());
     //Failure.  Set status in GalilController instance
     recstatus_ = asynError;
     //Check for timeout errors
@@ -3004,7 +3005,7 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
 		catch (string e)
 			{
 			//Upload failed
-			cout << "GalilStartController:Upload failed:" << " " << e;
+			errlogSevPrintf(errlogMajor, "GalilStartController:Upload failed: %s\n", e.c_str());
 			}
 
 		if ((display_code == 2) || (display_code == 3))
@@ -3106,7 +3107,7 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
 		catch (string e)
 			{
 			//Upload failed
-			cout << "GalilStartController:Upload failed:" << " " << e;
+			errlogSevPrintf(errlogMajor, "GalilStartController:Upload failed: %s\n", e.c_str());
 			}
 
 		//Start thread 0 if upload reveals code exists on controller
@@ -3685,7 +3686,7 @@ asynStatus GalilController::drvUserDestroy(asynUser *pasynUser)
   */
 void GalilController::setCtrlError(const char* mesg)
 {
-	std::cout << mesg << std::endl;   // or maybe use errlogSevPrintf() ?
+	errlogSevPrintf(errlogMajor, "%s\n", mesg);
 	setStringParam(0, GalilCtrlError_, mesg);
 }
 

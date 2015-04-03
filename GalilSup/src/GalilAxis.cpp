@@ -1017,7 +1017,7 @@ asynStatus GalilAxis::getStatus(void)
 	catch (string e) 
 		{
 		//Print exception mesg
-		cout << functionName << ":" << e;
+		errlogSevPrintf(errlogMajor, "%s: %s\n", functionName, e.c_str());
 		}
 	//Forgiveness is cheap
 	//Allows us to poll without lock
@@ -1268,7 +1268,7 @@ void GalilAxis::pollServices(void)
         case MOTOR_CANCEL_HOME: sprintf(pC_->cmd_, "home%c=0\n", axisName_);
                                 epicsThreadSleep(.2);  //Wait as controller may still issue move upto this time after
                                                        //Setting home to 0 (cancel home)
-						 std::cout << "Poll services: MOTOR CANCEL HOME " << axisName_ << std::endl;
+						 errlogSevPrintf(errlogInfo, "Poll services: MOTOR CANCEL HOME %c\n", axisName_);
                                 //break; Delibrate fall through to MOTOR_STOP
         case MOTOR_STOP: stop(1);
 						 std::cout << "Poll services: STOP " << axisName_ << std::endl;
@@ -1293,7 +1293,7 @@ void GalilAxis::pollServices(void)
                             }
                          break;
         case MOTOR_HOMED://Retrieve needed params
-						 std::cout << "Poll services: MOTOR HOMED " << axisName_ << std::endl;
+						 errlogSevPrintf(errlogInfo, "Poll services: MOTOR HOMED %c\n", axisName_);
                          status = pC_->getDoubleParam(axisNo_, pC_->GalilJogAfterHomeValue_, &jahv);
                          status |= pC_->getDoubleParam(axisNo_, pC_->GalilMotorAccl_, &accl);
                          status |= pC_->getDoubleParam(axisNo_, pC_->GalilMotorVelo_, &velo);
@@ -1322,13 +1322,13 @@ void GalilAxis::pollServices(void)
                                mrhmval = 0.0;
                                }
                             //Program motor position register
-						    std::cout << "Poll services: applying motor home position " << mrhmval << std::endl;
+						    errlogSevPrintf(errlogInfo, "Poll services: applying motor home position %.01f\n", mrhmval);
                             sprintf(pC_->cmd_, "DP%c=%.0lf\n", axisName_, mrhmval);
                             pC_->writeReadController(functionName);
                             //Program encoder position register
                             if (ueip)
                                {
-						       std::cout << "Poll services: applying encoder home position " << enhmval << std::endl;
+						       errlogSevPrintf(errlogInfo, "Poll services: applying encoder home position %.01f\n", enhmval);
                                sprintf(pC_->cmd_, "DE%c=%.0lf\n", axisName_, enhmval);
                                pC_->writeReadController(functionName);
                                }
