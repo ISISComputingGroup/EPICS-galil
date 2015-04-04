@@ -2727,7 +2727,7 @@ void GalilController::getStatus(void)
 		{
 		//Print exception mesg
 		//cout << functionName << ":" << e;
-		errlogSevPrintf(errlogMajor, "%s\n", e.c_str());
+		errlogSevPrintf(errlogMajor, "%s:%s\n", functionName, e.c_str());
 		}
 	//Forgiveness is cheap
 	//Allows us to poll without lock

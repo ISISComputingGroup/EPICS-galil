@@ -1322,14 +1322,14 @@ void GalilAxis::pollServices(void)
                                mrhmval = 0.0;
                                }
                             //Program motor position register
-						    errlogSevPrintf(errlogInfo, "Poll services: applying motor home position %.01f\n", mrhmval);
-                            sprintf(pC_->cmd_, "DP%c=%.0lf\n", axisName_, mrhmval);
+						    errlogSevPrintf(errlogInfo, "Poll services: applying motor %c raw home position %.0f\n", axisName_, mrhmval);
+                            sprintf(pC_->cmd_, "DP%c=%.0f\n", axisName_, mrhmval);
                             pC_->writeReadController(functionName);
                             //Program encoder position register
                             if (ueip)
                                {
-						       errlogSevPrintf(errlogInfo, "Poll services: applying encoder home position %.01f\n", enhmval);
-                               sprintf(pC_->cmd_, "DE%c=%.0lf\n", axisName_, enhmval);
+						       errlogSevPrintf(errlogInfo, "Poll services: applying encoder %c raw home position %.0f\n", axisName_, enhmval);
+                               sprintf(pC_->cmd_, "DE%c=%.0f\n", axisName_, enhmval);
                                pC_->writeReadController(functionName);
                                }
                             //Give ample time for position register updates to complete
