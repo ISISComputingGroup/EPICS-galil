@@ -360,6 +360,9 @@ private:
   friend class GalilAxis;
   friend class GalilCSAxis;
   friend class GalilPoller;
+  
+  bool checkGalilThreads();
+  bool checkGalilThread(int thread);
 };
 #define NUM_GALIL_PARAMS (&LAST_GALIL_PARAM - &FIRST_GALIL_PARAM + 1)
 #endif  // GalilController_H

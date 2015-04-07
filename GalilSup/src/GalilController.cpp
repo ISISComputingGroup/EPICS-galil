@@ -2930,6 +2930,64 @@ asynStatus GalilController::writeReadController(const char *caller)
   return status;
 }
 
+// return true if thread running, false if not
+bool GalilController::checkGalilThread(int thread)
+{
+	const char *functionName = "checkGalilThread";
+	sprintf(cmd_, "MG _XQ%d\n", thread);
+	if (writeReadController(functionName) == asynSuccess)
+	{
+		if (atoi(resp_) == -1)
+		{
+            return false;
+        }
+        else
+        {
+            return true;
+        }
+    }
+    else
+    {
+        return false;
+    }
+}
+
+// return true if all expected threads running, else return false and write message to epics errlog
+bool GalilController::checkGalilThreads()
+{
+	const char *functionName = "checkThreads";
+    bool result = true;
+    if ( !checkGalilThread(0) ) // thread 0 should always be running
+    {	
+        result = false;
+		errlogPrintf("Thread %d not running on model %s, address %s\n", 0, model_, address_);
+    }
+ 			//Check threads on controller
+			if (thread_mask_ != 0) // is we gave a mask, only check for these threads
+			{
+				for (int i=0; i<32; ++i)
+				{
+                    if ( ((thread_mask_ & (1 << i)) != 0) && !checkGalilThread(i) )
+                    {
+                        result = false;
+						errlogPrintf("Thread %d not running on model %s, address %s\n", i, model_, address_);
+                    }
+				}
+			}
+			else if (numAxes_ > 0) //Check code is running for all created GalilAxis
+			{
+                for (int i=0;i<numAxes_;++i)
+                {		
+					/*check that code is running*/
+                    if ( !checkGalilThread(i) )
+					{
+                        result = false;
+						errlogPrintf("Thread %d not running on model %s, address %s\n", i, model_, address_);
+					}
+				}
+			}
+            return result;
+}
 /*--------------------------------------------------------------*/
 /* Start the card requested by user   */
 /*--------------------------------------------------------------*/
@@ -3121,41 +3179,10 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
 			epicsThreadSleep(1);
 			
 			//Check threads on controller
-			if (thread_mask != 0) // is we gave a mask, only check for these threads
-				{
-				for (i=0; i<32; ++i)
-					{
-					if ( (thread_mask & (1 << i)) != 0 )
-						{
-					        /*check that code is running*/
-						sprintf(cmd_, "MG _XQ%d\n", i);
-						if (writeReadController(functionName) == asynSuccess)
-							{
-							if (atoi(resp_) == -1)
-								{
-								start_ok = 0;
-								errlogPrintf("\nThread %d failed to start on model %s, address %s\n", i, model_, address_);
-								}
-							}
-						}
-					}
-				}
-			else if (numAxes_ > 0) //Check code is running for all created GalilAxis
-				{
-				for (i=0;i<numAxes_;i++)
-					{		
-					/*check that code is running*/
-					sprintf(cmd_, "MG _XQ%d\n",i);
-					if (writeReadController(functionName) == asynSuccess)
-						{
-						if (atoi(resp_) == -1)
-							{
-							start_ok = 0;
-							errlogPrintf("\nThread %d failed to start on model %s, address %s\n",i, model_, address_);
-							}
-						}
-					}
-				}
+            if ( !checkGalilThreads() )
+            {
+				start_ok = 0;
+            }
 		
 			if (start_ok == 0 && strncmp(model_, "RIO", 3) != 0)
 				{

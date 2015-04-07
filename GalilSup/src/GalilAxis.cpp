@@ -568,6 +568,13 @@ asynStatus GalilAxis::home(double minVelocity, double maxVelocity, double accele
   if (ssiinput)
      return asynSuccess;  //Nothing to do
 
+  // check homing thread is available
+  if ( !pC_->checkGalilThreads() )
+  {
+      errlogPrintf("Cannot start homing as galil threads are not running");
+      return asynError;
+  }
+  
   //Check velocity and wlp protection
   if (beginCheck(functionName, maxVelocity))
      return asynSuccess;  //Nothing to do
