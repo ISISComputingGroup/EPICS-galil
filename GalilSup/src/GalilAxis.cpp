@@ -1209,12 +1209,15 @@ void GalilAxis::checkHoming(void)
 {
    char message[MAX_GALIL_STRING_SIZE];
    double readback = motor_position_;	//For step motors controller uses motor_position_ for positioning
+   double estall_time;
+   pC_->getDoubleParam(axisNo_, pC_->GalilEStallTime_, &estall_time);
+   double homing_timeout = (HOMING_TIMEOUT < estall_time ? estall_time : HOMING_TIMEOUT);
 
    //If motor is servo and ueip_ = 1 then controller uses encoder_position_ for positioning
    if (ueip_ && (motorType_ == 0 || motorType_ == 1))
       readback = encoder_position_;
 
-   if ((homing_ && (stopped_time_ >= HOMING_TIMEOUT) && !cancelHomeSent_) ||
+   if ((homing_ && (stopped_time_ >= homing_timeout) && !cancelHomeSent_) ||
        ((readback > highLimit_ || readback < lowLimit_) && homing_ && !cancelHomeSent_ && done_))
       {
       //Cancel home
@@ -1222,7 +1225,7 @@ void GalilAxis::checkHoming(void)
       //Flag home has been cancelled
       cancelHomeSent_ = true;
       //Inform user
-      if (stopped_time_ >= HOMING_TIMEOUT)
+      if (stopped_time_ >= homing_timeout)
          sprintf(message, "%c Homing timed out", axisName_);
       else
          sprintf(message, "%c Homing violated soft limits", axisName_);
@@ -1406,6 +1409,7 @@ void GalilAxis::executeAutoOn(void)
   sprintf(pC_->cmd_, "MG _MO%c\n", axisName_);
   pC_->writeReadController(functionName);
   motoroff = atoi(pC_->resp_);
+  epicsTimeGetCurrent(&stop_nowt_);
   //Execute motor auto on if feature is enabled and motor is off
   if (autoonoff && motoroff)
      {
@@ -1431,6 +1435,8 @@ void GalilAxis::executeAutoOn(void)
      else //AutoOn delay too short to bother releasing lock to other threads
         epicsThreadSleep(ondelay);
      }
+  //Reset stop timer for auto off
+  stop_begint_ = stop_nowt_;
   // allow a motor off to be sent at a later time
   autooffSent_ = false;
 }
@@ -1479,6 +1485,10 @@ asynStatus GalilAxis::beginMotion(const char *caller)
    double begin_time;	//Time taken for motion to begin
    static const char *functionName = "GalilAxis::beginMotion";
    char mesg[MAX_MESSAGE_LEN];	//Controller error mesg if begin fail
+   double estall_time;
+   pC_->getDoubleParam(axisNo_, pC_->GalilEStallTime_, &estall_time);
+   double begin_timeout = (BEGIN_TIMEOUT < estall_time ? estall_time : BEGIN_TIMEOUT);
+
 
    //Begin the move
    //Get time when attempt motor begin
@@ -1492,7 +1502,7 @@ asynStatus GalilAxis::beginMotion(const char *caller)
          epicsTimeGetCurrent(&begin_nowt_);
          //Calculate time begin has taken so far
          begin_time = epicsTimeDiffInSeconds(&begin_nowt_, &begin_begint_);
-         if (begin_time > BEGIN_TIMEOUT)
+         if (begin_time > begin_timeout)
             {
             sprintf(mesg, "%s begin failure axis %c", caller, axisName_);
             //Set controller error mesg monitor
