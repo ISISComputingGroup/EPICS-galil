@@ -2589,14 +2589,25 @@ void GalilController::processUnsolicitedMesgs(void)
    charstr = epicsStrtok_r(rawbuf, " \r\n", &tokSave);
    while (charstr != NULL)
       {
-      //Determine axis message is for
+      //Determine axis message is for e.g. homeA -> A
       axisName = (char)charstr[strlen(charstr)-1];
-      //Extract the message
-      strncpy(mesg, charstr, strlen(charstr)-1);
-      //Null terminate the message
-      mesg[strlen(charstr)-1] = '\0';
-      //Retrieve GalilAxis instance for the correct axis
-      pAxis = getAxis(axisName - AASCII);
+	  if (axisName >= AASCII)
+	  {
+          // axis valid, Extract the message
+          strncpy(mesg, charstr, strlen(charstr)-1);
+          //Null terminate the message
+          mesg[strlen(charstr)-1] = '\0';
+          //Retrieve GalilAxis instance for the correct axis
+          pAxis = getAxis(axisName - AASCII);
+	  }
+	  else
+	  {
+          // axis not valid, assume non-axis specific message
+		  axisName = ' ';
+          strcpy(mesg, charstr);
+		  pAxis = NULL;
+	  }
+
       //Retrieve the value
       charstr = epicsStrtok_r(NULL, " \r\n", &tokSave);
       if (charstr != NULL && pAxis)
@@ -2631,7 +2642,7 @@ void GalilController::processUnsolicitedMesgs(void)
          }
 	  else
 	     {
-             std::cout << "Discarding unsolicited message: \"" << mesg << axisName << "\"" << std::endl;
+             std::cout << "Discarding unsolicited message: \"" << mesg << "\" axis=\"" << axisName << "\" value=\"" << (charstr != NULL ? charstr : "") << "\"" << std::endl;
 	     }
 
       //Retrieve next mesg
