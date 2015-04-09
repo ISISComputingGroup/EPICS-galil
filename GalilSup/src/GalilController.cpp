@@ -2591,7 +2591,7 @@ void GalilController::processUnsolicitedMesgs(void)
       {
       //Determine axis message is for e.g. homeA -> A
       axisName = (char)charstr[strlen(charstr)-1];
-	  if (axisName >= AASCII)
+	  if (axisName >= 'A' && axisName <= 'Z')
 	  {
           // axis valid, Extract the message
           strncpy(mesg, charstr, strlen(charstr)-1);
