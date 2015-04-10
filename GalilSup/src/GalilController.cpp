@@ -401,7 +401,7 @@ void GalilController::connect(void)
 	   {
 	   //Must be in same thread as first new Galil(address_) statement
 	   //On windows this causes dll to load now
-	   cout << Galil::libraryVersion() << endl;
+	   cerr << Galil::libraryVersion() << endl;
 	   libverPrinted = true;
 	   }
 		
@@ -2613,7 +2613,7 @@ void GalilController::processUnsolicitedMesgs(void)
       if (charstr != NULL && pAxis)
          {
          value = atoi(charstr);
-         std::cout << "Unsolicited message: \"" << mesg << axisName << "\"" << "=" << value << std::endl;
+         std::cerr << "Unsolicited message: \"" << mesg << axisName << "\"" << "=" << value << std::endl;
          //Process known messages
 
          //Motor homed message
@@ -2642,7 +2642,7 @@ void GalilController::processUnsolicitedMesgs(void)
          }
 	  else
 	     {
-             std::cout << "Discarding unsolicited message: \"" << mesg << "\" axis=\"" << axisName << "\" value=\"" << (charstr != NULL ? charstr : "") << "\"" << std::endl;
+             std::cerr << "Discarding unsolicited message: \"" << mesg << "\" axis=\"" << axisName << "\" value=\"" << (charstr != NULL ? charstr : "") << "\"" << std::endl;
 	     }
 
       //Retrieve next mesg
@@ -2885,7 +2885,7 @@ asynStatus GalilController::writeReadController(const char *caller)
 	catch (string e) 
 		{
 		//Print exception mesg
-		cout << caller << ":" << functionName << ":" << cmd_ << ":" << e;
+		cerr << caller << ":" << functionName << ":" << cmd_ << ":" << e;
 		//Extract controller mesg from exception mesg
 		std::size_t found = e.find("TC1 returned \"");
 		std::string errmsg = e.substr(found + 14, e.size()-found-14-2);

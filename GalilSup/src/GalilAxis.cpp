@@ -1119,7 +1119,7 @@ void GalilAxis::checkEncoder(void)
             sprintf(message, "Encoder stall stop motor %c", axisName_);
             //Set controller error mesg monitor
 			pC_->setCtrlError(message);
-			std::cout << "STALL: pestall_time=" << pestall_time << "(>" << estall_time << ") encoderMove_=" << encoderMove_ << " encDirOk_=" << encDirOk_ << std::endl;
+			std::cerr << "STALL: pestall_time=" << pestall_time << "(>" << estall_time << ") encoderMove_=" << encoderMove_ << " encDirOk_=" << encDirOk_ << std::endl;
             }
          }
       }
@@ -1281,7 +1281,7 @@ void GalilAxis::pollServices(void)
 						 errlogSevPrintf(errlogInfo, "Poll services: MOTOR CANCEL HOME %c\n", axisName_);
                                 //break; Delibrate fall through to MOTOR_STOP
         case MOTOR_STOP: stop(1);
-						 std::cout << "Poll services: STOP " << axisName_ << std::endl;
+						 std::cerr << "Poll services: STOP " << axisName_ << std::endl;
                          break;
         case MOTOR_POST: if (pC_->getStringParam(axisNo_, pC_->GalilPost_, (int)sizeof(post), post) == asynSuccess)
                             {
@@ -1289,7 +1289,7 @@ void GalilAxis::pollServices(void)
                             strcpy(pC_->cmd_, post);
                             //Write command to controller
                             pC_->writeReadController(functionName);
-							std::cout << "Poll services: POST " << axisName_ << " " << post << std::endl;
+							std::cerr << "Poll services: POST " << axisName_ << " " << post << std::endl;
                             postExecuted_ = true;
                             }
                          break;
@@ -1297,7 +1297,7 @@ void GalilAxis::pollServices(void)
                          if (!inmotion_ && autooffAllowed_)
                             {
                             //Execute the motor off command
-							std::cout << "Poll services: MOTOR OFF " << axisName_ << std::endl;
+							std::cerr << "Poll services: MOTOR OFF " << axisName_ << std::endl;
                             setClosedLoop(false);
                             autooffExecuted_ = true;
                             }
@@ -1388,7 +1388,7 @@ void GalilAxis::executePrem(void)
         //Copy prem to cmd
         strcpy(pC_->cmd_, prem);
         //Execute the prem string
-		std::cout << "Premove " << prem << std::endl;
+		std::cerr << "Premove " << prem << std::endl;
         pC_->writeReadController(functionName);
         }
      }
