@@ -1496,22 +1496,24 @@ asynStatus GalilAxis::beginMotion(const char *caller)
    sprintf(pC_->cmd_, "BG%c", axisName_);
    if (pC_->writeReadController(functionName) == asynSuccess)
       {
-//  GET error printed when move to very close to current position as motion completes too quickly?
 //
-//      while (!inmotion_) //Allow time for motion to begin
-//         {
-//         epicsThreadSleep(.001);
-//         epicsTimeGetCurrent(&begin_nowt_);
-//         //Calculate time begin has taken so far
-//         begin_time = epicsTimeDiffInSeconds(&begin_nowt_, &begin_begint_);
-//         if (begin_time > begin_timeout)
-//            {
-//            sprintf(mesg, "%s begin failure axis %c", caller, axisName_);
-//            //Set controller error mesg monitor
+      while (!inmotion_) //Allow time for motion to begin
+         {
+         epicsThreadSleep(.001);
+         epicsTimeGetCurrent(&begin_nowt_);
+         //Calculate time begin has taken so far
+         begin_time = epicsTimeDiffInSeconds(&begin_nowt_, &begin_begint_);
+         if (begin_time > begin_timeout)
+            {
+            sprintf(mesg, "%s begin failure axis %c", caller, axisName_);
+			std::cerr << mesg << std::endl;
+			// getting these a lot, it it moving to somewhere very near current position?
+			// comment out sending to errlog for now
+            //Set controller error mesg monitor
 //            pC_->setCtrlError(mesg);
-//            return asynError;
-//            }
-//         }
+            return asynError;
+            }
+         }
          return asynSuccess;
       }
    else
