@@ -1496,7 +1496,6 @@ asynStatus GalilAxis::beginMotion(const char *caller)
    sprintf(pC_->cmd_, "BG%c", axisName_);
    if (pC_->writeReadController(functionName) == asynSuccess)
       {
-//
       while (!inmotion_) //Allow time for motion to begin
          {
          epicsThreadSleep(.001);
@@ -1514,7 +1513,6 @@ asynStatus GalilAxis::beginMotion(const char *caller)
             return asynError;
             }
          }
-         return asynSuccess;
       }
    else
       return asynError; //Controller complained at begin.
