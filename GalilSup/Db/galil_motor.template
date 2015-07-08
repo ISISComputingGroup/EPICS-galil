@@ -198,12 +198,14 @@ record(stringout,"$(P):$(M)_POST_CMD")
 
 #driver to mr command to stop/go
 #motors in coordsys
+#set initial value of 3 so if running with motor simulator we don't get all motors in STOP 
 record(ai,"$(P):$(M)_STOPGO_MON")
 {
 	field(DESC, "stop/go")
 	field(DTYP, "asynInt32")
 	field(SCAN, "I/O Intr")
 	field(INP,  "@asyn($(PORT),$(ADDR))MOTOR_STOPGO")
+	field(VAL, 3)
 }
 
 record(ao, "$(P):$(M)_STOPGO_CMD") 
