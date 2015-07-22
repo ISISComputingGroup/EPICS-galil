@@ -30,7 +30,7 @@ DB += galil_userdef_records8.template
 # Example galil code templates
 GMC += galil_Default_Footer.gmc  galil_Default_Header.gmc  galil_Home_ForwLimit.gmc  galil_Home_ForwLimit_Home.gmc
 GMC += galil_Home_Home.gmc  galil_Home_Home+FIneg.gmc  galil_Home_Home+FIpos.gmc  galil_Home_RevLimit.gmc
-GMC += galil_Home_RevLimit_Home.gmc  galil_Piezo_Home.gmc
+GMC += galil_Home_RevLimit_Home.gmc  galil_Piezo_Home.gmc  galil_Home_ForwLimit+FIneg.gmc  galil_Home_RevLimit+FIpos.gmc
 
 include $(TOP)/configure/RULES
 #----------------------------------------
