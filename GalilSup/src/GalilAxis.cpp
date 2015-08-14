@@ -622,8 +622,8 @@ asynStatus GalilAxis::home(double minVelocity, double maxVelocity, double accele
 
 	hvel = maxVelocity * home_direction * -1;
 			
-	sprintf(pC_->cmd_, "JG%c=%.0lf", axisName_, hvel);
-	pC_->writeReadController(functionName);
+//	sprintf(pC_->cmd_, "JG%c=%.0lf", axisName_, hvel);
+//	pC_->writeReadController(functionName);
 
 	//recalculate limit deceleration given hvel (instead of velo) and allowed steps after home/limit activation
 	setLimitDecel(hvel);	
@@ -640,8 +640,8 @@ asynStatus GalilAxis::home(double minVelocity, double maxVelocity, double accele
 	executePrem();
 
         //Begin the move
-	if (!beginMotion(functionName))
-		{
+//	if (!beginMotion(functionName))
+//		{
 		homing_ = true;  //Start was successful
                 cancelHomeSent_ = false;  //Homing has not been cancelled yet
 		//tell controller which axis we are doing a home on
@@ -649,7 +649,7 @@ asynStatus GalilAxis::home(double minVelocity, double maxVelocity, double accele
 		//is sitting on opposite limit to which we are homing
 		sprintf(pC_->cmd_, "home%c=1\n", axisName_);
 		pC_->writeReadController(functionName);
-		}
+//		}
 	}
 
   //Always return success. Dont need more error mesgs
@@ -1217,9 +1217,13 @@ void GalilAxis::checkHoming(void)
    if (ueip_ && (motorType_ == 0 || motorType_ == 1))
       readback = encoder_position_;
 
-   if ((homing_ && (stopped_time_ >= homing_timeout) && !cancelHomeSent_) ||
-       ((readback > highLimit_ || readback < lowLimit_) && homing_ && !cancelHomeSent_ && done_))
+//   GH - Changed IF statement to remove highLimit and lowLimit checks for the home.
+//   if ((homing_ && (stopped_time_ >= homing_timeout) && !cancelHomeSent_) ||
+//       ((readback > highLimit_ || readback < lowLimit_) && homing_ && !cancelHomeSent_ && done_))
+   if (homing_ && (stopped_time_ >= homing_timeout) && !cancelHomeSent_)
       {
+	  sprintf(message, "%f Homing timeout", homing_timeout);
+	  pC_->setCtrlError(message);
       //Cancel home
       pollRequest_.send((void*)&MOTOR_CANCEL_HOME, sizeof(int));
       //Flag home has been cancelled
