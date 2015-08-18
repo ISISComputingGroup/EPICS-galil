@@ -1,39 +1,6 @@
-## configure/RELEASE: Location of external products
+include $(TOP)/../../../configure/MASTER_RELEASE
 
-#include $(TOP)/config/MASTER_RELEASE
-
-TEMPLATE_TOP=$(EPICS_BASE)/templates/makeBaseApp/top
-
-SNCSEQ=$(SUPPORT)/seq/2-1-11
-
-CALC=$(SUPPORT)/calc/3-4
-SSCAN=$(SUPPORT)/sscan/2-8
-MOTOR=$(SUPPORT)/motor/R6-9
-GALIL=$(SUPPORT)/galil/3-0
-AUTOSAVE=$(SUPPORT)/autosave/R5_6_1
-ASYN=$(SUPPORT)/asyn/4-26
-ONCRPC=$(SUPPORT)/oncrpc/2
-LIBJSON=$(SUPPORT)/libjson
-UTILITIES=$(SUPPORT)/utilities
-PCRE=$(SUPPORT)/pcre
-MYSQL=$(SUPPORT)/MySQL
-ZLIB=$(SUPPORT)/zlib/1-2-8
-TEMPLATE_TOP=$(EPICS_BASE)/templates/makeBaseApp/top
-BUSY=$(SUPPORT)/busy/1-6-1
-
-## ISIS standard modules ##
-PUGIXML=$(SUPPORT)/pugixml
-ICPCONFIG=$(SUPPORT)/icpconfig
-PVDUMP=$(SUPPORT)/pvdump
-PVCOMPLETE=$(SUPPORT)/pvcomplete
-DEVIOCSTATS=$(SUPPORT)/devIocStats/3-1-11
-CAPUTLOG=$(SUPPORT)/caPutLog/3-3-3
-SQLITE=$(SUPPORT)/sqlite
-LIBJSON=$(SUPPORT)/libjson
-UTILITIES=$(SUPPORT)/utilities
-ASUBFUNCTIONS=$(SUPPORT)/asubFunctions
-STD=$(SUPPORT)/std/R3_1
-ONCRPC=$(SUPPORT)/oncrpc/2
-
+# overrdie module definitions here
+-include $(TOP)/configure/RELEASE.private
 
 include $(TOP)/../../../ISIS_CONFIG.$(EPICS_HOST_ARCH)
