@@ -3370,15 +3370,14 @@ void GalilController::write_gen_codefile(const char* suffix)
 // Load file(s) specified by user into GalilController instance
 // The result is stored in GalilController->user_code_ 
 // as well as a single code_file, also handles extended syntax of:
-//          "header_file;first_axis_file!second_axis_file!third_axis_file;footer_file"
+//          "header_file1!header_file2;first_axis_file!second_axis_file!third_axis_file;footer_file1!footer_file2"
 // this allows the downloaded program to be assembed from on-disk templates that are tailored to the
 // specific e.g. homing required. Within an axis_file, $(AXIS) is replaced by the relevant axis letter
+// within header,footer $(INDEX) is 0 in first file,1 in second etc. 
 asynStatus GalilController::read_codefile(const char *code_file)
 {
-	char* code_file_copy = strdup(code_file); 	//As epicsStrtok_r() modifies string
-	char *tokSave = NULL;				//Remaining tokens
-	char axis_value[MAX_GALIL_AXES];	//Substitute axis name
-
+	char *tokSave = NULL;
+	char* code_file_copy = strdup(code_file); //As epicsStrtok_r() modifies string
 	if (strcmp(code_file, "") == 0)
 	{	//No code file(s) specified, use generated code
 		return asynError;
@@ -3390,53 +3389,67 @@ asynStatus GalilController::read_codefile(const char *code_file)
 		return read_codefile_part(code_file, NULL); // only one part (whole code file specified)
 	}
 	//Retrieve header file name
-	const char* header_file = epicsStrtok_r(code_file_copy, ";", &tokSave);
-	if (header_file == NULL)
+	const char* header_files = epicsStrtok_r(code_file_copy, ";", &tokSave);
+	if (header_files == NULL)
 	{
-		errlogPrintf("\nread_codefile: no header file\n\n");
+		errlogPrintf("\nread_codefile: no header files\n\n");
 		return asynError;
 	}
 	//Read the header file
-	if (read_codefile_part(header_file, NULL))
+	if (read_codefile_hf(header_files))
 		return asynError;
 	//Retrieve body file names
-	char* body_files = epicsStrtok_r(NULL, ";", &tokSave);
+	const char* body_files = epicsStrtok_r(NULL, ";", &tokSave);
 	if (body_files == NULL)
 	{
 		errlogPrintf("\nread_codefile: no body files\n\n");
 		return asynError;
 	}
+	//Read the body files
+	if (read_codefile_hf(body_files))
+		return asynError;
 	//Retrieve footer file name
-	const char* footer_file = epicsStrtok_r(NULL, ";",  &tokSave);
-	if (footer_file == NULL)
+	const char* footer_files = epicsStrtok_r(NULL, ";",  &tokSave);
+	if (footer_files == NULL)
 	{
-		errlogPrintf("\nread_codefile: no footer file\n\n");
+		errlogPrintf("\nread_codefile: no footer files\n\n");
 		return asynError;
 	}
-	//Read the body files
+	//Read the footer files
+	if (read_codefile_hf(footer_files))
+		return asynError;
+	//Free the ram we used
+	free(code_file_copy);
+	return asynSuccess;
+}
+
+// split a ! separated list of files and load them with appropriate $(AXIS) and $(INDEX) definitions
+asynStatus GalilController::read_codefile_hf(const char *code_files)
+{
+	char axis_value[64];	//Substitute letter, usually axis name
+	char index_value[64];	//Substitute axis name
+	char* code_files_copy = strdup(code_files); //As epicsStrtok_r() modifies string
 	MAC_HANDLE *mac_handle = NULL;
 	macCreateHandle(&mac_handle, NULL);
-	tokSave = NULL;
-	const char* body_file = epicsStrtok_r(body_files, "!", &tokSave);
-	for(int i = 0; body_file != NULL; ++i) // i will loop over axis index, 0=A,1=B etc.
+	char *tokSave = NULL;
+	const char* code_file = epicsStrtok_r(code_files_copy, "!", &tokSave);
+	for(int i = 0; code_file != NULL; ++i) // i will loop over axis index, 0=A,1=B etc.
 	{
 		macPushScope(mac_handle);
 		//Define the macros we will substitute in the included codefile
 		sprintf(axis_value, "%c", i + 'A');
+		sprintf(index_value, "%d", i);
 		macPutValue(mac_handle, "AXIS", axis_value);  // substitute $(AXIS) for axis letter 
+		macPutValue(mac_handle, "INDEX", index_value);  // substitute $(INDEX) for index number 
 		//Read the body file
-		if (read_codefile_part(body_file, mac_handle))
+		if (read_codefile_part(code_file, mac_handle))
 			return asynError;
 		macPopScope(mac_handle);
 		//Retrieve the next body file name
-		body_file = epicsStrtok_r(NULL, "!", &tokSave);
+		code_file = epicsStrtok_r(NULL, "!", &tokSave);
 	}
 	macDeleteHandle(mac_handle);
-	//Read the footer file
-	if (read_codefile_part(footer_file, NULL))
-		return asynError;
-	//Free the ram we used
-	free(code_file_copy);
+	free(code_files_copy);
 	return asynSuccess;
 }
 

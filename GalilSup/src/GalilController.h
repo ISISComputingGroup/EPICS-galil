@@ -197,6 +197,7 @@ public:
   void write_gen_codefile(const char* suffix);
   asynStatus read_codefile(const char *code_file);
   asynStatus read_codefile_part(const char *code_file, MAC_HANDLE* mac_handle);
+  asynStatus read_codefile_hf(const char *code_files);
   asynStatus writeReadController(const char *caller);
   void check_comms(bool reqd_comms, asynStatus status);
   asynStatus get_integer(int function, epicsInt32 *value, int axisNo);
