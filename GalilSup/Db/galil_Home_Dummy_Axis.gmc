@@ -1,0 +1,13 @@
+NO***************Dummy Axis*****************
+NO**********Execute in own thread******************
+#HOMEB1
+SHB
+WT200
+ACB=1024;DCB=1024
+JGB=1024
+BGB
+WT15000
+STB
+AMB
+MOB
+EN
