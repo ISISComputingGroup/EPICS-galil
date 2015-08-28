@@ -1,51 +1,34 @@
-NO*****************AXIS ${AXIS}********************
-NO***HOME - IMAT Pin hole Selector ************
-NO***********Fibre Optic Home******************
-NO************Analog signal***************
-#HOME${AXIS}
-IF (home${AXIS}=1)
-    inhome${AXIS}=1
-	IF ((home${AXIS}=1) & (hjog${AXIS}=0))
-	    slimfl${AXIS}=_FL${AXIS};FL${AXIS}=2147483647
-		slimbl${AXIS}=_BL${AXIS};BL${AXIS}=-2147483648
-		hjog${AXIS}=1
-	ENDIF
-	IF ((_LR${AXIS}=0) & (_LF${AXIS}=0) & (home${AXIS}=1))
-		home${AXIS}=0;MG "home${AXIS}", home${AXIS};ENDIF
-	IF ((hjog${AXIS}=1) & (_BG${AXIS}=1) & (home${AXIS}=1))
-		ST${AXIS};ENDIF
-	IF ((hjog${AXIS}=1) & (_BG${AXIS}=0) & (home${AXIS}=1))
-		oldecel${AXIS}=_DC${AXIS};speed${AXIS}=_SP${AXIS}
-		homesp = 4096;dir=-1
-		AC${AXIS}=1024;DC${AXIS}=1024;SP${AXIS}=1024
-		JG${AXIS}=dir*homesp;
-		SH${AXIS};WT100;BG${AXIS};hjog${AXIS}=2
-	ENDIF
-	IF ((hjog${AXIS}=2) & (_BG${AXIS}=1) & (home${AXIS}=1) & (@AN[5]<=5))
-	    ST${AXIS}
-		hjog${AXIS}=3
-	ENDIF
-	IF ((hjog${AXIS}=3) & (_BG${AXIS}=0) & (home${AXIS}=1))
-	    homesp = 256;dir=dir*-1
-        JGA = dir*homesp;
-		SH${AXIS};WT100;BG${AXIS};hjog${AXIS}=4
-	ENDIF
-	IF ((hjog${AXIS}=4) & (_BG${AXIS}=1) & (home${AXIS}=1) & (@AN[5]<=5))
-	    ST${AXIS}
-		hjog${AXIS}=5
-	ENDIF
-	IF ((hjog${AXIS}=5) & (_BG${AXIS}=0) & (home${AXIS}=1))
-		hjog${AXIS}=0;home${AXIS}=0;homed${AXIS}=1
-		MG "home${AXIS}", home${AXIS};MG "homed${AXIS}", homed${AXIS}
-	ENDIF
-ELSE
-	hjog${AXIS}=0
-ENDIF
-IF ((home${AXIS}=0) & (inhome${AXIS}=1))
-    FL${AXIS}=slimfl${AXIS}
-	BL${AXIS}=slimbl${AXIS}
-	inhome${AXIS}=0
-ENDIF
-IF (mlock=1)
-	II ,,dpon,dvalues
-ENDIF
+NO***************PIN HOLE SELECTOR*****************
+NO**********Execute in own thread******************
+NO**********Based on analog input******************
+#HOMEA0
+SHA
+homesp = 4096; 'set the homing speed
+dir=-1; 'set the homing direction
+ACA=1024;DCA=1024;SPA=1024
+JGA = dir*homesp;
+BGA; 'begin the motion in axis A
+' MG "  HOMING..";
+WT 1000;
+#hmLoop1;
+IF (@AN[5]>5);
+ JP #hmLoop1;
+ELSE;
+ WT 200;
+ STA;
+ AMA;
+ homesp = 256;
+ dir=dir*-1;
+ JGA = dir*homesp;
+ BGA;
+#hmLoop2;
+ IF (@AN[5]>5);
+  JP #hmLoop2;
+ ELSE;
+  STA; 'stop motion in axis A
+  enHome=_TPA;
+'  MG "  F.O. HOME LOCATED. Position =",_TPA;
+  AMA;
+ ENDIF;
+ENDIF;
+EN;

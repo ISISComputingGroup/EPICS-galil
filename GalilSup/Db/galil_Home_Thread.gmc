@@ -1,0 +1,49 @@
+NO*****************AXIS ${AXIS}********************
+NO**********Execute in new thread******************
+NO***Launch thread, wait for thread to complete****
+#HOME${AXIS}
+IF (home${AXIS}=1)
+  inhome${AXIS}=1
+  IF ((home${AXIS}=1) & (hjog${AXIS}=0))
+    slimfl${AXIS}=_FL${AXIS};FL${AXIS}=2147483647
+    slimbl${AXIS}=_BL${AXIS};BL${AXIS}=-2147483648
+    hjog${AXIS}=1
+  ENDIF
+  IF ((_LR${AXIS}=0) & (_LF${AXIS}=0) & (home${AXIS}=1))
+    home${AXIS}=0;MG "home${AXIS}", home${AXIS};ENDIF
+  IF ((hjog${AXIS}=1) & (_BG${AXIS}=1) & (home${AXIS}=1))
+    ST${AXIS};ENDIF
+  IF ((hjog${AXIS}=1) & (_BG${AXIS}=0) & (home${AXIS}=1))
+    IF (_XQ2=-1);thread${AXIS}=2;ENDIF
+    IF (_XQ3=-1);thread${AXIS}=3;ENDIF
+    IF (_XQ4=-1);thread${AXIS}=4;ENDIF
+    IF (_XQ5=-1);thread${AXIS}=5;ENDIF
+    IF (_XQ6=-1);thread${AXIS}=6;ENDIF
+    IF (_XQ7=-1);thread${AXIS}=7;ENDIF
+    XQ #HOME${AXIS}${INDEX},thread${AXIS}
+    hjog${AXIS}=2
+  ENDIF
+  IF ((hjog${AXIS}=2) & (home${AXIS}=1))
+    th[0]=_XQ0;th[1]=_XQ1;th[2]=_XQ2;th[3]=_XQ3
+	th[4]=_XQ4;th[5]=_XQ5;th[6]=_XQ6;th[7]=_XQ7
+    IF th[thread${AXIS}]=-1
+	  hjog${AXIS}=3
+	ENDIF
+  ENDIF
+  IF ((hjog${AXIS}=3) & (_BG${AXIS}=0) & (home${AXIS}=1))
+    hjog${AXIS}=0;home${AXIS}=0;homed${AXIS}=1
+    MG "home${AXIS}", home${AXIS};MG "homed${AXIS}", homed${AXIS}
+  ENDIF
+ELSE
+  hjog${AXIS}=0
+ENDIF
+IF ((home${AXIS}=0) & (inhome${AXIS}=1))
+  HX thread${AXIS}
+  ST${AXIS}
+  FL${AXIS}=slimfl${AXIS}
+  BL${AXIS}=slimbl${AXIS}
+  inhome${AXIS}=0
+ENDIF
+IF (mlock=1)
+  II ,,dpon,dvalues
+ENDIF
