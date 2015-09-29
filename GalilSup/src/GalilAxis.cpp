@@ -649,6 +649,7 @@ asynStatus GalilAxis::home(double minVelocity, double maxVelocity, double accele
 		//is sitting on opposite limit to which we are homing
 		sprintf(pC_->cmd_, "home%c=1\n", axisName_);
 		pC_->writeReadController(functionName);
+		std::cerr << "Home started axis " << axisName_ << std::endl;
 //		}
 	}
 
@@ -1280,6 +1281,7 @@ void GalilAxis::pollServices(void)
         //Poll will make upper layers wait for POST, HOMED and OFF completion by setting moving true
         //Poll will not make upper layers wait for STOP, or CANCEL_HOME completion
         case MOTOR_CANCEL_HOME: sprintf(pC_->cmd_, "home%c=0\n", axisName_);
+								pC_->writeReadController(functionName);
                                 epicsThreadSleep(.2);  //Wait as controller may still issue move upto this time after
                                                        //Setting home to 0 (cancel home)
 						 errlogSevPrintf(errlogInfo, "Poll services: MOTOR CANCEL HOME %c\n", axisName_);
