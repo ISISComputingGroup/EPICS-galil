@@ -1087,6 +1087,7 @@ void GalilAxis::checkEncoder(void)
    char message[MAX_MESSAGE_LEN];	//Safety stop message
    double estall_time;			//Allowed encoder stall time specified by user
    double pestall_time;			//Possible encoder stall has been happening for this many secs
+   const char *functionName = "GalilAxis::checkEncoder";
 
    if ((ueip_ && !done_ && (!encoderMove_ || !encDirOk_)))
       {
@@ -1109,6 +1110,16 @@ void GalilAxis::checkEncoder(void)
          //Check time to see if possible stall is now a stall
          if (pestall_time >= estall_time && !stopSent_)
             {
+			// get last stop code
+	        sprintf(pC_->cmd_, "MG _SC%c\n", axisName_);
+            pC_->writeReadController(functionName);
+            double sc_code = atof(pC_->resp_);
+
+	        // get axis moving state
+	        sprintf(pC_->cmd_, "MG _BG%c\n", axisName_);
+            pC_->writeReadController(functionName);
+            double bg_code = atof(pC_->resp_);
+
             //Pass stall status to higher layers
             setIntegerParam(pC_->motorStatusSlip_, 1);
             setIntegerParam(pC_->GalilEStall_, 1);
@@ -1120,7 +1131,7 @@ void GalilAxis::checkEncoder(void)
             sprintf(message, "Encoder stall stop motor %c", axisName_);
             //Set controller error mesg monitor
 			pC_->setCtrlError(message);
-			std::cerr << "STALL: pestall_time=" << pestall_time << "(>" << estall_time << ") encoderMove_=" << encoderMove_ << " encDirOk_=" << encDirOk_ << std::endl;
+			std::cerr << "STALL: pestall_time=" << pestall_time << "(>" << estall_time << ") encoderMove_=" << encoderMove_ << " encDirOk_=" << encDirOk_ << " _SC" << axisName_ << "=" << sc_code << " _BG" << axisName_ << "=" << bg_code << std::endl;
             }
          }
       }
@@ -1208,6 +1219,7 @@ void GalilAxis::setStopTime(void)
 //Cancel home if either true
 void GalilAxis::checkHoming(void)
 {
+   const char *functionName = "GalilAxis::checkHoming";
    char message[MAX_GALIL_STRING_SIZE];
    double readback = motor_position_;	//For step motors controller uses motor_position_ for positioning
    double estall_time;
@@ -1223,8 +1235,19 @@ void GalilAxis::checkHoming(void)
 //       ((readback > highLimit_ || readback < lowLimit_) && homing_ && !cancelHomeSent_ && done_))
    if (homing_ && (stopped_time_ >= homing_timeout) && !cancelHomeSent_)
       {
-	  sprintf(message, "%f Homing timeout", homing_timeout);
+	    // get last stop code
+	    sprintf(pC_->cmd_, "MG _SC%c\n", axisName_);
+        pC_->writeReadController(functionName);
+        double sc_code = atof(pC_->resp_);
+
+	    // get axis moving state
+	    sprintf(pC_->cmd_, "MG _BG%c\n", axisName_);
+        pC_->writeReadController(functionName);
+        double bg_code = atof(pC_->resp_);
+
+	  sprintf(message, "Homing timed out after %f: BG%c=%f SC%c=%f ", homing_timeout, axisName_, bg_code, axisName_, sc_code);
 	  pC_->setCtrlError(message);
+	  
       //Cancel home
       pollRequest_.send((void*)&MOTOR_CANCEL_HOME, sizeof(int));
       //Flag home has been cancelled
