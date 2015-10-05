@@ -5,6 +5,11 @@ EN
 errstr=_ED;errcde=_TC;cmderr=cmderr+1
 RE 1
 EN
+#TCPERR
+errtcp=_IA4
+MG "TCP lost sync or timeout - Handle - ",errtcp
+RE 1
+EN
 #LIMSWI
 IF (((_SCA=2) | (_SCA=3)) & (_BGA=1))
 	oldecelA=_DCA;DCA=limdcA;WT2;STA;DCA=oldecelA;ENDIF
