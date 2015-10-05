@@ -758,8 +758,9 @@ asynStatus GalilAxis::stop(double acceleration)
   homing_ = false;
 
   //cancel any home switch jog off operations that may be underway
-  sprintf(pC_->cmd_, "hjog%c=0\n", axisName_);
-  pC_->writeReadController(functionName);
+  // GH 05/10/2015 home%c=0 should be sufficient. Galil controls how state completes.
+  // sprintf(pC_->cmd_, "hjog%c=0\n", axisName_);
+  // pC_->writeReadController(functionName);
 
   //Stop the axis
   sprintf(pC_->cmd_, "ST%c\n", axisName_);
