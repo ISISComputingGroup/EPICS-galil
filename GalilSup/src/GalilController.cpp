@@ -90,8 +90,9 @@ static bool dbInitialized = false;
 static bool libverPrinted = false;
 
 //Number of communication retries
-#define MAX_RETRIES 1
-#define ALLOWED_TIMEOUTS 3
+// GH 05/10/2015 Altered retries (from 1 to 3) and allowed timeouts (from 3 to 5)
+#define MAX_RETRIES 3
+#define ALLOWED_TIMEOUTS 5
 
 #define MAX_FILENAME_LEN 256
 #define MAX_MESSAGE_LEN 256
