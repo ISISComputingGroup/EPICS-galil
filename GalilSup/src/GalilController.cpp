@@ -247,7 +247,7 @@ GalilController::GalilController(const char *portName, const char *address, doub
   //Default model
   strcpy(model_, "Unknown");
   //Initialize galil communication object
-  gco_ = NULL;
+  gco_ = gco_um_ = NULL;
   //Code for the controller has not been assembled yet
   code_assembled_ = false;
   //We have not reported any connect failures
@@ -385,6 +385,13 @@ void GalilController::disconnect(void)
 	    //Print brief disconnection details
 	    errlogSevPrintf(errlogInfo, "Disconnected from %s at %s\n", model_, address_);
 	}
+	if (gco_um_ != NULL)
+	{
+	    //Delete reference to Galil communication class.  This runs galil communication class destructor
+	    delete gco_um_;
+	    //Stop GalilController class use of Galil communication object
+	    gco_um_ = NULL;
+	}
 }
 
 //Disconnection/connection management
@@ -407,7 +414,14 @@ void GalilController::connect(void)
 	   }
 		
 	//Open connection to address provided
-	gco_ = new Galil(address_);
+	// -t 500 is default timeout (ms)
+	// -mg 0 means don't set up for unsolicited messages
+	gco_ = new Galil(std::string(address_) + " -mg 0 -t 1000");
+
+	// second tcp handle just for unsolicited messages, by default they are sent udp and may get lost
+	gco_um_ = new Galil(std::string(address_) + " -s");  // -s means connect silently, just make tcp connection
+	gco_um_->command("CFI");  // take unsolicited messages
+
 	//Success, continue
 	//No timeouts have occurred
 	consecutive_timeouts_ = 0;
@@ -417,7 +431,7 @@ void GalilController::connect(void)
   catch (string e)
      {
 	 //Ensure galil communications object is NULL on connect failure
-	 gco_ = NULL;
+	 gco_ = gco_um_ = NULL;
 	 if (!connect_fail_reported_)
 		{
 		//Couldnt connect mesg
@@ -430,7 +444,7 @@ void GalilController::connect(void)
      }
 
   //if connected
-  if (gco_ != NULL)
+  if (gco_ != NULL && gco_um_ != NULL)
 	 {
 	 //Read controller model, firmware, stop all motors and threads
   	 connected();
@@ -2583,7 +2597,7 @@ void GalilController::processUnsolicitedMesgs(void)
    char *tokSave = NULL;	//Remaining tokens
 
    //Collect unsolicted message(s)   
-   strncpy(rawbuf, gco_->message(0).c_str(), sizeof(rawbuf));
+   strncpy(rawbuf, gco_um_->message(0).c_str(), sizeof(rawbuf));
    rawbuf[sizeof(rawbuf)-1] = '\0';
 
    //Break message into tokens: name value name value    etc.
