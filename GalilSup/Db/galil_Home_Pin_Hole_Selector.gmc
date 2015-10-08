@@ -14,9 +14,12 @@ WT 1000;
 IF (@AN[5]>5);
  JP #hmLoop1;
 ELSE;
- WT 200;
+ WT 500;
  STA;
  AMA;
+ WT 100
+ SHA
+ WT 100
  homesp = 256;
  dir=dir*-1;
  JGA = dir*homesp;
