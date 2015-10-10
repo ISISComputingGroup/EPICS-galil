@@ -1327,7 +1327,7 @@ void GalilAxis::pollServices(void)
                          if (!inmotion_ && autooffAllowed_)
                             {
                             //Execute the motor off command
-//							std::cerr << "Poll services: MOTOR OFF " << axisName_ << std::endl;
+							std::cerr << "Poll services: MOTOR OFF " << axisName_ << std::endl;
                             setClosedLoop(false);
                             autooffExecuted_ = true;
                             }
