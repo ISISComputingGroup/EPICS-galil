@@ -1,10 +1,10 @@
 O.*/
-/db
-/bin
-/dbd
-/include
-/lib
-/templates
+/db/
+/bin/
+/dbd/
+/include/
+/lib/
+/templates/
 envPaths
 cdCommands
 dllPath.bat
@@ -13,3 +13,6 @@ runIOC.sh
 relPaths.sh
 /gmc/
 NULL
+*_info_positions.req
+*_info_settings.req
+/iocBoot/ioc*/*.gmc
