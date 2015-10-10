@@ -413,6 +413,13 @@ void GalilController::connect(void)
 	   libverPrinted = true;
 	   }
 		
+	
+	Galil* tgco = new Galil(std::string(address_) + " -s"); // -s is silent connect, just get tcp handle
+	// clean up handles on Galil
+	tgco->command("IHT=>-1"); // udp handles
+	tgco->command("IHT=>-2"); // tcp handles
+	delete tgco;
+	
 	//Open connection to address provided
 	// -t 500 is default timeout (ms)
 	// -mg 0 means don't set up for unsolicited messages
@@ -2903,7 +2910,7 @@ asynStatus GalilController::writeReadController(const char *caller)
 		cerr << caller << ":" << functionName << ":" << cmd_ << ":" << e;
 		//Extract controller mesg from exception mesg
 		std::size_t found = e.find("TC1 returned \"");
-		std::string errmsg = e.substr(found + 14, e.size()-found-14-2);
+		std::string errmsg = strcmd + ": " + e.substr(found + 14, e.size()-found-14-2);
 		//Set controller error mesg monitor
 		setCtrlError(errmsg.c_str());
 		//Inc exception counter
