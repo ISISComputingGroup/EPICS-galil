@@ -624,13 +624,15 @@ void GalilController::connected(void)
 		//Fail.  Probably wrong bus.  RS-232 does not support async DR data record 
 		async_records_ = false;
 		//Print explanation
-		cout << "Asynchronous setup failed, swapping to synchronous poll " << model_ << " at " << address_ << endl;
+		errlogSevPrintf(errlogMajor, "Asynchronous setup failed, swapping to synchronous poll %s at %s\n", 
+		       model_, address_);
+		setCtrlError(e.c_str());
 		//Extra warning for RIO for when 
 		//2010 COMMAND ERROR.  Galil::command("DR8.192,3") got ? instead of : response.  TC1 returned "6 Number out of range"
 		//occurs.  It is not driver corruption, it is the RIO.
 		if (strncmp(model_,"RIO",3) == 0)
 			cout << "RIO at address " << address_ << "may need power cycle " << endl;
-		cout << e << endl;
+
 		}
 	}
 	else
