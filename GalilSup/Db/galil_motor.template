@@ -55,7 +55,8 @@ grecord(motor,"$(P):$(M)")
 	field(PCOF,"$(PCOF)")
 	field(ICOF,"$(ICOF)")
 	field(DCOF,"$(DCOF)")
-	info(archive,"0.02 VAL RBV DVAL DRBV OFF MSTA")
+	field(HLSV,"MINOR")
+	info(archive,"0.02 VAL RBV DVAL OFF MSTA")
 }
 
 alias("$(P):$(M)", "$(P):$(M):SP")
@@ -248,5 +249,49 @@ record(stringin, "$(P):$(M)_STATUS")
 	field(DESC, "Simple Text version of motor MSTA")
 }
 
+record(stringin, "$(P):$(M)_MTR")
+{
+    field(VAL, "$(M)")
+}
+
+record(aSub,"$(P):$(M)_ERRCALC")
+{
+    field(SNAM,"checkMotorError")
+    field(SCAN,"Passive")
+    field(INPA,"$(P):$(M).MSTA CP")
+	field(FTA, "ULONG")
+    field(INPB,"$(P):$(M).LVIO CP")
+	field(FTB, "SHORT")
+    field(INPC,"$(P):$(M).HLS CP")
+	field(FTC, "SHORT")
+    field(INPD,"$(P):$(M).LLS CP")
+	field(FTD, "SHORT")
+    field(INPE,"$(P):$(M).STAT CP")
+	field(FTE, "USHORT")
+    field(INPF,"$(P):$(M).SEVR CP")
+	field(FTF, "USHORT")
+    field(INPG,"$(P):$(M)_MTR")
+	field(FTG, "STRING")
+	field(FTVA, "STRING")
+	field(FTVB, "ULONG")
+	field(FLNK, "$(P):$(M)_ERRCALC_FAN.PROC")
+#	field(EFLG, "ALWAYS")
+}
+
+# on success VALB above == 0 and so fanout triggers no output, VALB == 1 causes OUTA to fire
+record(fanout, "$(P):$(M)_ERRCALC_FAN")
+{
+	field(SELM, "Specified")
+    field(SELL, "$(P):$(M)_ERRCALC.VALB NPP")
+	field(LNK1, "$(P):$(M)_ERROR")
+}
+
+record(stringout,"$(P):$(M)_ERROR")
+{
+    field(OMSL, "closed_loop")
+	field(DOL, "$(P):$(M)_ERRCALC.VALA NPP")
+    field(DTYP, "stdio")
+    field(OUT, "@errlog")
+}
 
 # end
