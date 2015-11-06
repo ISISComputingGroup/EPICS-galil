@@ -57,6 +57,7 @@ grecord(motor,"$(P):$(M)")
 	field(DCOF,"$(DCOF)")
 	field(HLSV,"MINOR")
 	info(archive,"0.02 VAL RBV DVAL OFF MSTA")
+	info(alarm,"Motors")
 }
 
 alias("$(P):$(M)", "$(P):$(M):SP")
