@@ -275,8 +275,8 @@ record(aSub,"$(P):$(M)_ERRCALC")
 	field(FTG, "STRING")
 	field(FTVA, "STRING")
 	field(FTVB, "ULONG")
-	field(FLNK, "$(P):$(M)_ERRCALC_FAN.PROC")
-#	field(EFLG, "ALWAYS")
+	# we want to process _ERRCALC_FAN only if the error message changes, so use OUTA rather than FLNK 
+	field(OUTA, "$(P):$(M)_ERRCALC_FAN.PROC")
 }
 
 # on success VALB above == 0 and so fanout triggers no output, VALB == 1 causes OUTA to fire
