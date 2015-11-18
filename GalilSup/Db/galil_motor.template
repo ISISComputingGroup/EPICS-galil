@@ -275,11 +275,18 @@ record(aSub,"$(P):$(M)_ERRCALC")
 	field(FTG, "STRING")
 	field(FTVA, "STRING")
 	field(FTVB, "ULONG")
-	# we want to process _ERRCALC_FAN only if the error message changes, so use OUTA rather than FLNK 
-	field(OUTA, "$(P):$(M)_ERRCALC_FAN.PROC")
+	# we want to process _ERRCALC_FAN only if the error message changes, so use OUTA not FLNK
+	# but strings outputs cannot be used to write to .PROC fields, so need to use intermediate string record 
+	field(OUTA, "$(P):$(M)_ERRCALC_MESS PP")
+}
+
+record(stringout, "$(P):$(M)_ERRCALC_MESS")
+{
+	field(FLNK, "$(P):$(M)_ERRCALC_FAN.PROC")
 }
 
 # on success VALB above == 0 and so fanout triggers no output, VALB == 1 causes OUTA to fire
+# we want to record error messages, but not blanks on no error
 record(fanout, "$(P):$(M)_ERRCALC_FAN")
 {
 	field(SELM, "Specified")
