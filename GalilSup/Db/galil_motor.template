@@ -302,8 +302,6 @@ record(stringout,"$(P):$(M)_ERROR")
     field(OUT, "@errlog")
 }
 
-# end
-
 # Expose the DMOV field as a PV record, so it can be access from a block
 record(ai,"$(P):$(M):DMOV")
 {
