@@ -303,3 +303,14 @@ record(stringout,"$(P):$(M)_ERROR")
 }
 
 # end
+
+# Expose the DMOV field as a PV record, so it can be access from a block
+record(ai,"$(P):$(M):DMOV")
+{
+	field(DESC, "Done move?")
+    field(SCAN, "Passive")
+    field(DTYP, "Soft Channel")
+    field(INP, "$(P):$(M).DMOV CP")
+}
+
+# end
