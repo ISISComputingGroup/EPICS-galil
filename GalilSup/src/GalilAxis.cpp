@@ -55,7 +55,7 @@ GalilAxis::GalilAxis(class GalilController *pC, //Pointer to controller instance
 		     char *enables_string,	//digital input(s) to use for motor enable/disable function
 		     int switch_type)		//motor enable/disable switch type
   : asynMotorAxis(pC, (toupper(axisname[0]) - AASCII)),
-    pC_(pC), last_encoder_position_(0), pollRequest_(10, sizeof(int))
+    pC_(pC), last_encoder_position_(0), pollRequest_(10, sizeof(int)), encDirOk_(true)
 {
   char axis_limit_code[LIMIT_CODE_LEN];   	//Code generated for limits interrupt on this axis
   char axis_digital_code[INP_CODE_LEN];	     	//Code generated for digital interrupt related to this axis
@@ -1063,8 +1063,11 @@ void GalilAxis::setStatus(bool *moving)
         encoder_direction = 1;
         encoderMove_ = true;
         }
-     //Encoder direction ok flag
-     encDirOk_ = (encoder_direction == direction_) ? true : false;
+     //Encoder direction ok flag - only update if encoder is moving, else encoder_direction is uninitialised
+	 if (encoderMove_)
+	     {
+         encDirOk_ = (encoder_direction == direction_) ? true : false;
+	     }
      }
 
    //Determine move status
@@ -1132,7 +1135,7 @@ void GalilAxis::checkEncoder(void)
             sprintf(message, "Encoder stall stop motor %c", axisName_);
             //Set controller error mesg monitor
 			pC_->setCtrlError(message);
-			std::cerr << "STALL: pestall_time=" << pestall_time << "(>" << estall_time << ") encoderMove_=" << encoderMove_ << " encDirOk_=" << encDirOk_ << " _SC" << axisName_ << "=" << sc_code << " _BG" << axisName_ << "=" << bg_code << std::endl;
+			std::cerr << "STALL: pestall_time=" << pestall_time << " (>" << estall_time << ") encoderMove_=" << encoderMove_ << " encDirOk_=" << encDirOk_ << " _SC" << axisName_ << "=" << sc_code << " _BG" << axisName_ << "=" << bg_code << std::endl;
             }
          }
       }

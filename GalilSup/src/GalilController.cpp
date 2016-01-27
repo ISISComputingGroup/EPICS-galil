@@ -597,9 +597,9 @@ void GalilController::connected(void)
 			sprintf(cmd_, "home%c=0", (i + AASCII));
 			writeReadController(functionName);
 			}
-		//Turn off motor
-		sprintf(cmd_, "MO%c", (i + AASCII));
-		writeReadController(functionName);
+		//Turn off motor - should really check autoonoff PV but autosave has not restored that value at this point
+//		sprintf(cmd_, "MO%c", (i + AASCII));
+//		writeReadController(functionName);
 		}
 
 	//Has code for the GalilController been assembled
