@@ -40,6 +40,9 @@ using namespace std; //cout ostringstream vector string
 
 static void pollServicesThreadC(void *pPvt);
 
+#define SAMPLES_TO_TIME	1024 /* number of values in galil data record sample number that correspond to 1 second */
+
+
 // These are the GalilAxis methods
 
 /** Creates a new GalilAxis object.
@@ -55,13 +58,15 @@ GalilAxis::GalilAxis(class GalilController *pC, //Pointer to controller instance
 		     char *enables_string,	//digital input(s) to use for motor enable/disable function
 		     int switch_type)		//motor enable/disable switch type
   : asynMotorAxis(pC, (toupper(axisname[0]) - AASCII)),
-    pC_(pC), last_encoder_position_(0), pollRequest_(10, sizeof(int)), encDirOk_(true)
+    pC_(pC), last_encoder_position_(0), pollRequest_(10, sizeof(int)),sample_number_(0),sample_number_wraps_(0),sync_time_(true),call_counter_(0),encDirOk_(true)
 {
   char axis_limit_code[LIMIT_CODE_LEN];   	//Code generated for limits interrupt on this axis
   char axis_digital_code[INP_CODE_LEN];	     	//Code generated for digital interrupt related to this axis
   char axis_thread_code[THREAD_CODE_LEN]; 	//Code generated for the axis (eg. home code, limits response)
 
   epicsTimeGetCurrent(&stop_begint_);
+  epicsTimeGetCurrent(&sample_time_);
+
   stop_nowt_ = stop_begint_;
  
   //Increment internal axis counter
@@ -508,6 +513,7 @@ asynStatus GalilAxis::move(double position, int relative, double minVelocity, do
 		else if (relative)
 		  	{
 			//Check position
+			std::cerr << "Relative move " << position << std::endl;
 			if (position != 0)
 				{
 				pos_ok = true;
@@ -519,6 +525,7 @@ asynStatus GalilAxis::move(double position, int relative, double minVelocity, do
 		else   
 			{
 			//Check position
+			std::cerr << "Absolute move " << position << std::endl;
 			if (position != readback)
 				{
 				pos_ok = true;
@@ -970,6 +977,11 @@ asynStatus GalilAxis::setClosedLoop(bool closedLoop)
   return status;
 }
 
+void GalilAxis::syncTime()
+{
+    sync_time_ = true;
+}
+
 //Extract axis data from GalilController data record and
 //store in GalilAxis (motorRecord attributes) or asyn ParamList (other record attributes)
 //Return status of GalilController data record acquisition
@@ -980,6 +992,7 @@ asynStatus GalilAxis::getStatus(void)
    int offonerror, motoron;                 //paramList items to update
    int connected;                           //paramList items to update
    double error;                            //paramList items to update  
+   double sample_number1 = 0.0, sample_number2 = 1.0;	
 
    //If data record query success in GalilController::acquireDataRecord
    if (pC_->recstatus_ == asynSuccess)
@@ -989,17 +1002,51 @@ asynStatus GalilAxis::getStatus(void)
 		//If connected, then proceed
 		if (pC_->gco_ != NULL)
 			{
-			//aux encoder data
-			sprintf(src, "_TD%c", axisName_);
-			motor_position_ = pC_->gco_->sourceValue(pC_->recdata_, src);
-			//main encoder data
-			sprintf(src, "_TP%c", axisName_);
-			encoder_position_ = pC_->gco_->sourceValue(pC_->recdata_, src);
-
-			//moving status
-			sprintf(src, "_BG%c", axisName_);
-			inmotion_ = (bool)(pC_->gco_->sourceValue(pC_->recdata_, src) == 1) ? 1 : 0;
-
+			// sample number
+			while( fabs(sample_number1 - sample_number2) > 0.1 ) // make sure sample number and positions are consistent
+			{
+				sample_number1 = pC_->gco_->sourceValue(pC_->recdata_, "TIME");
+				//aux encoder data
+				sprintf(src, "_TD%c", axisName_);
+				motor_position_ = pC_->gco_->sourceValue(pC_->recdata_, src);
+				//main encoder data
+				sprintf(src, "_TP%c", axisName_);
+				encoder_position_ = pC_->gco_->sourceValue(pC_->recdata_, src);
+				//moving status
+				sprintf(src, "_BG%c", axisName_);
+				inmotion_ = (bool)(pC_->gco_->sourceValue(pC_->recdata_, src) == 1) ? 1 : 0;
+				sample_number2 = pC_->gco_->sourceValue(pC_->recdata_, "TIME");
+			}
+			epicsTimeStamp tsnow;
+			epicsTimeGetCurrent(&tsnow);
+			if (sync_time_)
+			{
+			    sync_time_ = false;
+				epicsTimeGetCurrent(&sample_time_base_);
+				sample_number_base_ = sample_number1;
+				sample_number_wraps_ = 0;
+				std::cerr << "sync time " << axisName_ << std::endl;
+			}
+			else if (sample_number1 < sample_number_) // counter wrapped, which is roughly every minute
+			{
+			    if (axisName_ == 'A')
+				{
+			        std::cerr << "wrap " << axisName_ << " " << sample_number1 << " < " << sample_number_ << " (" << sample_number_wraps_ << ")" << std::endl; 
+				}
+			    ++sample_number_wraps_;
+			}
+			sample_number_ = sample_number1;
+			sample_time_ = sample_time_base_;
+			double secs_to_add = static_cast<double>(sample_number_ + sample_number_wraps_ * 65536.0 - sample_number_base_) / static_cast<double>(SAMPLES_TO_TIME);
+			epicsTimeAddSeconds(&sample_time_, secs_to_add);
+			epicsTimeToStrftime(src, sizeof(src), "%H:%M:%S.%03f", &sample_time_);
+			setStringParam(pC_->GalilTime_, src);
+//            double tdiff = fabs(epicsTimeDiffInSeconds(&tsnow, &sample_time_));
+            double tdiff = (epicsTimeDiffInSeconds(&tsnow, &sample_time_));
+			if (++call_counter_ % 3000 == 0 && axisName_ == 'A')
+			{
+			    std::cerr << "time diff " << axisName_ << " = " << tdiff << std::endl; 
+			}
 			//reverse limit
 			sprintf(src, "_LR%c", axisName_);
 			rev_ = (bool)(pC_->gco_->sourceValue(pC_->recdata_, src) == 1) ? 0 : 1;

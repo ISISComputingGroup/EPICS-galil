@@ -746,4 +746,20 @@ record(stringout,"$(P):$(M)_MOVE_CMD")
 	field(OUT,  "@asyn($(PORT),$(ADDR))MOVE_COMMAND")
 }
 
+record(stringin, "$(P):$(M)_TIME")
+{
+	field(DESC, "Galil Time")
+	field(DTYP, "asynOctetRead")
+   	field(INP,  "@asyn($(PORT),$(ADDR))GALIL_TIME")
+	field(SCAN, "I/O Intr")
+}
+
+record(longout, "$(P):$(M)_SYNC_TIME")
+{
+	field(DESC, "Galil Sync Time")
+	field(DTYP, "asynInt32")
+   	field(OUT,  "@asyn($(PORT),$(ADDR))GALIL_SYNC_TIME")
+	field(SCAN, "Passive")
+}
+
 #end

@@ -126,6 +126,7 @@ public:
   asynStatus setIGain(double iGain);
   asynStatus setDGain(double dGain);
   asynStatus setClosedLoop(bool closedLoop);
+  void syncTime();
 
 private:
   GalilController *pC_;      		/**< Pointer to the asynMotorController to which this axis belongs.
@@ -183,6 +184,13 @@ private:
   bool homedSent_;			//Homed message sent to pollServices
   bool homedExecuted_;			//Homed message has been executed by pollServices
   bool cancelHomeSent_;			//Cancel home process message sent to pollServices
+  double sample_number_;           //galil sample number from last data record read
+  unsigned sample_number_wraps_;           //number of times sample number wrapped
+  epicsTimeStamp sample_time_base_;   // base timefor sample
+  double sample_number_base_;   // base timefor sample
+  epicsTimeStamp sample_time_;   // base timefor sample
+  bool sync_time_; 
+  unsigned call_counter_;
 
 friend class GalilController;
 };

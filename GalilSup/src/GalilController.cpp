@@ -91,8 +91,8 @@ static bool libverPrinted = false;
 
 //Number of communication retries
 // GH 05/10/2015 Altered retries (from 1 to 3) and allowed timeouts (from 3 to 5)
-#define MAX_RETRIES 3
-#define ALLOWED_TIMEOUTS 5
+#define MAX_RETRIES 1
+#define ALLOWED_TIMEOUTS 3
 
 #define MAX_FILENAME_LEN 256
 #define MAX_MESSAGE_LEN 256
@@ -241,6 +241,8 @@ GalilController::GalilController(const char *portName, const char *address, doub
 //Add new parameters here
   createParam(GalilMoveCommandString, asynParamOctet, &GalilMoveCommand_);
 
+  createParam(GalilTimeString, asynParamOctet, &GalilTime_);
+  createParam(GalilSyncTimeString, asynParamInt32, &GalilSyncTime_);
   createParam(GalilCommunicationErrorString, asynParamInt32, &GalilCommunicationError_);
 
   //Store address
@@ -589,6 +591,7 @@ void GalilController::connected(void)
 		}
 
 	//Stop all moving motors, and turn all motors off
+	int autoonoff;
 	for (i=0;i<numAxesMax_;i++)
 		{
 		//Query moving status
@@ -2450,6 +2453,11 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
 	{
 	status = setOutputCompare(addr);
 	}
+  else if (function == GalilSyncTime_)
+  {
+      pAxis->syncTime();
+	  reqd_comms = false;
+  }
   else 
   	{
     	/* Call base class method */
@@ -3258,6 +3266,11 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
 		//The GalilController code is fully assembled, and stored in GalilController::card_code_
 		code_assembled_ = true;
 		}
+	for (i=0; i<numAxes_; ++i)
+	{
+	    getAxis(i)->syncTime();
+	}
+
 }
 
 /*--------------------------------------------------------------------------------*/
