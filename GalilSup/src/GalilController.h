@@ -138,6 +138,8 @@
 
 #define GalilEthAddrString	  	"CONTROLLER_ETHADDR"
 #define GalilSerialNumString	  	"CONTROLLER_SERIALNUM"
+#define GalilTimeString	  	"GALIL_TIME"
+#define GalilSyncTimeString	  	"GALIL_SYNC_TIME"
 
 /* For each digital input, we maintain a list of motors, and the state the input should be in*/
 /* To disable the motor */
@@ -306,7 +308,8 @@ protected:
   int GalilEthAddr_;
   int GalilSerialNum_;
 //Add new parameters here
-
+  int GalilTime_;
+  int GalilSyncTime_;
   int GalilCommunicationError_;
   #define LAST_GALIL_PARAM GalilCommunicationError_
 

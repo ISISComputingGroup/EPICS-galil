@@ -735,4 +735,20 @@ record(mbbo,"$(P):$(M)_ON_CMD")
 	field(FLNK, "$(P):$(M)_ON_STATUS")
 }
 
+record(stringin, "$(P):$(M)_TIME")
+{
+	field(DESC, "Galil Time")
+	field(DTYP, "asynOctetRead")
+   	field(INP,  "@asyn($(PORT),$(ADDR))GALIL_TIME")
+	field(SCAN, "I/O Intr")
+}
+
+record(longout, "$(P):$(M)_SYNC_TIME")
+{
+	field(DESC, "Galil Sync Time")
+	field(DTYP, "asynInt32")
+   	field(OUT,  "@asyn($(PORT),$(ADDR))GALIL_SYNC_TIME")
+	field(SCAN, "Passive")
+}
+
 #end
