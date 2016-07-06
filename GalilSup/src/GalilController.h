@@ -312,8 +312,8 @@ protected:
 
 private:
   asynUser *pasynUserGalil_;
-  Galil *gco_;				//Galil communication object (gco_).  From galil communication lib
-  Galil *gco_um_;				//Galil communication object for unsolicited messages (gco_um_).  From galil communication lib
+  GalilWrap *gco_;				//Galil communication object (gco_).  From galil communication lib
+  GalilWrap *gco_um_;				//Galil communication object for unsolicited messages (gco_um_).  From galil communication lib
   GalilPoller *poller_;			//GalilPoller to acquire a datarecord
   char address_[256];			//address string
   char model_[256];			//model string

@@ -8,6 +8,9 @@ include $(TOP)/configure/CONFIG
 #==================================================
 # Build an IOC support library
 
+ifneq ($(findstring 10.0,$(VCVERSION)),)
+LIBRARY_IOC += GalilWrap
+endif
 LIBRARY_IOC += GalilSupport
 
 # Location of Galil communications library from their website, with directory structure rearranged to:
@@ -28,17 +31,22 @@ DBD += GalilSupport.dbd
 
 # The following are compiled and added to the Support library
 GalilSupport_SRCS += GalilController.cpp GalilAxis.cpp GalilCSAxis.cpp GalilConnector.cpp GalilPoller.cpp
-
-GalilSupport_LIBS += asyn motor calc
+GalilSupport_LIBS += asyn motor calc GalilWrap
 
 Galil_DIR = $(LIBGALIL)/lib/$(EPICS_HOST_ARCH)
-GalilSupport_SYS_LIBS_Linux += Galil
-
 Galil1_DIR = $(LIBGALIL)/lib/$(EPICS_HOST_ARCH)
 galil2_DIR = $(LIBGALIL)/lib/$(EPICS_HOST_ARCH)
-GalilSupport_LIBS_WIN32 += Galil1 # galil2
-GalilSupport_SYS_LIBS_WIN32 += delayimp
-GalilSupport_LDFLAGS_WIN32 += /DELAYLOAD:Galil1.dll
+
+ifneq ($(findstring 10.0,$(VCVERSION)),)
+GalilWrap_SRCS += GalilWrap.cpp
+GalilWrap_SYS_LIBS_Linux += Galil
+GalilWrap_LIBS_WIN32 += Galil1 # galil2
+GalilWrap_SYS_LIBS_WIN32 += delayimp
+GalilWrap_LDFLAGS_WIN32 += /DELAYLOAD:Galil1.dll
+else
+GalilWrap_DIR = $(LIBGALIL)/lib/$(EPICS_HOST_ARCH)
+endif
+
 
 # Galil communications library from their website
 #GalilSupport_SYS_LIBS += Galil

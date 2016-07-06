@@ -22,7 +22,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
-#include <Galil.h>
+#include <GalilWrap.h>
 #include <iostream>  //cout
 #include <sstream>   //ostringstream istringstream
 #include <typeinfo>  //std::bad_typeid

@@ -53,7 +53,7 @@
 #else
 #include <unistd.h>
 #endif /* _WIN32 */
-#include <Galil.h>   //Galil communication library api
+#include <GalilWrap.h>   //Galil communication library api
 #include <iostream>  //cout
 #include <sstream>   //ostringstream istringstream
 #include <typeinfo>  //std::bad_typeid
@@ -409,12 +409,12 @@ void GalilController::connect(void)
 	   {
 	   //Must be in same thread as first new Galil(address_) statement
 	   //On windows this causes dll to load now
-	   cerr << Galil::libraryVersion() << endl;
+	   cerr << GalilWrap::libraryVersion() << endl;
 	   libverPrinted = true;
 	   }
 		
 	
-	Galil* tgco = new Galil(std::string(address_) + " -s"); // -s is silent connect, just get tcp handle
+	GalilWrap* tgco = new GalilWrap(std::string(address_) + " -s"); // -s is silent connect, just get tcp handle
 	// clean up handles on Galil
 	tgco->command("IHT=>-1"); // udp handles
 	tgco->command("IHT=>-2"); // tcp handles
@@ -423,10 +423,10 @@ void GalilController::connect(void)
 	//Open connection to address provided
 	// -t 500 is default timeout (ms)
 	// -mg 0 means don't set up for unsolicited messages
-	gco_ = new Galil(std::string(address_) + " -mg 0 -t 1000");
+	gco_ = new GalilWrap(std::string(address_) + " -mg 0 -t 1000");
 
 	// second tcp handle just for unsolicited messages, by default they are sent udp and may get lost
-	gco_um_ = new Galil(std::string(address_) + " -s");  // -s means connect silently, just make tcp connection
+	gco_um_ = new GalilWrap(std::string(address_) + " -s");  // -s means connect silently, just make tcp connection
 	gco_um_->command("CFI");  // take unsolicited messages
 
 	//Success, continue

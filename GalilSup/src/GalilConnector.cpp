@@ -21,7 +21,7 @@
 
 #include <iostream>  //cout
 #include <sstream>   //ostringstream istringstream
-#include <Galil.h>
+#include <GalilWrap.h>
 #include <epicsThread.h>
 
 using namespace std; //cout ostringstream vector string
