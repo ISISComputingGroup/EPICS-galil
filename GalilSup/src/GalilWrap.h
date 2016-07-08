@@ -10,7 +10,7 @@
   
   namespace GalilIntf
   {
-      epicsShareExtern GalilH* create(const char* address = "");
+      epicsShareExtern GalilH* create(const char* address, char*& exc);
 	  
 	  epicsShareExtern void destroy(GalilH* g);
 	  
@@ -22,46 +22,56 @@
 
       epicsShareExtern int& timeout_ms(GalilH* g);
 
-      epicsShareExtern char* command(GalilH* g, const char* command = "MG TIME", const char* terminator = "\r", 
-	                const char* ack = ":", bool trim = true);
+      epicsShareExtern char* command(GalilH* g, const char* command, const char* terminator, 
+	                const char* ack, bool trim, char*& exc);
 
-     epicsShareExtern double commandValue(GalilH* g, const char* command = "MG TIME");
+     epicsShareExtern double commandValue(GalilH* g, const char* command, char*& exc);
 
-     epicsShareExtern char* message(GalilH* g, int timeout_ms = 500);
+     epicsShareExtern char* message(GalilH* g, int timeout_ms);
 
-     epicsShareExtern int interrupt(GalilH* g, int timeout_ms = 500);
+     epicsShareExtern int interrupt(GalilH* g, int timeout_ms);
 	 
 	 epicsShareExtern char* programUpload(GalilH* g);
 
-     epicsShareExtern void programDownload(GalilH* g, const char* program = "MG TIME\rEN");
+     epicsShareExtern void programDownload(GalilH* g, const char* program);
 
-     epicsShareExtern void programUploadFile(GalilH* g, const char* file = "program.dmc");
+     epicsShareExtern void programUploadFile(GalilH* g, const char* file);
 
-     epicsShareExtern void programDownloadFile(GalilH* g, const char* file = "program.dmc");
+     epicsShareExtern void programDownloadFile(GalilH* g, const char* file);
 
-     epicsShareExtern void recordsStart(GalilH* g, double period_ms = -1);
+     epicsShareExtern void recordsStart(GalilH* g, double period_ms, char*& exc);
 
-     epicsShareExtern char* record(GalilH* g, size_t& len, const char* method = "QR");
+     epicsShareExtern char* record(GalilH* g, size_t& len, const char* method, char*& exc);
 
      epicsShareExtern double sourceValue(
 	   GalilH* g,
-       const char* record, size_t len,
-       const char* source = "TIME"
+       const char* record, 
+	   size_t len,
+       const char* source,
+	   char*& exc
      );
 
      epicsShareExtern char* source(
 	   GalilH* g,
-       const char* field = "Description",
-       const char* source = "TIME"
+       const char* field,
+       const char* source
      );
 
      epicsShareExtern void setSource(
 	   GalilH* g,
-       const char* field = "Description",
-       const char* source = "TIME",
-       const char* to = "Sample counter"
+       const char* field,
+       const char* source,
+       const char* to
      );
   };
+
+#define CHECK_EXC(__exc) \
+		 if (__exc != NULL) \
+		 { \
+		     std::string s_exc(__exc); \
+		     GalilIntf::freeMem(__exc); \
+			 throw s_exc; \
+		 }
 
   class GalilWrap
   {
@@ -72,7 +82,9 @@
 	  
      GalilWrap(const std::string& address = "")
 	 {
-		 m_gh = GalilIntf::create(address.c_str());
+	     char* exc = NULL;
+		 m_gh = GalilIntf::create(address.c_str(), exc);
+		 CHECK_EXC(exc);
 	 }
 
      ~GalilWrap()
@@ -102,7 +114,9 @@
         const std::string& ack = ":", bool trim = true
      )
 	 {
-		 char* reply = GalilIntf::command(m_gh, command.c_str(), terminator.c_str(), ack.c_str(), trim);
+	     char* exc = NULL;
+		 char* reply = GalilIntf::command(m_gh, command.c_str(), terminator.c_str(), ack.c_str(), trim, exc);
+		 CHECK_EXC(exc);
 		 std::string s(reply);
 		 GalilIntf::freeMem(reply);
 		 return s;
@@ -110,7 +124,10 @@
 
      double commandValue(const std::string& command = "MG TIME")
 	 {
-		 return GalilIntf::commandValue(m_gh, command.c_str());		 
+	     char* exc = NULL;
+		 double value = GalilIntf::commandValue(m_gh, command.c_str(), exc);		 
+		 CHECK_EXC(exc);
+		 return value;
 	 }
 
      std::string message(int timeout_ms = 500)
@@ -164,14 +181,19 @@
 
      void recordsStart(double period_ms = -1)
 	 {
-		 GalilIntf::recordsStart(m_gh, period_ms);		 
+	     char* exc = NULL;
+		 GalilIntf::recordsStart(m_gh, period_ms, exc);
+		 CHECK_EXC(exc);
 	 }
 
      std::vector<char> record(const std::string& method = "QR")
 	 {
 		 size_t len;
-		 char* vals = GalilIntf::record(m_gh, len, method.c_str());
+		 char* exc = NULL;
+		 char* vals = GalilIntf::record(m_gh, len, method.c_str(), exc);
+		 CHECK_EXC(exc);
 		 std::vector<char> v(vals, vals + len);
+		 GalilIntf::freeMem(vals);
 		 return v;
 	 }
 
@@ -180,7 +202,10 @@
        const std::string& source = "TIME"
      )
 	 {
-		 return GalilIntf::sourceValue(m_gh, &(record[0]), record.size(), source.c_str());
+	     char* exc = NULL;
+		 double res = GalilIntf::sourceValue(m_gh, &(record[0]), record.size(), source.c_str(), exc);
+		 CHECK_EXC(exc);
+		 return res;
 	 }
 
      std::string source(

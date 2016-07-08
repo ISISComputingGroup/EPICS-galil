@@ -7,16 +7,33 @@ struct GalilH
 	Galil* g;
 };
 
-      GalilH* GalilIntf::create(const char* address)
+#define HANDLE_EXC(__exc) \
+		 catch(const std::string& str) \
+		 { \
+		     __exc = strdup(str.c_str()); \
+		 } \
+		 catch(const std::exception& ex) \
+		 { \
+		     __exc = strdup(ex.what()); \
+		 }
+		 
+      GalilH* GalilIntf::create(const char* address, char*& exc)
 	  {
+	      exc = NULL;
 		  GalilH* gh = new GalilH;
-		  gh->g = new Galil(address);
-		  return gh;
+		  gh->g = NULL;
+		  try
+		  {
+		      gh->g = new Galil(address);
+		  }
+		  HANDLE_EXC(exc);
+		 return gh;
 	  }
 	  
 	  void GalilIntf::destroy(GalilH* gh)
 	  {
 	      delete gh->g;
+		  gh->g = NULL;
 		  delete gh;
 	  }
 	  
@@ -42,14 +59,28 @@ struct GalilH
 	  }
 
       char* GalilIntf::command(GalilH* gh, const char* command, const char* terminator, 
-	                const char* ack, bool trim)
+	                const char* ack, bool trim, char*& exc)
 	{
-		return strdup(gh->g->command(command, terminator, ack, trim).c_str());						
+	    exc = NULL;
+	    char* res = NULL;
+	    try
+		{
+		    res = strdup(gh->g->command(command, terminator, ack, trim).c_str());	
+        }			
+		HANDLE_EXC(exc);
+		 return res;
 	}
 
-     double GalilIntf::commandValue(GalilH* gh, const char* command)
+     double GalilIntf::commandValue(GalilH* gh, const char* command, char*& exc)
 	 {
-		 return gh->g->commandValue(command);
+	     exc = NULL;
+	     double res = 0.0;
+		 try
+		 {
+		     res = gh->g->commandValue(command);
+	     }
+		 HANDLE_EXC(exc);
+		 return res;
 	 }
 
      char* GalilIntf::message(GalilH* gh, int timeout_ms)
@@ -82,29 +113,48 @@ struct GalilH
 		 gh->g->programDownloadFile(file);
 	 }
 
-     void GalilIntf::recordsStart(GalilH* gh, double period_ms)
+     void GalilIntf::recordsStart(GalilH* gh, double period_ms, char*& exc)
 	 {
-		 gh->g->recordsStart(period_ms);
+	     exc = NULL;
+	     try
+		 {
+		     gh->g->recordsStart(period_ms);
+	     }
+		 HANDLE_EXC(exc);
 	 }
 
-     char* GalilIntf::record(GalilH* gh, size_t& len, const char* method)
+     char* GalilIntf::record(GalilH* gh, size_t& len, const char* method, char*& exc)
 	 {
-	std::vector<char> rec = gh->g->record(method);
-	len = rec.size();
-	char* res = (char*)malloc(len);
-	memcpy(res, &(rec[0]), len);
-	return res;
-		 
+	     exc = NULL;
+		 char* res = NULL;
+	     try
+	     {
+	         std::vector<char> rec = gh->g->record(method);
+	         len = rec.size();
+	         res = (char*)malloc(len);
+	         memcpy(res, &(rec[0]), len);
+		 }
+		 HANDLE_EXC(exc);
+		 return res;		 
 	 }
 
      double GalilIntf::sourceValue(
 	   GalilH* gh,
-       const char* record, size_t len,
-       const char* source
+       const char* record, 
+	   size_t len,
+       const char* source,
+	   char*& exc
      )
 	 {
-	std::vector<char> record_v(record, record + len);
-	return gh->g->sourceValue(record_v, source);
+	     exc = NULL;
+		 double res;
+	     const std::vector<char> record_v(record, record + len);
+		 try 
+		 {
+	         res = gh->g->sourceValue(record_v, source);
+	     }
+		 HANDLE_EXC(exc);
+		 return res;
      }
 	 
      char* GalilIntf::source(
