@@ -5,11 +5,15 @@ include $(TOP)/configure/CONFIG
 #  ADD MACRO DEFINITIONS AFTER THIS LINE
 #=============================
 
-#==================================================
-# Build an IOC support library
+ifneq ($(findstring win32-x86,$(EPICS_HOST_ARCH)),)
+GCLIB_ARCH=x86
+else
+GCLIB_ARCH=x64
+endif
 
-LIBRARY_IOC += GalilSupport
-
+# For VS2010 use Standard Galil COmmunication Library Galil1.dll
+# for Other VC version, build Galil1.dll from galil c library wrappers
+ifneq ($(findstring 10.0,$(VCVERSION)),)
 # Location of Galil communications library from their website, with directory structure rearranged to:
 #  galil.h -> $(LIBGALIL)/include/galil.h
 #  LibGalil-vs2010-x64/release/Galil1.lib -> $(LIBGALIL)/lib/windows-x64/Galil1.lib
@@ -17,10 +21,33 @@ LIBRARY_IOC += GalilSupport
 #  LibGalil-vs2010-x64/release/Galil1.dll -> $(LIBGALIL)/bin/windows-x64/Galil1.dll
 #  LibGalil-vs2010-x64/debug/Galil1.dll -> $(LIBGALIL)/bin/windows-x64-debug/Galil1.dll
 LIBGALIL = $(ICPBINARYDIR)/LibGalil/$(VCVERSION)
+Galil1_DIR = $(LIBGALIL)/lib/$(EPICS_HOST_ARCH)
+BIN_INSTALLS_WIN32 += $(wildcard $(LIBGALIL)/bin/$(EPICS_HOST_ARCH)/*.dll)
+BIN_INSTALLS_WIN32 += $(wildcard $(LIBGALIL)/bin/$(EPICS_HOST_ARCH)/*.pdb)
+LIB_INSTALLS_WIN32 += $(wildcard $(LIBGALIL)/lib/$(EPICS_HOST_ARCH)/*.lib)
+else
+# use galil c library (gclib) 
+LIBGALIL = $(ICPBINARYDIR)/galil_glibc
+LIBRARY_IOC += Galil1
+SRC_DIRS += $(LIBGALIL)/source/wrappers/gcl
+Galil1_SRCS += gcl_galil.cpp gcl_datarecord.cpp
+Galil1_LIBS_WIN32 += gclib gclibo
+gclib_DIR = $(LIBGALIL)/lib/dynamic/$(GCLIB_ARCH)
+gclibo_DIR = $(LIBGALIL)/lib/dynamic/$(GCLIB_ARCH)
+USR_CXXFLAGS += -DSMALLBUF=256 # missing define in gclib wrappers
+BIN_INSTALLS_WIN32 += $(wildcard $(LIBGALIL)/dll/$(GCLIB_ARCH)/*.dll)
+LIB_INSTALLS_WIN32 += $(wildcard $(LIBGALIL)/lib/dynamic/$(GCLIB_ARCH)/*.lib)
+endif
 
-USR_CXXFLAGS += -I$(LIBGALIL)/include
+#==================================================
+# Build an IOC support library
+
+LIBRARY_IOC += GalilSupport
+
 # For sCalcPostfix.h
 USR_INCLUDES += -I$(CALC)/calcApp/src
+
+USR_CXXFLAGS += -I$(LIBGALIL)/include
 
 # motorRecord.h will be created from motorRecord.dbd
 # install devMotorSoft.dbd into <top>/dbd
@@ -31,24 +58,15 @@ GalilSupport_SRCS += GalilController.cpp GalilAxis.cpp GalilCSAxis.cpp GalilConn
 
 GalilSupport_LIBS += asyn motor calc
 
-Galil_DIR = $(LIBGALIL)/lib/$(EPICS_HOST_ARCH)
-GalilSupport_SYS_LIBS_Linux += Galil
-
-Galil1_DIR = $(LIBGALIL)/lib/$(EPICS_HOST_ARCH)
-galil2_DIR = $(LIBGALIL)/lib/$(EPICS_HOST_ARCH)
-GalilSupport_LIBS_WIN32 += Galil1 # galil2
+GalilSupport_LIBS_WIN32 += Galil1
 GalilSupport_SYS_LIBS_WIN32 += delayimp
 GalilSupport_LDFLAGS_WIN32 += /DELAYLOAD:Galil1.dll
 
-# Galil communications library from their website
-#GalilSupport_SYS_LIBS += Galil
 GalilSupport_LIBS += $(EPICS_BASE_IOC_LIBS)
 
+Galil_DIR = $(LIBGALIL)/lib/$(EPICS_HOST_ARCH)
+GalilSupport_SYS_LIBS_Linux += Galil
 BIN_INSTALLS_Linux += $(wildcard $(LIBGALIL)/lib/$(EPICS_HOST_ARCH)/*.so.*)
-
-BIN_INSTALLS_WIN32 += $(wildcard $(LIBGALIL)/bin/$(EPICS_HOST_ARCH)/*.dll)
-BIN_INSTALLS_WIN32 += $(wildcard $(LIBGALIL)/bin/$(EPICS_HOST_ARCH)/*.pdb)
-LIB_INSTALLS_WIN32 += $(wildcard $(LIBGALIL)/lib/$(EPICS_HOST_ARCH)/*.lib)
 
 include $(TOP)/configure/RULES
 #----------------------------------------
