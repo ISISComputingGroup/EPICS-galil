@@ -37,7 +37,7 @@ set_requestfile_path("${MOTOR}/motorApp/Db", "")
 epicsEnvSet("GALILCONFIG","$(ICPCONFIGROOT)/galil")
 
 # how many galil crates we have
-epicsEnvSet("GALILNUMCRATES", "7")
+epicsEnvSet("GALILNUMCRATES", "1")
 
 # this defines macros we can use for conditional loading later
 calc("IFDMC01", "$(GALILNUMCRATES) >= 1", 4)
