@@ -31,7 +31,7 @@ LIBGALIL = $(ICPBINARYDIR)/galil_glibc
 LIBRARY_IOC += Galil1
 SRC_DIRS += $(LIBGALIL)/source/wrappers/gcl
 Galil1_SRCS += gcl_galil.cpp gcl_datarecord.cpp
-Galil1_LIBS_WIN32 += gclib gclibo
+Galil1_LIBS_WIN32 += gclib gclibo $(EPICS_BASE_IOC_LIBS)
 gclib_DIR = $(LIBGALIL)/lib/dynamic/$(GCLIB_ARCH)
 gclibo_DIR = $(LIBGALIL)/lib/dynamic/$(GCLIB_ARCH)
 USR_CXXFLAGS += -DSMALLBUF=256 # missing define in gclib wrappers
