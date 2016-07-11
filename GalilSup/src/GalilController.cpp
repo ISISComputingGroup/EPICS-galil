@@ -423,7 +423,11 @@ void GalilController::connect(void)
 	//Open connection to address provided
 	// -t 500 is default timeout (ms)
 	// -mg 0 means don't set up for unsolicited messages
-	gco_ = new Galil(std::string(address_) + " -mg 0 -t 1000");
+	int timeout = 1000;
+	char galil_args[128];
+	epicsSnprintf(galil_args, sizeof(galil_args), "%s -mg 0 -t %d", address_, timeout);
+	gco_ = new Galil(galil_args);
+	gco_->timeout_ms = timeout; // this didn't seem to get set with -t above and new galil C library wrapper
 
 	// second tcp handle just for unsolicited messages, by default they are sent udp and may get lost
 	gco_um_ = new Galil(std::string(address_) + " -s");  // -s means connect silently, just make tcp connection
