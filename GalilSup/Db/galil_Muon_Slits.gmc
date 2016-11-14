@@ -1,0 +1,161 @@
+#emu
+IF tare>7.5
+tare=7.5
+ELSE
+IF tare<2
+tare=2.5
+ENDIF
+ENDIF
+SPA=100
+ACA=1024
+DCA=1024
+volte=@AN[1]
+diffe=tare-volte
+IF diffe>0
+dire=-1
+ELSE
+dire=1
+ENDIF
+OFA=8*dire
+IF diffe>0.5
+TLA=9
+ELSE
+IF diffe>0.2
+TLA=8
+ELSE
+TLA=6
+ENDIF
+ENDIF
+SHA
+#movee
+volte=@AN[1]
+diffe=tare-volte
+IF diffe>0
+dire=-1
+ELSE
+dire=1
+ENDIF
+OFA=8*dire
+IF diffe>0.5
+TLA=9
+ELSE
+IF diffe>0.2
+TLA=8
+ELSE
+TLA=6
+ENDIF
+ENDIF
+diffe=@ABS[diffe]
+JP #movee,diffe>0.001
+TLA=0
+OFA=0
+MOA
+EN
+
+#musr
+IF tarm>7.5
+tarm=7.5
+ELSE
+IF tarm<2
+tarm=2.5
+ENDIF
+ENDIF
+SPB=100
+ACB=1024
+DCB=1024
+voltm=@AN[2]
+diffm=tarm-voltm
+IF diffm>0
+dirm=1
+ELSE
+dirm=-1
+ENDIF
+OFB=8*dirm
+IF diffm>0.5
+TLB=9
+ELSE
+IF diffm>0.2
+TLB=8
+ELSE
+TLB=6
+ENDIF
+ENDIF
+SHB
+#movem
+voltm=@AN[2]
+diffm=tarm-voltm
+IF diffm>0
+dirm=1
+ELSE
+dirm=-1
+ENDIF
+OFB=8*dirm
+IF diffm>0.5
+TLB=9
+ELSE
+IF diffm>0.2
+TLB=8
+ELSE
+TLB=6
+ENDIF
+ENDIF
+diffm=@ABS[diffm]
+JP #movem,diffm>0.001
+TLB=0
+OFB=0
+MOB
+EN
+
+#hifi
+IF tarh>7.5
+tarh=7.5
+ELSE
+IF tarh<2
+tarh=2.5
+ENDIF
+ENDIF
+SPC=100
+ACC=1024
+DCC=1024
+volth=@AN[3]
+diffh=tarh-volth
+IF diffh>0
+dirh=-1
+ELSE
+dirh=1
+ENDIF
+OFC=8*dirh
+IF diffh>0.5
+TLC=9
+ELSE
+IF diffh>0.2
+TLC=8
+ELSE
+TLC=6
+ENDIF
+ENDIF
+SHC
+#moveh
+volth=@AN[3]
+diffh=tarh-volth
+IF diffh>0
+dirh=-1
+ELSE
+dirh=1
+ENDIF
+OFC=8*dirh
+IF diffh>0.5
+TLC=9
+ELSE
+IF diffh>0.2
+TLC=8
+ELSE
+TLC=6
+ENDIF
+ENDIF
+diffh=@ABS[diffh]
+JP #moveh,diffh>0.001
+TLC=0
+OFC=0
+MOC
+EN
