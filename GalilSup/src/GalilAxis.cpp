@@ -55,7 +55,7 @@ GalilAxis::GalilAxis(class GalilController *pC, //Pointer to controller instance
 		     char *enables_string,	//digital input(s) to use for motor enable/disable function
 		     int switch_type)		//motor enable/disable switch type
   : asynMotorAxis(pC, (toupper(axisname[0]) - AASCII)),
-    pC_(pC), last_encoder_position_(0), pollRequest_(10, sizeof(int)), encDirOk_(true)
+    pC_(pC), last_encoder_position_(0), pollRequest_(10, sizeof(int)), encDirOk_(true), encoder_wrap_(0.0)
 {
   char axis_limit_code[LIMIT_CODE_LEN];   	//Code generated for limits interrupt on this axis
   char axis_digital_code[INP_CODE_LEN];	     	//Code generated for digital interrupt related to this axis
@@ -969,7 +969,18 @@ asynStatus GalilAxis::getStatus(void)
    int offonerror, motoron;                 //paramList items to update
    int connected;                           //paramList items to update
    double error;                            //paramList items to update  
-
+   double encoder_wrap = 0.0;
+   double eres;
+   
+   if ( (pC_->getDoubleParam(axisNo_, pC_->GalilEncoderWrap_, &encoder_wrap) == asynSuccess) &&
+        (pC_->getDoubleParam(axisNo_, pC_->GalilEncoderResolution_, &eres) == asynSuccess) )
+   {
+	  encoder_wrap = encoder_wrap / eres;
+   }
+   else
+   {
+	   encoder_wrap = 0.0;
+   }
    //If data record query success in GalilController::acquireDataRecord
    if (pC_->recstatus_ == asynSuccess)
 	{
@@ -984,6 +995,17 @@ asynStatus GalilAxis::getStatus(void)
 			//main encoder data
 			sprintf(src, "_TP%c", axisName_);
 			encoder_position_ = pC_->gco_->sourceValue(pC_->recdata_, src);
+			if ( (encoder_wrap > 0.0) && (fabs(encoder_position_ - last_encoder_position_) > encoder_wrap / 2.0) )
+			{
+				if (encoder_position_ < last_encoder_position_)
+				{
+				    encoder_position_ += encoder_wrap;
+				}
+				else
+				{
+				    encoder_position_ -= encoder_wrap;					
+				}
+			}
 
 			//moving status
 			sprintf(src, "_BG%c", axisName_);

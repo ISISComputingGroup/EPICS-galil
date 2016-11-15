@@ -137,6 +137,29 @@ record(ao,"$(P):$(M)_EDEL_SP")
 	field(FLNK,"$(P):$(M)_EDEL_MON")
 }
 
+record(ai,"$(P):$(M)_EWRAP_MON")
+{
+	field(DESC,"Encoder wrap")
+	field(PINI,"YES")
+	field(EGU, "$(EGU)")
+	field(DTYP,"asynFloat64")
+	field(SCAN,"$(SCAN)")
+	field(PREC,"$(PREC)")
+	field(INP, "@asyn($(PORT),$(ADDR))ENCODER_WRAP")
+}
+
+record(ao,"$(P):$(M)_EWRAP_SP")
+{
+	field(DESC,"encoder wrap")
+	field(DTYP,"asynFloat64")
+	field(EGU, "$(EGU)")
+	field(PREC,"$(PREC)")
+	field(VAL, "0")
+	field(PINI, "YES")
+	field(OUT, "@asyn($(PORT),$(ADDR))ENCODER_WRAP")
+	field(FLNK,"$(P):$(M)_EWRAP_MON")
+}
+
 record(bi,"$(P):$(M)_MCONN_STATUS")
 {
 	field(DESC, "Connect stat")

@@ -158,6 +158,7 @@ private:
   double encoder_position_;		//main encoder register
   double last_motor_position_;		//aux encoder or step count register stored from previous poll.  Used to detect movement.
   double last_encoder_position_;	//main encoder register stored from previous poll.  Used to detect movement.
+  double encoder_wrap_;
   int direction_;			//Movement direction
   bool inmotion_;			//Axis in motion status from controller
   bool fwd_;				//Forward limit status

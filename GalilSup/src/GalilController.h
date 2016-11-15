@@ -138,6 +138,7 @@
 
 #define GalilEthAddrString	  	"CONTROLLER_ETHADDR"
 #define GalilSerialNumString	  	"CONTROLLER_SERIALNUM"
+#define GalilEncoderWrapString		"ENCODER_WRAP"
 
 /* For each digital input, we maintain a list of motors, and the state the input should be in*/
 /* To disable the motor */
@@ -264,6 +265,7 @@ protected:
   int GalilWrongLimitProtectionActive_;
   int GalilUserOffset_;
   int GalilEncoderResolution_;
+  int GalilEncoderWrap_;
   int GalilUseEncoder_;
   int GalilPrem_;
   int GalilPost_;

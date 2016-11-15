@@ -170,6 +170,7 @@ GalilController::GalilController(const char *portName, const char *address, doub
   createParam(GalilSSIConnectedString, asynParamInt32, &GalilSSIConnected_);	
   createParam(GalilEncoderStallString, asynParamInt32, &GalilEStall_);
   createParam(GalilEncoderStallTimeString, asynParamFloat64, &GalilEStallTime_);
+  createParam(GalilEncoderWrapString, asynParamFloat64, &GalilEncoderWrap_);
 
   createParam(GalilStepSmoothString, asynParamFloat64, &GalilStepSmooth_);
   createParam(GalilEncoderDeadBString, asynParamFloat64, &GalilEncoderDeadB_);
