@@ -294,10 +294,16 @@ record(fanout, "$(P):$(M)_ERRCALC_FAN")
 	field(LNK1, "$(P):$(M)_ERROR")
 }
 
-record(stringout,"$(P):$(M)_ERROR")
+record(scalcout, "$(P):$(M)_ERROR")
 {
-    field(OMSL, "closed_loop")
-	field(DOL, "$(P):$(M)_ERRCALC.VALA NPP")
+    field(INAA, "$(P):$(M)_ERRCALC.VALA NPP")
+	field(CALC, "AA")
+	field(OOPT, "On Change")
+	field(OUT, "$(P):$(M)_PERROR PP")
+}
+
+record(stringout, "$(P):$(M)_PERROR")
+{
     field(DTYP, "stdio")
     field(OUT, "@errlog")
 }
