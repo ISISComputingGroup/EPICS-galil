@@ -27,12 +27,14 @@ DB += galil_userdef_records8.template
 # 6. Thread programs for axis not using limits as home should send home<Axis> = 0 at hardware limits violation
 # 7. If using single thread avoid use of blocking commands (eg. WT100, AD, etc)
 
+# galil_Muon_Slits is a routine used by the Muons
+
 # Example galil code templates
 GMC += galil_Default_Footer.gmc  galil_Default_Header.gmc  galil_Home_ForwLimit.gmc  galil_Home_ForwLimit_Home.gmc
 GMC += galil_Home_Home.gmc  galil_Home_Home+FIneg.gmc  galil_Home_Home+FIpos.gmc  galil_Home_RevLimit.gmc
 GMC += galil_Home_RevLimit_Home.gmc  galil_Piezo_Home.gmc  galil_Home_ForwLimit+FIneg.gmc  galil_Home_RevLimit+FIpos.gmc
 GMC += galil_Home_Pin_Hole_Selector.gmc  galil_Home_Thread.gmc  galil_Home_Dummy_Axis.gmc
-GMC += galil_Home_FIpos.gmc galil_Home_FIneg.gmc
+GMC += galil_Home_FIpos.gmc galil_Home_FIneg.gmc galil_Muon_Slits.gmc
 
 
 include $(TOP)/configure/RULES
