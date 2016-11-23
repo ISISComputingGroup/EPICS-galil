@@ -294,16 +294,17 @@ record(fanout, "$(P):$(M)_ERRCALC_FAN")
 	field(LNK1, "$(P):$(M)_ERROR")
 }
 
-record(scalcout, "$(P):$(M)_ERROR")
+# last known error, not clear on blank as fanout above will not update us
+record(stringin, "$(P):$(M)_ERROR")
 {
-    field(INAA, "$(P):$(M)_ERRCALC.VALA NPP")
-	field(CALC, "AA")
-	field(OOPT, "On Change")
-	field(OUT, "$(P):$(M)_PERROR PP")
+    field(INP, "$(P):$(M)_ERRCALC_MESS NPP")
 }
 
+# print new error
 record(stringout, "$(P):$(M)_PERROR")
 {
+    field(OMSL, "closed_loop")
+    field(DOL, "$(P):$(M)_ERROR CP")
     field(DTYP, "stdio")
     field(OUT, "@errlog")
 }
