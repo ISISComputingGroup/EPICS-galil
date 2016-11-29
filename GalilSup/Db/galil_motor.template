@@ -282,22 +282,12 @@ record(aSub,"$(P):$(M)_ERRCALC")
 
 record(stringout, "$(P):$(M)_ERRCALC_MESS")
 {
-	field(FLNK, "$(P):$(M)_ERRCALC_FAN.PROC")
 }
 
-# on success VALB above == 0 and so fanout triggers no output, VALB == 1 causes OUTA to fire
-# we want to record error messages, but not blanks on no error
-record(fanout, "$(P):$(M)_ERRCALC_FAN")
-{
-	field(SELM, "Specified")
-    field(SELL, "$(P):$(M)_ERRCALC.VALB NPP")
-	field(LNK1, "$(P):$(M)_ERROR")
-}
-
-record(stringout,"$(P):$(M)_ERROR")
+record(stringout, "$(P):$(M)_PERROR")
 {
     field(OMSL, "closed_loop")
-	field(DOL, "$(P):$(M)_ERRCALC.VALA NPP")
+    field(DOL, "$(P):$(M)_ERRCALC_MESS CP")
     field(DTYP, "stdio")
     field(OUT, "@errlog")
 }
