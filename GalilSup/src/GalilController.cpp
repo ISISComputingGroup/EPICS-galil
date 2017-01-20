@@ -239,6 +239,7 @@ GalilController::GalilController(const char *portName, const char *address, doub
   createParam(GalilSerialNumString, asynParamOctet, &GalilSerialNum_);
 
 //Add new parameters here
+  createParam(GalilMoveCommandString, asynParamOctet, &GalilMoveCommand_);
 
   createParam(GalilCommunicationErrorString, asynParamInt32, &GalilCommunicationError_);
 
@@ -485,7 +486,10 @@ void GalilController::setParamDefaults(void)
   setStringParam(1, GalilCoordSysMotors_, "");
   //Put all motors in spmg go mode
   for (i = 0; i < MAX_GALIL_AXES + MAX_GALIL_CSAXES; i++)
+  {
 	setIntegerParam(i, GalilMotorStopGo_, 3);
+    setStringParam(i, GalilMoveCommand_, "");
+  }
   //Output compare is off
   for (i = 0; i < 2; i++)
 	setIntegerParam(i, GalilOutputCompareAxis_, 0);

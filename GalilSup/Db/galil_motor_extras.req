@@ -22,4 +22,4 @@ $(P)$(M)_OFFDELAY_SP
 $(P)$(M)_UINDEX_CMD
 $(P)$(M)_JAH_CMD
 $(P)$(M)_JAHV_SP
-
+$(P)$(M)_MOVE_CMD
