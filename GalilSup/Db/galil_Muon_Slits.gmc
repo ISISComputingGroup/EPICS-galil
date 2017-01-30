@@ -45,6 +45,8 @@ ELSE
 TLA=6
 ENDIF
 ENDIF
+IF _LFA = 0; diffe=0; ENDIF
+IF _LRA = 0; diffe=0; ENDIF
 diffe=@ABS[diffe]
 JP #movee,diffe>0.001
 TLA=0
@@ -99,6 +101,8 @@ ELSE
 TLB=6
 ENDIF
 ENDIF
+IF _LFB = 0; diffm=0; ENDIF
+IF _LRB = 0; diffm=0; ENDIF
 diffm=@ABS[diffm]
 JP #movem,diffm>0.001
 TLB=0
@@ -153,8 +157,49 @@ ELSE
 TLC=6
 ENDIF
 ENDIF
+IF _LFC = 0; diffh=0; ENDIF
+IF _LRC = 0; diffh=0; ENDIF
 diffh=@ABS[diffh]
 JP #moveh,diffh>0.001
+TLC=0
+OFC=0
+MOC
+EN
+
+
+
+#testemu
+SPA=100
+ACA=1024
+DCA=1024
+TLA=8
+OFA=-8
+SHA
+WT 500
+TLA=0
+OFA=0
+MOA
+EN
+#testmus
+SPB=100
+ACB=1024
+DCB=1024
+TLB=4
+OFB=-4
+SHB
+WT 500
+TLB=0
+OFB=0
+MOB
+EN
+#testhi
+SPC=100
+ACC=1024
+DCC=1024
+TLC=8
+OFC=4
+SHC
+WT 500
 TLC=0
 OFC=0
 MOC
