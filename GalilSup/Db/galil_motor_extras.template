@@ -735,4 +735,15 @@ record(mbbo,"$(P):$(M)_ON_CMD")
 	field(FLNK, "$(P):$(M)_ON_STATUS")
 }
 
+## if we don't send moves in the usual way, put a string here and %f will be replaced by
+## the position requested and sent to the galil
+record(stringout,"$(P):$(M)_MOVE_CMD")
+{
+	field(DESC, "Special Motor Move cmd")
+	field(DTYP, "asynOctetWrite")
+	field(PINI, "YES")
+	field(VAL,  "")
+	field(OUT,  "@asyn($(PORT),$(ADDR))MOVE_COMMAND")
+}
+
 #end
