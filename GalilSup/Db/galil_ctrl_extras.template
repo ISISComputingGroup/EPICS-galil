@@ -412,4 +412,14 @@ record(ai,"$(P):SEND_STRVAL_MON")
 	field(INP,  "@asyn($(PORT),0)USER_OCTET_VAL")
 }
 
+record(longout,"$(P):RTRY_CMD")
+{
+	field(DESC, "Controller Galil command retries")
+	field(OMSL, "supervisory")
+	field(DTYP, "asynInt32")
+	field(PINI, "YES")
+	field(VAL, "3")
+	field(OUT,  "@asyn($(PORT),0)CONTROLLER_RTRY")
+}
+
 #end

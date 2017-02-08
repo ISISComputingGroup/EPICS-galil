@@ -139,6 +139,7 @@
 #define GalilEthAddrString	  	"CONTROLLER_ETHADDR"
 #define GalilSerialNumString	  	"CONTROLLER_SERIALNUM"
 #define GalilMoveCommandString	"MOVE_COMMAND"
+#define GalilCommandRetryCntString	"CONTROLLER_RTRY"
 
 /* For each digital input, we maintain a list of motors, and the state the input should be in*/
 /* To disable the motor */
@@ -308,6 +309,7 @@ protected:
   int GalilSerialNum_;
 //Add new parameters here
   int GalilMoveCommand_;
+  int GalilCommandRetryCnt_;
   
   int GalilCommunicationError_;
   #define LAST_GALIL_PARAM GalilCommunicationError_

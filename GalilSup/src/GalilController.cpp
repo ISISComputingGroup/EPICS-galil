@@ -240,6 +240,7 @@ GalilController::GalilController(const char *portName, const char *address, doub
 
 //Add new parameters here
   createParam(GalilMoveCommandString, asynParamOctet, &GalilMoveCommand_);
+  createParam(GalilCommandRetryCntString, asynParamInt32, &GalilCommandRetryCnt_);
 
   createParam(GalilCommunicationErrorString, asynParamInt32, &GalilCommunicationError_);
 
@@ -484,6 +485,8 @@ void GalilController::setParamDefaults(void)
   setStringParam(0, GalilCoordSysMotors_, "");
   //Coordinate system T axes list empty
   setStringParam(1, GalilCoordSysMotors_, "");
+  
+  setIntegerParam(GalilCommandRetryCnt_, MAX_RETRIES);
   //Put all motors in spmg go mode
   for (i = 0; i < MAX_GALIL_AXES + MAX_GALIL_CSAXES; i++)
   {
@@ -2888,6 +2891,11 @@ asynStatus GalilController::writeReadController(const char *caller)
   int ex_count;
   static const char* debug_file_name = macEnvExpand("$(GALIL_DEBUG_FILE=)");
   static FILE* debug_file = ( (debug_file_name != NULL && strlen(debug_file_name) > 0) ? fopen(debug_file_name, "at") : NULL);
+  int max_retries;
+  if ( getIntegerParam(GalilCommandRetryCnt_, &max_retries) != asynSuccess )
+  {
+	  max_retries = MAX_RETRIES;
+  }
 
   asynPrint(this->pasynUserSelf, ASYN_TRACE_FLOW, 
           "%s: caller=\"%s\" command=\"%s\"\n", 
@@ -2931,7 +2939,7 @@ asynStatus GalilController::writeReadController(const char *caller)
 		//Motor jumper incorrect
 		//Timeout for any reason
 		//Or reached max allowed errors
-		if (ex_count > MAX_RETRIES || strncmp(cmd_, "BP",2)==0 || strncmp(cmd_, "MT",2) == 0 || strstr(e.c_str(), "TIMEOUT") != NULL)
+		if (ex_count > max_retries || strncmp(cmd_, "BP",2)==0 || strncmp(cmd_, "MT",2) == 0 || strstr(e.c_str(), "TIMEOUT") != NULL)
 			  {
 			  //Check for timeout errors
 			  if (strstr(e.c_str(), "TIMEOUT") != NULL)
