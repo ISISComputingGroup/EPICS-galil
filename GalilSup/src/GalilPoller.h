@@ -22,15 +22,21 @@
 
 class GalilPoller: public epicsThreadRunable {
 public:
-  GalilPoller(GalilController *cntrl);
-  void wakePoller(void);
-  void sleepPoller(bool connected = true);
+  GalilPoller(GalilController *pcntrl);
+  void wakePoller(bool restart_async = true);
+  void sleepPoller(void);
   virtual void run();
   epicsThread thread;
+  ~GalilPoller();
 
 private:
-  GalilController *pCntrl_;		//The GalilController we poll for
+  GalilController *pC_;			//The GalilController we poll for
   bool pollerSleep_;			//Tell poller to sleep
+  epicsTimeStamp pollstartt_;		//Used to calculate sleep time in synchronous mode
+  epicsTimeStamp pollendt_;		//Used to calculate sleep time in synchronous mode
+
   epicsEventId pollerSleepEventId_;    	//Poller sleep event
   epicsEventId pollerWakeEventId_;    	//Poller Wake event
+  bool shutdownPoller_;
+  void shutdownPoller();
 };

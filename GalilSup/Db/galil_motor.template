@@ -25,7 +25,7 @@
 # 800 Blackburn Road, Clayton, Victoria 3168, Australia.
 #
 
-grecord(motor,"$(P):$(M)")
+grecord(motor,"$(P)$(M)")
 {
 	field(DTYP,"asynMotor")
 	field(VMAX,"$(VMAX)")
@@ -44,130 +44,185 @@ grecord(motor,"$(P):$(M)")
 	field(DHLM,"$(DHLM)")
 	field(DLLM,"$(DLLM)")
 	field(UEIP,"$(UEIP)")
-        field(SREV,"$(SREV)")
+	field(SREV,"$(SREV)")
 	field(OFF,"$(OFF)")
 	field(RTRY,"$(RTRY)")
 	field(TWV,"1")
 	field(DESC,"$(DESC)")
 	field(SCAN,"Passive")
 	field(FOFF,"1")
+	field(NTM, "$(NTM)")
 # PID gains
 	field(PCOF,"$(PCOF)")
 	field(ICOF,"$(ICOF)")
 	field(DCOF,"$(DCOF)")
 }
 
-record(transform,"$(P):$(M)_ableput") {
-  field(CLCB,"a")
-  field(CLCC,"a")
-  field(OUTA,"$(P):$(M).DISA NPP NMS")
-  field(OUTB,"$(P):$(M).DISP NPP NMS")
-  field(OUTC,"$(P):$(M).DISA NPP NMS")
+record(transform,"$(P)$(M)_ableput") {
+	field(CLCB,"a")
+	field(CLCC,"a")
+	field(OUTA,"$(P)$(M).DISA NPP NMS")
+	field(OUTB,"$(P)$(M).DISP NPP NMS")
+	field(OUTC,"$(P)$(M).DISA NPP NMS")
 }
 
-record(bo,"$(P):$(M)_able") {
-  field(DESC,"motor enable")
-  field(PINI,"YES")
-  field(OUT,"$(P):$(M)_ableput.A PP MS")
-  field(ZNAM,"Enable")
-  field(ONAM,"Disable")
+record(bo,"$(P)$(M)_able") {
+	field(DESC,"motor enable")
+	field(PINI,"YES")
+	field(OUT,"$(P)$(M)_ableput.A PP MS")
+	field(ZNAM,"Enable")
+	field(ONAM,"Disable")
 }
 
 #Below records are used to extract data from MR
 #and pass to driver
-record(ao,"$(P):$(M)_ACCL_SP") {
-    field(DESC, "ACCL")
-    field(DOL,  "$(P):$(M).ACCL CP MS")
-    field(OMSL, "closed_loop")
-    field(DTYP, "asynFloat64")
-    field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_ACCL")
-    field(PREC, "$(PREC)")
+record(ao,"$(P)$(M)_PCOF_SP") {
+	field(DESC, "Motor PCOF")
+	field(DOL,  "$(P)$(M).PCOF CP MS")
+	field(OMSL, "closed_loop")
+	field(DTYP, "asynFloat64")
+	field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_PGAIN")
+	field(PREC, "$(PREC)")
 }
 
-record(ao,"$(P):$(M)_VMAX_SP") {
-    field(DESC, "VMAX")
-    field(DOL,  "$(P):$(M).VMAX CP MS")
-    field(OMSL, "closed_loop")
-    field(DTYP, "asynFloat64")
-    field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_VMAX")
-    field(PREC, "$(PREC)")
+record(ao,"$(P)$(M)_ICOF_SP") {
+	field(DESC, "Motor ICOF")
+	field(DOL,  "$(P)$(M).ICOF CP MS")
+	field(OMSL, "closed_loop")
+	field(DTYP, "asynFloat64")
+	field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_IGAIN")
+	field(PREC, "$(PREC)")
 }
 
-record(ao,"$(P):$(M)_VELO_SP") {
-    field(DESC, "VELO")
-    field(DOL,  "$(P):$(M).VELO CP MS")
-    field(OMSL, "closed_loop")
-    field(DTYP, "asynFloat64")
-    field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_VELO")
-    field(PREC, "$(PREC)")
+record(ao,"$(P)$(M)_DCOF_SP") {
+	field(DESC, "Motor DCOF")
+	field(DOL,  "$(P)$(M).DCOF CP MS")
+	field(OMSL, "closed_loop")
+	field(DTYP, "asynFloat64")
+	field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_DGAIN")
+	field(PREC, "$(PREC)")
 }
 
-record(ao,"$(P):$(M)_OFF_SP") {
-    field(DESC, "OFF")
-    field(DOL,  "$(P):$(M).OFF CP MS")
-    field(OMSL, "closed_loop")
-    field(DTYP, "asynFloat64")
-    field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_OFF")
-    field(PREC, "$(PREC)")
+record(ao,"$(P)$(M)_ACCL_SP") {
+	field(DESC, "Motor record ACCL")
+	field(DOL,  "$(P)$(M).ACCL CP MS")
+	field(OMSL, "closed_loop")
+	field(DTYP, "asynFloat64")
+	field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_ACCL")
+	field(PREC, "$(PREC)")
 }
 
-record(ao,"$(P):$(M)_MRES_SP") {
-    field(DESC, "MRES")
-    field(DOL,  "$(P):$(M).MRES CP MS")
-    field(OMSL, "closed_loop")
-    field(DTYP, "asynFloat64")
-    field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_RESOLUTION")
-    field(PREC, "$(PREC)")
+record(ao,"$(P)$(M)_RDBD_SP") {
+	field(DESC, "Motor record RDBD")
+	field(DOL,  "$(P)$(M).RDBD CP MS")
+	field(OMSL, "closed_loop")
+	field(DTYP, "asynFloat64")
+	field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_RDBD")
+	field(PREC, "$(PREC)")
 }
 
-record(ao,"$(P):$(M)_ERES_SP") {
-    field(DESC, "ERES")
-    field(DOL,  "$(P):$(M).ERES CP MS")
-    field(OMSL, "closed_loop")
-    field(DTYP, "asynFloat64")
-    field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_ERES")
-    field(PREC, "$(PREC)")
+record(ao,"$(P)$(M)_VMAX_SP") {
+	field(DESC, "Motor record VMAX")
+	field(DOL,  "$(P)$(M).VMAX CP MS")
+	field(OMSL, "closed_loop")
+	field(DTYP, "asynFloat64")
+	field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_VMAX")
+	field(PREC, "$(PREC)")
 }
 
-record(bo,"$(P):$(M)_DIR_SP") {
-    field(DESC, "DIR")
-    field(DOL,  "$(P):$(M).DIR CP MS")
-    field(OMSL, "closed_loop")
-    field(DTYP, "asynInt32")
-    field(ZNAM, "Pos")
-    field(ZSV,  "NO_ALARM")
-    field(ONAM, "Neg")
-    field(OSV,  "NO_ALARM")
-    field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_DIR")
+record(ao,"$(P)$(M)_VELO_SP") {
+	field(DESC, "Motor record VELO")
+	field(DOL,  "$(P)$(M).VELO CP MS")
+	field(OMSL, "closed_loop")
+	field(DTYP, "asynFloat64")
+	field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_VELO")
+	field(PREC, "$(PREC)")
 }
 
-record(bo,"$(P):$(M)_UEIP_SP") {
-    field(DESC, "UEIP")
-    field(DOL,  "$(P):$(M).UEIP CP MS")
-    field(OMSL, "closed_loop")
-    field(DTYP, "asynInt32")
-    field(ZNAM, "No")
-    field(ZSV,  "NO_ALARM")
-    field(ONAM, "Yes")
-    field(OSV,  "NO_ALARM")
-    field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_UEIP")
+record(ao,"$(P)$(M)_OFF_SP") {
+	field(DESC, "Motor record OFF")
+	field(DOL,  "$(P)$(M).OFF CP MS")
+	field(OMSL, "closed_loop")
+	field(DTYP, "asynFloat64")
+	field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_OFF")
+	field(PREC, "$(PREC)")
+}
+
+record(ao,"$(P)$(M)_MRES_SP") {
+	field(DESC, "Motor record MRES")
+	field(DOL,  "$(P)$(M).MRES CP MS")
+	field(OMSL, "closed_loop")
+	field(DTYP, "asynFloat64")
+	field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_RESOLUTION")
+	field(PREC, "$(PREC)")
+}
+
+record(ao,"$(P)$(M)_ERES_SP") {
+	field(DESC, "Motor record ERES")
+	field(DOL,  "$(P)$(M).ERES CP MS")
+	field(OMSL, "closed_loop")
+	field(DTYP, "asynFloat64")
+	field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_ERES")
+	field(PREC, "$(PREC)")
+}
+
+record(bo,"$(P)$(M)_DIR_SP") {
+	field(DESC, "Motor record DIR")
+	field(DOL,  "$(P)$(M).DIR CP MS")
+	field(OMSL, "closed_loop")
+	field(DTYP, "asynInt32")
+	field(ZNAM, "Pos")
+	field(ZSV,  "NO_ALARM")
+	field(ONAM, "Neg")
+	field(OSV,  "NO_ALARM")
+	field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_DIR")
+}
+
+record(bo,"$(P)$(M)_UEIP_SP") {
+	field(DESC, "Motor record UEIP")
+	field(DOL,  "$(P)$(M).UEIP CP MS")
+	field(OMSL, "closed_loop")
+	field(DTYP, "asynInt32")
+	field(ZNAM, "No")
+	field(ZSV,  "NO_ALARM")
+	field(ONAM, "Yes")
+	field(OSV,  "NO_ALARM")
+	field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_UEIP")
+}
+
+record(stringout,"$(P)$(M)_PREM_CMD")
+{
+	field(DESC, "Motor record PREM")
+	field(OMSL, "closed_loop")
+	field(DTYP, "asynOctetWrite")
+	field(DOL,  "$(P)$(M).PREM CP MS")
+	field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_PREM")
+}
+
+record(stringout,"$(P)$(M)_POST_CMD")
+{
+	field(DESC, "Motor record POST")
+	field(OMSL, "closed_loop")
+	field(DTYP, "asynOctetWrite")
+	field(DOL,  "$(P)$(M).POST CP MS")
+	field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_POST")
 }
 
 #driver to mr command to stop/go
 #motors in coordsys
-record(ai,"$(P):$(M)_STOPGO_MON")
+record(ai,"$(P)$(M)_STOPGO_MON")
 {
 	field(DESC, "stop/go")
 	field(DTYP, "asynInt32")
-        field(SCAN, "I/O Intr")
+	field(SCAN, "I/O Intr")
 	field(INP,  "@asyn($(PORT),$(ADDR))MOTOR_STOPGO")
 }
 
-record(ao, "$(P):$(M)_STOPGO_CMD") 
+record(ao, "$(P)$(M)_STOPGO_CMD") 
 {
 	field(OMSL, "closed_loop") 
-	field(DOL,  "$(P):$(M)_STOPGO_MON CP MS")
-	field(OUT,  "$(P):$(M).SPMG CA")
+	field(DOL,  "$(P)$(M)_STOPGO_MON CP MS")
+	field(OUT,  "$(P)$(M).SPMG CA")
 }
 
 # end
