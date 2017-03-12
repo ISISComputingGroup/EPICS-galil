@@ -23,66 +23,93 @@
 #include "asynMotorController.h"
 #include "asynMotorAxis.h"
 
-#define KPMAX		      1023.875   
-#define KDMAX		      4095.875
+//Related CSAxis may have new setpoints too
+struct CSTargets 
+	{
+        double ncspos[MAX_GALIL_AXES];		//The new position setpoints for the related CSAxis Units=Steps
+        double ncsvel[MAX_GALIL_AXES];		//The velocity required for the related CSAxis Units=Steps/s
+        double ncsaccel[MAX_GALIL_AXES];	//The acceleration required for the related CSAxis Units=Steps/s/s
+        char csaxes[MAX_GALIL_CSAXES];		//List of related csaxis that also have new position setpoints
+	};
 
 class GalilCSAxis : public asynMotorAxis
 {
 public:
 
   GalilCSAxis(class GalilController *pC, 	//The GalilController
-	     char axisname,			//The coordinate system axis name I-P
-         char *csaxes, 			//List of coordinate system axis
-         char *forward,			//Forward kinematic transform used to calculate the coordinate system axis position from real axis positions
-         char *fwdvars, 		//Forward kinematic variables List of Q-Z
-	     char *fwdsubs, 		//Forward kinematic substitutes List of A-P
-         char *axes,            //List of real axis
-	     char **reverse,		//Reverse transforms to calculate each real axis position in the coordinate system
-	     char **revvars,		//Reverse kinematic variables List of Q-Z
-	     char **revsubs);		//Reverse kinematic substitutes List of A-P
+		char axisname);			//The coordinate system axis name I-P
 
   //These are the methods that are new to this class
   //Store settings, and implement defaults
   asynStatus setDefaults(void);
+  //Construct axes list from provided equation
+  asynStatus obtainAxisList(char axis, char *equation, char *axes);
+  //Substitute transform equation in place of motor name
+  asynStatus substituteTransforms(char axis, char *equation);
+  //Bring variables Q-X in range A-P for use with sCalcperform
+  asynStatus substituteVariables(char axis, char *equation, char *axes, char *vars, char *subs);
+  //Parse a kinematic transform equation and store results in GalilCSAxis instance
+  asynStatus parseTransform(char axis, char *equation, char *axes, char *vars, char *subs);
+  //Store kinematics when user changes them
+  asynStatus parseTransforms(void);
   //Calculate an expression with the given arguments
   asynStatus doCalc(const char *expr, double args[], double *result);
-  //Get relevant data for kinematic transform, and pack into margs and eargs
-  asynStatus packKinematicArgs(char *axes, double margs[], double eargs[]);
+  //Get motor readbacks for kinematic transform, and pack into mrargs (motor readback args)
+  asynStatus packReadbackArgs(char *axes, double mrargs[]);
   //Peform forward kinematic transform using real axis readback data, and store results in GalilCSAxis
-  int forwardTransform(void);
-  //Peform reverse kinematic transform using coordinate system axis readback data, and new position from user
-  //for this coordinate system axis, then calculate real motor positions
-  int reverseTransform(double nposition, double nmotor_positions[]);
+  asynStatus forwardTransform(void);
+  //Perform reverse coordinate and velocity transform
+  asynStatus reverseTransform(double pos, double vel, double accel, CSTargets *targets, double npos[], double nvel[], double naccel[]);
+  //Transform CSAxis profile into Axis profiles
+  asynStatus transformCSAxisProfile(void);
   //Selects a free coordinate system S or T and returns coordsys number, or -1 if none free
   int selectFreeCoordinateSystem(void);
+  //Uses vector mathematics to check requested real motor velocities
+  asynStatus checkMotorVelocities(double npos[], double nvel[]);
 
   /* These are the methods we override from the base class */
   asynStatus move(double position, int relative, double min_velocity, double max_velocity, double acceleration);
   asynStatus moveVelocity(double min_velocity, double max_velocity, double acceleration);
-  //asynStatus home(double min_velocity, double max_velocity, double acceleration, int forwards);
+  asynStatus home(double minVelocity, double maxVelocity, double acceleration, int forwards);
   asynStatus stop(double acceleration);
+  asynStatus initializeProfile(size_t maxProfilePoints);
   asynStatus poll(bool *moving);
 
   //asynStatus setHighLimit(double highLimit);
   //asynStatus setLowLimit(double lowLimit);
 
+  ~GalilCSAxis();
+
 private:
   GalilController *pC_;      		/**< Pointer to the asynMotorController to which this axis belongs.
                                 	*   Abbreviated because it is used very frequently */
-  char axisName_;			   //The axis letter I-P
-  char *raxes_;				   //List of real axis in the coordinate system axis
-  char *csaxes_;			   //List of coordinate system axis related to this cs axis
-  char *forward_;			   //forward kinematic transform used to calculate the coordinate system position from real axis positions
-  char *fwdvars_;			   //Forward kinematic variables List of Q-Z
-  char *fwdsubs_;			   //Forward kinematic substitutes List of A-P
-  char **reverse_;			   //Reverse transforms to calculate each real axis position in the coordinate system
-  char **revvars_;			   //Reverse kinematic variables List of Q-Z
-  char **revsubs_;			   //Reverse kinematic substitutes List of A-P
-  int coordsys_;			   //The coordinate system S or T that we started when moving
-  double motor_position_;	   //aux encoder or step count register
-  double encoder_position_;	   //main encoder register
-  double last_motor_position_; //aux encoder or step count register stored from previous poll
-  int direction_;			   //Direction of cs axis
+  char axisName_;			//The axis letter I-P
+  bool axisReady_;			//Have motor record fields been pushed into driver
+  bool lastaxisReady_;			//Show CS axis as moving until after axis ready so initial setpoint in mr matches the readback
+  char *fwdaxes_;			//List of CS motors whose transforms should be treated as forward transforms
+  char *forward_;			//forward kinematic transform used to calculate the coordinate system (cs) motor position
+  char *fwdvars_;			//Forward kinematic variables List of Q-Z
+  char *fwdsubs_;			//Forward kinematic substitutes List of A-P
+  char *revaxes_;			//List of real motors axis whose transforms should be treated as reverse transforms
+  char **reverse_;			//Reverse transforms to calculate each axis position in the coordinate system
+  char **revvars_;			//Reverse kinematic variables List of Q-Z
+  char **revsubs_;			//Reverse kinematic substitutes List of A-P
+  bool stop_onlimit_;			//Is a real motor in the cs axis stopping on a limit
+  bool stop_issued_;			//CSAxis stop issued
+  bool move_started_;			//Has a move been initiated from this cs axis
+  bool kinematic_error_reported_;	//Kinematic error has been reported to user
+  int last_done_;			//Done status stored from previous poll cycle
+  double motor_position_;		//aux encoder or step count register
+  double encoder_position_;		//main encoder register
+  double last_motor_position_;		//aux encoder or step count register stored from previous poll
+  int direction_;			//Direction of cs axis
+  int deferredCoordsys_;		//Coordinate system 0 (S) or 1 (T)
+  double deferredAcceleration_;		//Coordinate system acceleration
+  double deferredVelocity_;		//Coordinate system velocity
+  double deferredPosition_;		//Deferred move position
+  int deferredRelative_;		//Deferred move is relative or absolute
+  bool deferredMove_;			//Has a deferred move been set
+  int deferredMode_;			//Deferred mode.  Sync start only, sync start and stop
  
 friend class GalilController;
 };

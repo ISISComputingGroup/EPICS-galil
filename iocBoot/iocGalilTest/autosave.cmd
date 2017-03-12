@@ -28,16 +28,17 @@ set_savefile_path("/autosave", "")
 # set_requestfile_path(${TOP}, "autosaveReqs")
 set_requestfile_path("${GALIL}/GalilSup/Db", "")
 set_requestfile_path("${MOTOR}/motorApp/Db", "")
+set_requestfile_path("${SSCAN}/sscanApp/Db", "")
 set_requestfile_path("${TOP}/iocBoot/${IOC}", "")
 
 dbLoadRecords("$(AUTOSAVE)/asApp/Db/save_restoreStatus.db","P=IOC01:")
 
 save_restoreSet_CAReconnect(1)
 
-# restore positions at pass 0 so motors don't move
-set_pass0_restoreFile("galilTest_positions.sav")
-# restore settings at pass 1 so settings are pushed to hardware
-set_pass1_restoreFile("galilTest_settings.sav")
+# restore settings in pass 0 so encoder ratio is set correctly for position restore in device support init
+set_pass0_restoreFile("GalilTest_settings.sav")
+# restore positions in pass 0 so motors don't move
+set_pass0_restoreFile("GalilTest_positions.sav")
 
 ## End of autosave set-up
 ####################################################
