@@ -419,6 +419,7 @@ void GalilController::connect(void)
 	
 	Galil* tgco = new Galil(std::string(address_) + " -s"); // -s is silent connect, just get tcp handle
 	// clean up handles on Galil
+	tgco->command("DR0"); // stop udp data record
 	tgco->command("IHT=>-1"); // udp handles
 	tgco->command("IHT=>-2"); // tcp handles
 	delete tgco;
