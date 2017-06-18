@@ -36,10 +36,12 @@ GMC += galil_Home_RevLimit_Home.gmc  galil_Piezo_Home.gmc  galil_Home_ForwLimit+
 GMC += galil_Home_Pin_Hole_Selector.gmc  galil_Home_Thread.gmc  galil_Home_Dummy_Axis.gmc
 GMC += galil_Home_FIpos.gmc galil_Home_FIneg.gmc galil_Muon_Slits.gmc
 
-
 include $(TOP)/configure/RULES
 #----------------------------------------
 #  ADD RULES AFTER THIS LINE
+ifneq ($(BASE3_14),YES)
+galil_userdef_records8.template$(DEP) : $(TOP)/GalilSup/Db/galil_userdef_records.template $(TOP)/GalilSup/Db/galil_userdef_records8.substitutions
+endif
 
 galil_userdef_records8.template ../O.Common/galil_userdef_records8.template : $(TOP)/GalilSup/Db/galil_userdef_records.template $(TOP)/GalilSup/Db/galil_userdef_records8.substitutions
 	$(MSI) -o $@ -S $(TOP)/GalilSup/Db/galil_userdef_records8.substitutions $(TOP)/GalilSup/Db/galil_userdef_records.template
