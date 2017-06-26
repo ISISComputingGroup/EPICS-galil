@@ -2781,9 +2781,9 @@ void GalilController::getStatus(void)
 		errlogSevPrintf(errlogMajor, "%s:%s\n", functionName, e.c_str());
 		
 		// Switch over to syncronous mode if we get a timeout failure reading DR
-		if (e.find("TIMEOUT ERROR")!=std::string::npos && e.find("Galil::record(\"DR\")")!=std::string::npos) {
+		if (async_records_ && e.find("TIMEOUT ERROR")!=std::string::npos && e.find("Galil::record(\"DR\")")!=std::string::npos) {
 			consecutive_dr_timeouts_ ++;
-			if (async_records_ && consecutive_dr_timeouts_ >= ALLOWED_DR_TIMEOUTS) {
+			if (consecutive_dr_timeouts_ >= ALLOWED_DR_TIMEOUTS) {
 				cout << "Galil controller keeps timing out getting DR record. Switching to syncronous communication" << endl;
 				async_records_ = false;
 			}
