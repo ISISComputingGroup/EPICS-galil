@@ -325,6 +325,7 @@ private:
 					
   bool connect_fail_reported_;		//Has initial connection failure been reported to iocShell
   int consecutive_timeouts_;		//Used for connection management
+  int consecutive_dr_timeouts_;		//Used for switching between sync/async polling
   bool code_assembled_;			//Has code for the GalilController hardware been assembled (ie. is card_code_ all set to send)
   bool async_records_;			//Are the data records obtained async(DR), or sync (QR)
   double updatePeriod_;			//Period between data records in ms

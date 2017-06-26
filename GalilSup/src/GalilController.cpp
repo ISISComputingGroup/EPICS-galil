@@ -94,6 +94,8 @@ static bool libverPrinted = false;
 #define MAX_RETRIES 3
 #define ALLOWED_TIMEOUTS 5
 
+#define ALLOWED_DR_TIMEOUTS 10
+
 #define MAX_FILENAME_LEN 256
 #define MAX_MESSAGE_LEN 256
 
@@ -255,6 +257,8 @@ GalilController::GalilController(const char *portName, const char *address, doub
   connect_fail_reported_ = false;
   //We have not recieved a timeout yet
   consecutive_timeouts_ = 0;
+  // Number of timeouts from DR request
+  consecutive_dr_timeouts_ = 0;
   //Store period in ms between data records
   updatePeriod_ = fabs(updatePeriod);
   //Code generator has not been initialized
@@ -2766,12 +2770,24 @@ void GalilController::getStatus(void)
 					}
 				}
 			}
+			
+			// Reset the timeout counter
+			consecutive_dr_timeouts_ = 0;
 		}
 	catch (string e) 
 		{
 		//Print exception mesg
 		//cout << functionName << ":" << e;
 		errlogSevPrintf(errlogMajor, "%s:%s\n", functionName, e.c_str());
+		
+		// Switch over to syncronous mode if we get a timeout failure reading DR
+		if (e.find("TIMEOUT ERROR")!=std::string::npos && e.find("Galil::record(\"DR\")")!=std::string::npos) {
+			consecutive_dr_timeouts_ ++;
+			if (async_records_ && consecutive_dr_timeouts_ >= ALLOWED_DR_TIMEOUTS) {
+				cout << "Galil controller keeps timing out getting DR record. Switching to syncronous communication" << endl;
+				async_records_ = false;
+			}
+		}
 		}
 	//Forgiveness is cheap
 	//Allows us to poll without lock
