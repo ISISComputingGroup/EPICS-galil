@@ -39,6 +39,8 @@
 #define MAX_GALIL_STRING_SIZE 768
 #define MAX_GALIL_DATAREC_SIZE 768
 #define MAX_GALIL_AXES 8
+#define MAX_GALIL_LINEAR_INCREMENT 8388607
+#define MAX_GALIL_ABSOLUTE_MOVE 2147483647
 //Number of parameter tables created
 //Meaning records can have address values 0-63
 #define MAX_ADDRESS 64
@@ -57,6 +59,9 @@
 //Stop codes
 #define MOTOR_STOP_FWD 2
 #define MOTOR_STOP_REV 3
+#define MOTOR_STOP_STOP 4
+//Time base
+#define DEFAULT_TIME 1000.0
 
 #include "macLib.h"
 #include "GalilAxis.h"
@@ -77,6 +82,7 @@
 #define GalilCommunicationErrorString	"CONTROLLER_COMMERR"
 #define GalilDeferredModeString		"CONTROLLER_DEFERRED_MODE"
 #define GalilPVTCapableString		"CONTROLLER_PVTCAPABLE"
+#define GalilStartString		"CONTROLLER_START"
 
 #define GalilCoordSysString		"COORDINATE_SYSTEM"
 #define GalilCoordSysMotorsString	"COORDINATE_SYSTEM_MOTORS"
@@ -120,7 +126,7 @@
 #define GalilStepSmoothString		"MOTOR_STEPSMOOTH"
 #define GalilMotorTypeString		"MOTOR_TYPE"
 #define GalilMotorConnectedString	"MOTOR_MCONN"
-#define GalilAfterLimitString		"MOTOR_EGUAFTLIMIT"
+#define GalilAfterLimitString		"MOTOR_EGUAFTER_LIMIT"
 #define GalilHomeValueString		"MOTOR_HOMEVAL"
 #define GalilWrongLimitProtectionString	"MOTOR_WLP"
 #define GalilWrongLimitProtectionActiveString	"MOTOR_WLP_ACTIVE"
@@ -142,6 +148,10 @@
 #define GalilBrakePortString		"MOTOR_BRAKEPORT"
 #define GalilBrakeString		"MOTOR_BRAKE"
 #define GalilHomeAllowedString		"MOTOR_HOME_ALLOWED"
+#define GalilStopDelayString		"MOTOR_STOP_DELAY"
+#define GalilAmpGainString		"MOTOR_AMP_GAIN"
+#define GalilAmpCurrentLoopGainString	"MOTOR_AMP_CURRENTLOOP_GAIN"
+#define GalilAmpLowCurrentString	"MOTOR_AMP_LOWCURRENT"
 #define GalilUserDataString		"MOTOR_USER_DATA"
 #define GalilUserDataDeadbString	"MOTOR_USER_DATA_DEADB"
 
@@ -229,7 +239,6 @@ public:
   asynStatus programDownload(string prog);
   
   /* These are the methods that we override from asynMotorController */
-  asynStatus poll(void);
   asynStatus setDeferredMoves(bool deferMoves);
   asynStatus writeInt32(asynUser *pasynUser, epicsInt32 value);
   asynStatus writeFloat64(asynUser *pasynUser, epicsFloat64 value);
@@ -273,6 +282,7 @@ public:
   //asynStatus readbackProfile();
 
   /* These are the methods that are new to this class */
+  asynStatus poller(void);
   int GalilInitializeVariables(bool burn_variables);
   void GalilStartController(char *code_file, int eeprom_write, int thread_mask);
   void connect(void);
@@ -334,6 +344,7 @@ protected:
   int GalilCtrlError_;
   int GalilDeferredMode_;
   int GalilPVTCapable_;
+  int GalilStart_;
   int GalilCoordSys_;
   int GalilCoordSysMotors_;
   int GalilCoordSysMoving_;
@@ -396,6 +407,10 @@ protected:
   int GalilBrakePort_;
   int GalilBrake_;
   int GalilHomeAllowed_;
+  int GalilStopDelay_;
+  int GalilAmpGain_;
+  int GalilAmpCurrentLoopGain_;
+  int GalilAmpLowCurrent_;
   int GalilUserData_;
   int GalilUserDataDeadb_;
 
@@ -448,6 +463,11 @@ private:
 
   GalilPoller *poller_;			//GalilPoller to acquire a datarecord
   GalilConnector *connector_;		//GalilConnector to manage connection status flags
+
+  double timeMultiplier_;		//Controller time base divided by default time base
+
+  int digports_;			//Digital ports used in motor enable/disable
+  int digvalues_;			//Digital port interrupt values
 
   bool rio_;				//Is controller a RIO
   char code_file_[MAX_FILENAME_LEN];	//Code file(s) that user gave to GalilStartController

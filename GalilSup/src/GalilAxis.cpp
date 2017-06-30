@@ -321,11 +321,13 @@ void GalilAxis::gen_limitcode(char c,			 //GalilAxis::axisName_ used very often
 	//Setup the LIMSWI interrupt routine. The Galil Code Below, is called once per limit activate on ANY axis **
 	//Determine axis that requires stop based on stop code and moving status
 	//Use user desired deceleration, stop motor, then put deceleration back to that for normal moves
-	sprintf(axis_limit_code,"%sIF (((_SC%c=2) | (_SC%c=3)) & (_BG%c=1))\noldecel%c=_DC%c;ocds=_VDS;ocdt=_VDT;DC%c=limdc%c;VDS=limdc%c;VDT=limdc%c;ST%c\n",axis_limit_code,c,c,c,c,c,c,c,c,c,c);
 	if (!limit_as_home_)	//Hitting limit when homing to home switch is a fail, cancel home process
-		sprintf(axis_limit_code,"%sDC%c=oldecel%c;VDS=ocds;VDT=ocdt;home%c=0;MG \"home%c\",home%c;ENDIF\n",axis_limit_code,c,c,c,c,c);
-	else			//Hitting limit when homing to limit switch is normal
-		sprintf(axis_limit_code,"%sDC%c=oldecel%c;VDS=ocds;VDT=ocdt;ENDIF\n",axis_limit_code,c,c);
+		{
+		sprintf(axis_limit_code,"%sIF (((_SC%c=2) | (_SC%c=3)) & (_BG%c=1))\nDC%c=limdc%c;VDS=limdc%c;VDT=limdc%c\n",axis_limit_code,c,c,c,c,c,c,c);
+		sprintf(axis_limit_code,"%shome%c=0;MG \"home%c\",home%c;ENDIF\n",axis_limit_code,c,c,c);
+		}
+	else    //Hitting limit when homing to limit switch is normal
+		sprintf(axis_limit_code,"%sIF (((_SC%c=2) | (_SC%c=3)) & (_BG%c=1))\nDC%c=limdc%c;VDS=limdc%c;VDT=limdc%c;ENDIF\n",axis_limit_code,c,c,c,c,c,c,c);
 }
 
 /*--------------------------------------------------------------------------------*/
@@ -334,7 +336,7 @@ void GalilAxis::gen_limitcode(char c,			 //GalilAxis::axisName_ used very often
 void GalilAxis::gen_homecode(char c,			//GalilAxis::axisName_ used very often
 			     char axis_thread_code[])
 {
-	sprintf(axis_thread_code,"%sIF ((home%c=1))\n",axis_thread_code,c);
+	sprintf(axis_thread_code,"%sIF (home%c=1)\n",axis_thread_code,c);
 	
 	//Setup home code
 	if (limit_as_home_)
@@ -343,39 +345,57 @@ void GalilAxis::gen_homecode(char c,			//GalilAxis::axisName_ used very often
 		/*hjog%c=2 we have found limit switch inner edge*/
 		/*hjog%c=3 we have found our final home pos*/
 		//Code to jog off limit
-		sprintf(axis_thread_code,"%sIF ((_MO%c=0) & (hjog%c=0) & (_BG%c=0) & ((_LR%c=0) | (_LF%c=0)))\nJG%c=hjgsp%c;WT10;BG%c;hjog%c=1;ENDIF\n",axis_thread_code,c,c,c,c,c,c,c,c,c);
+		
+		//Ensure correct limit active
+		sprintf(axis_thread_code,"%sIF ((((_LR%c=0)&(hjgsp%c>0))|((_LF%c=0)&(hjgsp%c<0)))&(hjog%c=0))\n", axis_thread_code,c,c,c,c,c);
+		//Ensure ok to move in desired direction
+		sprintf(axis_thread_code,"%sIF ((((_LR%c=1)&(hjgsp%c<0))|((_LF%c=1)&(hjgsp%c>0)))&(_MO%c=0)&(_BG%c=0))\n", axis_thread_code,c,c,c,c,c,c);
+		//Jog off limit
+		sprintf(axis_thread_code,"%sJG%c=hjgsp%c;WT10;BG%c;hjog%c=1;ENDIF;ENDIF\n",axis_thread_code,c,c,c,c);
 		//Stop motor once off limit
-		sprintf(axis_thread_code,"%sIF ((_LR%c=1) & (_LF%c=1) & (hjog%c=1) & (_BG%c=1))\nST%c;ENDIF\n",axis_thread_code,c,c,c,c,c);
+		sprintf(axis_thread_code,"%sIF ((_LR%c=1) & (_LF%c=1) & (hjog%c=1) & (_BG%c=1));ST%c;ENDIF\n",axis_thread_code,c,c,c,c,c);
 		//Find encoder index 
-		sprintf(axis_thread_code,"%sIF ((_LR%c=1) & (_LF%c=1) & (hjog%c=1) & (_BG%c=0))\nIF ((_MO%c=0) & (ueip%c=1) & (ui%c=1))\nJG%c=hjgsp%c;DC%c=%ld;FI%c;WT10;BG%c;hjog%c=2\nELSE\n",axis_thread_code,c,c,c,c,c,c,c,c,c,c,pC_->maxAcceleration_,c,c,c);
+		sprintf(axis_thread_code,"%sIF ((hjog%c=1) & (_BG%c=0))\n",axis_thread_code,c,c);
+		//Ensure ok to move in desired direction
+		sprintf(axis_thread_code,"%sIF ((((_LR%c=1)&(hjgsp%c<0))|((_LF%c=1)&(hjgsp%c>0))))\n",axis_thread_code,c,c,c,c);
+		//Start index search
+		sprintf(axis_thread_code,"%sIF ((_MO%c=0) & (ueip%c=1) & (ui%c=1))\nJG%c=hjgsp%c;FI%c;WT10;BG%c;hjog%c=2\nELSE\n",axis_thread_code,c,c,c,c,c,c,c,c);
 		}	
 	else
 		{
 		//Stop motor once home activated
 		sprintf(axis_thread_code,"%sIF ((_HM%c=hswact%c) & (hjog%c=0) & (_BG%c=1))\nST%c;DC%c=limdc%c;ENDIF\n",axis_thread_code,c,c,c,c,c,c,c);
 		//Code to jog off home
-		sprintf(axis_thread_code,"%sIF ((_MO%c=0) & (_HM%c=hswact%c) & (hjog%c=0) & (_BG%c=0))\nJG%c=hjgsp%c;WT10;BG%c;hjog%c=1;ENDIF\n",axis_thread_code,c,c,c,c,c,c,c,c,c);
+		sprintf(axis_thread_code,"%sIF ((_HM%c=hswact%c)&(hjog%c=0))\n",axis_thread_code,c,c,c);
+		//Ensure ok to move in desired direction
+		sprintf(axis_thread_code,"%sIF ((((_LR%c=1)&(hjgsp%c<0))|((_LF%c=1)&(hjgsp%c>0)))&(_BG%c=0)&(_MO%c=0))\n",axis_thread_code,c,c,c,c,c,c);
+		//Start jog off home
+		sprintf(axis_thread_code,"%sJG%c=hjgsp%c;WT10;BG%c;hjog%c=1;ENDIF;ENDIF\n",axis_thread_code,c,c,c,c);
 		//Stop motor once off home
-		sprintf(axis_thread_code,"%sIF ((_HM%c=hswiact%c) & (hjog%c=1) & (_BG%c=1))\nST%c;ENDIF\n",axis_thread_code,c,c,c,c,c);
+		sprintf(axis_thread_code,"%sIF ((_HM%c=hswiact%c) & (hjog%c=1) & (_BG%c=1));ST%c;ENDIF\n",axis_thread_code,c,c,c,c,c);
 		//Find encoder index
-		sprintf(axis_thread_code,"%sIF ((_HM%c=hswiact%c) & (hjog%c=1) & (_BG%c=0))\nIF ((_MO%c=0) & (ueip%c=1) & (ui%c=1))\nJG%c=hjgsp%c;DC%c=%ld;FI%c;WT10;BG%c;hjog%c=2\nELSE\n",axis_thread_code,c,c,c,c,c,c,c,c,c,c,pC_->maxAcceleration_,c,c,c);
+		sprintf(axis_thread_code,"%sIF ((_HM%c=hswiact%c)&(hjog%c=1)&(_BG%c=0))\n",axis_thread_code,c,c,c,c);
+		//Ensure ok to move in desired direction
+		sprintf(axis_thread_code,"%sIF ((((_LR%c=1)&(hjgsp%c<0))|((_LF%c=1)&(hjgsp%c>0))))\n",axis_thread_code,c,c,c,c);
+		//Start index search
+		sprintf(axis_thread_code,"%sIF ((_MO%c=0) & (ueip%c=1) & (ui%c=1))\nJG%c=hjgsp%c;FI%c;WT10;BG%c;hjog%c=2\nELSE\n",axis_thread_code,c,c,c,c,c,c,c,c);
 		}
 
 	//Common homing code regardless of homing to limit or home switch
 	//If no encoder we are home already
-	sprintf(axis_thread_code,"%sIF (_MO%c=0)\nhjog%c=3;ENDIF;ENDIF;ENDIF\n",axis_thread_code,c,c);
+	sprintf(axis_thread_code,"%sIF (_MO%c=0)\nhjog%c=3;ENDIF;ENDIF;ENDIF;ENDIF\n",axis_thread_code,c,c);
 	//If encoder index complete we are home
 	sprintf(axis_thread_code,"%sIF ((hjog%c=2) & (_BG%c=0))\nhjog%c=3;ENDIF\n",axis_thread_code,c,c,c);
 	//Unset home flag
 	if (limit_as_home_)
 		sprintf(axis_thread_code,"%sIF ((_LR%c=1) & (_LF%c=1) & (hjog%c=3) & (_BG%c=0))\n",axis_thread_code,c,c,c,c);
 	else
-		sprintf(axis_thread_code,"%sIF ((_HM%c=hswiact%c) & (hjog%c=3) & (_BG%c=0))\n",axis_thread_code,c,c,c,c);
+		sprintf(axis_thread_code,"%sIF ((_LR%c=1) & (_LF%c=1) & (_HM%c=hswiact%c) & (hjog%c=3) & (_BG%c=0))\n",axis_thread_code,c,c,c,c,c,c);
 	//Common homing code regardless of homing to limit or home switch
 	//Flag homing complete
-	sprintf(axis_thread_code,"%sWT10;hjog%c=0;home%c=0\n", axis_thread_code,c,c);
+	sprintf(axis_thread_code,"%sWT10;hjog%c=0;home%c=0;homed%c=1\n", axis_thread_code,c,c,c);
 	//Send unsolicited messages to epics informing home and homed status
-	sprintf(axis_thread_code,"%shomed%c=1;MG \"homed%c\",homed%c;MG \"home%c\",home%c;ENDIF\nENDIF\n", axis_thread_code,c,c,c,c,c);
+	sprintf(axis_thread_code,"%sMG \"homed%c\",homed%c;MG \"home%c\",home%c;ENDIF;ENDIF\n", axis_thread_code,c,c,c,c);
 	
 	/*
 	//Add code that counts cpu cycles through thread 0
@@ -397,8 +417,8 @@ asynStatus GalilAxis::setAccelVelocity(double acceleration, double velocity, boo
    double mres;			//MotorRecord mres
    double egu_after_limit;	//Egu after limit parameter
    double distance;		//Used for kinematic calcs
-   long decceleration;		//limits deceleration final value sent to controller
-   double deccel;		//double version of above
+   long deceleration;		//limits deceleration final value sent to controller
+   double decel;		//double version of above
    double accel;		//Adjusted acceleration/deceleration for normal moves
    double vel;			//Velocity final value sent to controller
    int status;
@@ -426,14 +446,14 @@ asynStatus GalilAxis::setAccelVelocity(double acceleration, double velocity, boo
    //recalculate limit deceleration given velocity and allowed steps after home/limit activation
    distance = (egu_after_limit < fabs(mres)) ? fabs(mres) : egu_after_limit;
    //suvat equation for acceleration
-   deccel = fabs((velocity * velocity)/((distance/mres) * 2.0));
+   decel = fabs((velocity * velocity)/((distance/mres) * 2.0));
    //Find closest hardware setting
-   decceleration = (long)(lrint(deccel/1024.0) * 1024);
-   //Ensure decceleration is within maximum for this model
-   decceleration = (decceleration > pC_->maxAcceleration_) ? pC_->maxAcceleration_ : decceleration;
+   deceleration = (long)(lrint(decel/1024.0) * 1024);
+   //Ensure deceleration is within maximum for this model
+   deceleration = (deceleration > pC_->maxAcceleration_) ? pC_->maxAcceleration_ : deceleration;
    //Set limit deceleration
-   limdc_ = (double)decceleration;
-   sprintf(pC_->cmd_, "limdc%c=%ld", axisName_, decceleration);
+   limdc_ = (double)deceleration;
+   sprintf(pC_->cmd_, "limdc%c=%ld", axisName_, deceleration);
    status = pC_->sync_writeReadController();
 
    return (asynStatus)status;
@@ -1129,6 +1149,8 @@ asynStatus GalilAxis::getStatus(void)
 		strcpy(src, "_TVx");
 		src[3] = axisName_;
 		velocity_ = pC_->sourceValue(pC_->recdata_, src);
+		//Adjust velocity given controller time base setting
+		velocity_ *= pC_->timeMultiplier_;
 		pC_->getDoubleParam(axisNo_, pC_->GalilMotorVelocityRAW_, &velocitylast);
 		if (velocity_ != velocitylast)
 			{
@@ -1186,7 +1208,7 @@ asynStatus GalilAxis::getStatus(void)
 		//Brake port status
 		//Retrieve the brake port used for this axis
 		pC_->getIntegerParam(axisNo_, pC_->GalilBrakePort_, &brakeport);
-		//Only applies to DMC only, so port numbering begins at 1
+		//Applies to DMC only, so port numbering begins at 1
 		if (brakeport > 0)
 			{
 			strcpy(src, "_OP0");
@@ -1821,11 +1843,13 @@ asynStatus GalilAxis::beginMotion(const char *caller, bool move)
   * added.
   * It calls setIntegerParam() and setDoubleParam() for each item that it polls,
   * \param[out] moving A flag that is set indicating that the axis is moving (1) or done (0). */
-asynStatus GalilAxis::poll(bool *moving)
+asynStatus GalilAxis::poller(void)
 {
    //static const char *functionName = "GalilAxis::poll";
+   bool moving;			//Moving status
    int home;			//Home status to give to motorRecord
    int status;			//Communication status with controller
+   double stopDelay;		//Delay stop reporting
 
    //Default communication status
    status = asynError;
@@ -1833,7 +1857,7 @@ asynStatus GalilAxis::poll(bool *moving)
    home = 0;
    //Default moving status
    done_ = 1;
-   *moving = false;
+   moving = false;
    
    //Retrieve the motorRecord use encoder if present (ueip) from ParamList
    status = pC_->getIntegerParam(axisNo_, pC_->GalilUseEncoder_, &ueip_);
@@ -1843,7 +1867,7 @@ asynStatus GalilAxis::poll(bool *moving)
    if (status) goto skip;
 
    //Set poll variables in GalilAxis based on data record info
-   setStatus(moving);
+   setStatus(&moving);
 
    //Set motor stop time
    setStopTime();
@@ -1914,7 +1938,7 @@ skip:
    if ((postSent_ && !postExecuted_) || (homedSent_ && !homedExecuted_) || homing_ ||
        (syncEncodedStepperAtStopSent_ && !syncEncodedStepperAtStopExecuted_))
       {
-      *moving = true;
+      moving = true;
       done_ = 0;
       //Dont show motor record limit status whilst homing
       if (homing_)
@@ -1923,12 +1947,22 @@ skip:
          rev_ = 0;
          }
       }
+
+   //Retrieve the stopDelay
+   status = pC_->getDoubleParam(axisNo_, pC_->GalilStopDelay_, &stopDelay);
+   if (stoppedTime_ < stopDelay)
+      {
+      //Show motor record done only when stopDelay expired
+      moving = true;
+      done_ = 0;
+      }
+
    //Pass limit status to motorRecord
    setIntegerParam(pC_->motorStatusLowLimit_, rev_);
    setIntegerParam(pC_->motorStatusHighLimit_, fwd_);
    //Pass moving status to motorRecord
    setIntegerParam(pC_->motorStatusDone_, done_);
-   setIntegerParam(pC_->motorStatusMoving_, *moving);
+   setIntegerParam(pC_->motorStatusMoving_, moving);
    //Pass comms status to motorRecord
    setIntegerParam(pC_->motorStatusCommsError_, status ? 1:0);
    //Update motor status fields in upper layers using asynMotorAxis->callParamCallbacks
