@@ -22,7 +22,7 @@
 // 25/09/14 F.Akeroyd ISIS UK Added writeOctet
 // 25/09/14 F.Akeroyd ISIS UK Repaired some windows build issues
 // 29/09/14 M.Clift Modified writeOctet drvUserCreate/Destroy
-//			Modified userdef records
+//                  Modified userdef records
 // 09/10/14 M.Clift Repaired some more windows build issues
 // 09/10/14 M.Clift Repaired gcl problems under windows
 // 10/10/14 M.Clift Added Motor record PREM/POST support
@@ -62,7 +62,7 @@
 //                  Fixed encoder stall when using deferred moves
 //                  Fixed SSI capability detection on 4xxx controllers
 //                  Fixed analog numbering for DMC controllers
-//                  Fixed threading issue in poller caused by motorStatusUpdate
+//                  Fixed threading issue in poller caused by motorUpdateStatus_
 //                  Fixed mixed open and closed loop motor in CSAxis
 //                  Fixed command console
 //                  Fixed coordsys selection problem in deferred moves
@@ -229,6 +229,24 @@
 //                  Add I/O Intr support for user defined variables
 // 28/02/17 M.Clift
 //                  Fixed galil code home variables not set after controller re-connect
+// 09/03/17 M. Pearson
+//                  Provide ability to set TCP port number in controller address. If no port number specified then default is 23
+// 15/03/17 M.Clift
+//                  Changed default encoder stall time to .2 seconds
+//                  Add stop delay for heavy loads
+//                  Add controller start status PV
+// 25/03/17 M.Clift
+//                  Fix motor velocity readback when using custom time base
+//                  Add galil amplifier controls
+// 31/03/17 M.Clift
+//                  Optimized generated code for limits handling and homing
+//                  Fixed motor enable/disable interlock variables not being set correctly
+// 05/04/17 M.Clift
+//                  Fixed issue with motorUpdateStatus_ when using motor record set field
+//                  Fixed issue with CSAxis jog function in sync start and stop mode
+//                  Improved CSAxis limit handling
+// 17/04/17 M.Clift
+//                  Fixed motor wont move initially after IOC start when part of CSAxis
 
 #include <stdio.h>
 #include <math.h>
@@ -363,6 +381,7 @@ GalilController::GalilController(const char *portName, const char *address, doub
   createParam(GalilCtrlErrorString, asynParamOctet, &GalilCtrlError_);
   createParam(GalilDeferredModeString, asynParamInt32, &GalilDeferredMode_);
   createParam(GalilPVTCapableString, asynParamInt32, &GalilPVTCapable_);
+  createParam(GalilStartString, asynParamInt32, &GalilStart_);
 
   createParam(GalilCoordSysString, asynParamInt32, &GalilCoordSys_);
   createParam(GalilCoordSysMotorsString, asynParamOctet, &GalilCoordSysMotors_);
@@ -436,6 +455,12 @@ GalilController::GalilController(const char *portName, const char *address, doub
   createParam(GalilBrakePortString, asynParamInt32, &GalilBrakePort_);
   createParam(GalilBrakeString, asynParamInt32, &GalilBrake_);
   createParam(GalilHomeAllowedString, asynParamInt32, &GalilHomeAllowed_);
+  createParam(GalilStopDelayString, asynParamFloat64, &GalilStopDelay_);
+
+  createParam(GalilAmpGainString, asynParamInt32, &GalilAmpGain_);
+  createParam(GalilAmpCurrentLoopGainString, asynParamInt32, &GalilAmpCurrentLoopGain_);
+  createParam(GalilAmpLowCurrentString, asynParamInt32, &GalilAmpLowCurrent_);
+
   createParam(GalilUserDataString, asynParamFloat64, &GalilUserData_);
   createParam(GalilUserDataDeadbString, asynParamFloat64, &GalilUserDataDeadb_);
 
@@ -510,6 +535,9 @@ GalilController::GalilController(const char *portName, const char *address, doub
   //Code generator has not been initialized
   codegen_init_ = false;	
   digitalinput_init_ = false;
+  //Motor enables defaults
+  digports_ = 0;
+  digvalues_ = 0;
   //Deferred moves off at start-up
   movesDeferred_ = false;
   //Store the controller number for later use
@@ -606,8 +634,13 @@ void GalilController::connect(void)
   if (address.find("COM") == string::npos && address.find("ttyS") == string::npos)
      {
      //Open Synchronous ethernet connection
-     //Append Telnet port, and TCP directive to provided address
-     sprintf(address_string,"%s:23 TCP", address_);
+     //If no port number is specified in the provided address, append Telnet port and TCP directive
+     //Otherwise just append the TCP directive
+     if (strchr(address_, ':') == NULL) {
+        sprintf(address_string,"%s:23 TCP", address_);
+     } else {
+        sprintf(address_string,"%s TCP", address_);
+     }
      //Connect to the device, we don't want end of string processing
      drvAsynIPPortConfigure(syncPort_, address_string, epicsThreadPriorityMedium, 0, 1);
 
@@ -3206,7 +3239,22 @@ asynStatus GalilController::readInt32(asynUser *pasynUser, epicsInt32 *value)
 	sprintf(cmd_, "MG _OE%c", pAxis->axisName_);
 	status = get_integer(GalilOffOnError_, value);
 	}
-   else 
+  else if (function == GalilAmpGain_)
+	{
+	sprintf(cmd_, "MG _AG%c", pAxis->axisName_);
+	status = get_integer(GalilAmpGain_, value);
+	}
+  else if (function == GalilAmpCurrentLoopGain_)
+	{
+	sprintf(cmd_, "MG _AU%c", pAxis->axisName_);
+	status = get_integer(GalilAmpCurrentLoopGain_, value);
+	}
+  else if (function == GalilAmpLowCurrent_)
+	{
+	sprintf(cmd_, "MG _LC%c", pAxis->axisName_);
+	status = get_integer(GalilAmpLowCurrent_, value);
+	}
+  else 
 	status = asynPortDriver::readInt32(pasynUser, value);
 
    //Always return success. Dont need more error mesgs
@@ -3377,18 +3425,6 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
   unsigned i;					//Looping
   float oldmtr_abs, newmtr_abs;			//Track motor changes
   int uploading;				//Array uploading status
-
-  //GalilPoller is designed to be a constant and fast poller
-  //So we dont honour motorUpdateStatus as it will cause threading issues
-  if (function == motorUpdateStatus_)
-	{
-	//Dont block synchronous poller
-	unlock();
-	//Give poller time to provide status update to mr, then we're done
-	epicsThreadSleep(updatePeriod_*2.0/1000.0);
-	lock();
-	return asynSuccess;
-	}
 
   status = getAddress(pasynUser, &addr);
   if (status != asynSuccess) return(status);
@@ -3609,6 +3645,56 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
 	{
 	epicsEventSignal(arrayUploadEvent_);
 	}
+  else if (function == GalilAmpGain_)
+	{
+        int motorOff = 0;
+	//Retrieve motor off status
+	sprintf(cmd_, "MG _MO%c", pAxis->axisName_);
+	status = sync_writeReadController();
+	if (!status)
+		motorOff = atoi(resp_);
+	if (!motorOff)
+		{
+		//Motor must be off to change gain
+		sprintf(cmd_, "MO%c", pAxis->axisName_);
+		sync_writeReadController();
+		}
+	//Motor is now off, we can change gain
+	sprintf(cmd_, "AG%c=%d", pAxis->axisName_, value);
+	sync_writeReadController();
+	if (!motorOff)
+		{
+		//Motor was on at start, so turn it back on
+		sprintf(cmd_, "SH%c", pAxis->axisName_);
+		sync_writeReadController();
+		}
+	}
+  else if (function == GalilAmpCurrentLoopGain_)
+	{
+	float gainSetting = 0;
+	//Find the correct gain setting
+	if (value == 1)
+		gainSetting = 0.5;
+	else if (value == 2)
+		gainSetting = 1;
+	else if (value == 3)
+		gainSetting = 1.5;
+	else if (value == 4)
+		gainSetting = 2;
+	else if (value == 5)
+		gainSetting = 3;
+	else if (value == 6)
+		gainSetting = 4;
+	//Set current loop gain
+	sprintf(cmd_, "AU%c=%.1f", pAxis->axisName_, gainSetting);
+	sync_writeReadController();
+	}
+  else if (function == GalilAmpLowCurrent_)
+	{
+	//Set low current mode
+	sprintf(cmd_, "LC%c=%d", pAxis->axisName_, value);
+	sync_writeReadController();
+	}
   else 
 	{
 	/* Call base class method */
@@ -3814,6 +3900,9 @@ asynStatus GalilController::writeOctet(asynUser *pasynUser, const char*  value, 
         if (!pCSAxis) continue;
         //Parse the transforms and place results in GalilCSAxis instance(s)
         status |= pCSAxis->parseTransforms();
+        //Flag kinematics have been altered
+        if (!status)
+           pCSAxis->kinematicsAltered_ = true;
         }
      //Tell user when success
      //Dont provide message during startup
@@ -3940,7 +4029,7 @@ void GalilController::processUnsolicitedMesgs(void)
                   valuef = atof(charstr);
                   //Update the record with the new value
                   setDoubleParam(addr, GalilUserVar_, valuef);
-                  callParamCallbacks();
+                  callParamCallbacks(addr);
                   }
                }
             }//User variable messages
@@ -4075,12 +4164,11 @@ void GalilController::getStatus(void)
 	}
 }
 
-//Override asynMotorController::poll
 //Acquire a data record from controller, store in GalilController instance
 //Called by GalilPoller::run
-asynStatus GalilController::poll(void)
+asynStatus GalilController::poller(void)
 {
-        //Acquire a data record
+	//Acquire a data record
 	acquireDataRecord();
 
 	//Extract controller data from data record, store in GalilController, and ParamList
@@ -4760,6 +4848,7 @@ asynStatus GalilController::programUpload(string *prog)
 */
 int GalilController::GalilInitializeVariables(bool burn_variables)
 {
+   int status = 0;		//Return status			
    int homed[MAX_GALIL_AXES];	//Backup of homed status
    int cinit[MAX_GALIL_AXES];	//Backup of commutation initialized status
    unsigned i;			//General purpose looping
@@ -4771,20 +4860,28 @@ int GalilController::GalilInitializeVariables(bool burn_variables)
    //Controller wide variables
    //Set tcperr counter to 0
    sprintf(cmd_, "tcperr=0");
-   sync_writeReadController();
+   status = sync_writeReadController();
 
    //Set cmderr counter to 0
    sprintf(cmd_, "cmderr=0");
+   status |= sync_writeReadController();
+
+   //Activate input interrupts for motor interlock function
+   if (digitalinput_init_ && digports_)
+      sprintf(cmd_, "dpon=%d;dvalues=%d;mlock=1", digports_, digvalues_);
+   else
+      sprintf(cmd_, "dpon=%d;dvalues=%d;mlock=0", digports_, digvalues_);
    sync_writeReadController();
 
    //Before burning variables backup the commutation initialized, and homed status flags
    //Then set status flags to 0 ready for burn to eeprom
    //Done so commutation initialized and homed status is always 0 at controller power on
    //Finally set axis variables
-   if (numAxes_ > 0)
+   if (numAxes_ > 0 && !status)
       {
       for (i = 0;i < numAxes_;i++)
          {
+         //Set axis variables
          //Query homed status for this axis
          sprintf(cmd_, "MG homed%c", axisList_[i]);
          if (sync_writeReadController() != asynSuccess)
@@ -4792,7 +4889,7 @@ int GalilController::GalilInitializeVariables(bool burn_variables)
             //Controller doesnt know homed variable.  
             //Give it initial value only in this case
             sprintf(cmd_, "homed%c=0",  axisList_[i]);
-            sync_writeReadController();
+            status |= sync_writeReadController();
             homed[axisList_[i] - AASCII] = 0;
             burn_variables = 1;
             }
@@ -4809,7 +4906,7 @@ int GalilController::GalilInitializeVariables(bool burn_variables)
             }
          //Set homed = 0 before burning variables
          sprintf(cmd_, "homed%c=0", axisList_[i]);
-         sync_writeReadController();
+         status |= sync_writeReadController();
 
          //Query commutation initialized status for this axis
          sprintf(cmd_, "MG cinit%c", axisList_[i]);
@@ -4818,7 +4915,7 @@ int GalilController::GalilInitializeVariables(bool burn_variables)
             //Controller doesnt know commutation initialized variable.  
             //Give it initial value only in this case
             sprintf(cmd_, "cinit%c=0",  axisList_[i]);
-            sync_writeReadController();
+            status |= sync_writeReadController();
             cinit[axisList_[i] - AASCII] = 0;
             burn_variables = 1;
             }
@@ -4826,31 +4923,30 @@ int GalilController::GalilInitializeVariables(bool burn_variables)
             cinit[axisList_[i] - AASCII] = atoi(resp_); //Retrieve the commutation initialized status
          //Set commutation initialized status = 0 before burning variables
          sprintf(cmd_, "cinit%c=0", axisList_[i]);
-         sync_writeReadController();
+         status |= sync_writeReadController();
 
-         //Set axis variables
          //provide sensible default for limdc (limit deceleration) value
          sprintf(cmd_, "limdc%c=%ld", axisList_[i], maxAcceleration_);
-         sync_writeReadController();
+         status |= sync_writeReadController();
          //Initialize home related parameters on controller
          //initialise home variable for this axis, set to not homming just yet.  Set to homming only when doing a home
          sprintf(cmd_, "home%c=0", axisList_[i]);
-         sync_writeReadController();
+         status |= sync_writeReadController();
          //Initialize home switch active value
          sprintf(cmd_, "hswact%c=0", axisList_[i]);
-         sync_writeReadController();
+         status |= sync_writeReadController();
          //Initialize home switch inactive value
          sprintf(cmd_, "hswiact%c=1", axisList_[i]);
-         sync_writeReadController();
+         status |= sync_writeReadController();
          //Initialise home jogoff variable
          sprintf(cmd_, "hjog%c=0", axisList_[i]);
-         sync_writeReadController();
+         status |= sync_writeReadController();
          //Initialize use encoder if present
          sprintf(cmd_, "ueip%c=0", axisList_[i]);
-         sync_writeReadController();
+         status |= sync_writeReadController();
          //Initialize use index
          sprintf(cmd_, "ui%c=0", axisList_[i]);
-         sync_writeReadController();
+         status |= sync_writeReadController();
          }
       }
 
@@ -4859,7 +4955,10 @@ int GalilController::GalilInitializeVariables(bool burn_variables)
       {				
       sprintf(cmd_, "BV");
       if (sync_writeReadController() != asynSuccess)
+         {
+         status |= asynError;
          errlogPrintf("Error burning variables to EEPROM model %s, address %s\n",model_, address_);
+         }
       else
          errlogPrintf("Burning variables to EEPROM model %s, address %s\n",model_, address_);
       }
@@ -4871,15 +4970,18 @@ int GalilController::GalilInitializeVariables(bool burn_variables)
          {
          //Set homed to previous value
          sprintf(cmd_, "homed%c=%d", axisList_[i], homed[axisList_[i] - AASCII]);
-         sync_writeReadController();
+         status |= sync_writeReadController();
          //Set commutation initialized to previous value
          sprintf(cmd_, "cinit%c=%d", axisList_[i], cinit[axisList_[i] - AASCII]);
-         sync_writeReadController();
+         status |= sync_writeReadController();
          }
       }
 
-   //Always return success for now
-   return asynSuccess;
+   if (status)
+      errlogPrintf("Error setting variables on model %s, address %s\n",model_, address_);
+
+   //Return status
+   return status;
 }
 
 /*--------------------------------------------------------------*/
@@ -4887,12 +4989,14 @@ int GalilController::GalilInitializeVariables(bool burn_variables)
 /*--------------------------------------------------------------*/
 void GalilController::GalilStartController(char *code_file, int burn_program, int thread_mask)
 {
-   asynStatus status;		//Status
+   int status;			//Status
+   char mesg[MAX_GALIL_STRING_SIZE];
    GalilAxis *pAxis;		//GalilAxis
    unsigned i;			//General purpose looping
    bool start_ok = true;	//Have the controller threads started ok
-   bool download_ok = false;	//Was user specified code delivered successfully
-   bool burn_variables = false;	//Burn variables to controller
+   int download_status = 0;	//Code download status default = not required
+   bool variables_ok = false;	//Were the galil code variables set successfully
+   bool burn_variables;		//Burn variables to controller
    string uc;			//Uploaded code from controller
    string dc;			//Code to download to controller
    int display_code = 0;	//For debugging
@@ -4932,7 +5036,7 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
          strcpy(card_code_, user_code_);
          }
       else
-         thread_mask_ = 0;  //Forced to use generated code
+         thread_mask_ = (rio_) ? thread_mask_ : 0;  //DMC forced to use generated code
 
       //Dump card_code_ to file
       write_gen_codefile("_prd");
@@ -4954,7 +5058,7 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
       //Upload code currently in controller for comparison to generated/user code
       status = programUpload(&uc);
       if (status) //Upload failed
-         printf("\nError uploading code model %s, address %s\n",model_, address_);
+         errlogPrintf("\nError uploading code model %s, address %s\n",model_, address_);
 
       if ((display_code == 2) || (display_code == 3))
          {
@@ -4982,20 +5086,25 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
       //If code we wish to download differs from controller current code then download the new code
       if (dc.compare(uc) != 0 && dc.compare("") != 0)
          {
-         printf("\nTransferring code to model %s, address %s\n",model_, address_);		
+         errlogPrintf("\nTransferring code to model %s, address %s\n",model_, address_);		
          //Do the download
          status = programDownload(dc);
          if (status)
-            printf("\nError downloading code model %s, address %s\n",model_, address_); //Donwload failed
-         else
-            download_ok = true; //Download success
-	
-         if (download_ok)
             {
-            printf("Code transfer successful to model %s, address %s\n",model_, address_);	
+            //Download fail
+            sprintf(mesg, "Error downloading code model %s, address %s\n",model_, address_);
+            setCtrlError(mesg);
+            download_status = -1;
+            }
+         else
+            download_status = 1; //Download success
+	
+         if (download_status == 1)
+            {
+            errlogPrintf("Code transfer successful to model %s, address %s\n",model_, address_);	
             //Burn program code to eeprom if burn_program is 1
             if (burn_program == 1)
-               {		
+               {
                //Burn program to EEPROM
                sprintf(cmd_, "BP");
                if (sync_writeReadController() != asynSuccess)
@@ -5014,25 +5123,26 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
          } //Code on controller different
 
       //Initialize galil code variables
-      burn_variables = (burn_program && download_ok) ? true : false;
-      GalilInitializeVariables(burn_variables);
+      burn_variables = (burn_program && (download_status == 1)) ? true : false;
+      variables_ok = GalilInitializeVariables(burn_variables) == asynSuccess ? true : false;
 
       /*Upload code currently in controller to see whats there now*/              
       status = programUpload(&uc);
       if (!status)   //Remove the \r characters - \r\n is returned by galil controller
          uc.erase (std::remove(uc.begin(), uc.end(), '\r'), uc.end());
       else
-         printf("\nError uploading code model %s, address %s\n",model_, address_);
+         errlogPrintf("\nError uploading code model %s, address %s\n",model_, address_);
 
       //Start thread 0 if upload reveals code exists on controller
       //Its assumed that thread 0 starts any other required threads on controller
-      if ((int)uc.length()>2)
+      if ((int)uc.length()>2 && thread_mask_ >= 0)
          {
          //Start thread 0
          sprintf(cmd_, "XQ 0,0");
          if (sync_writeReadController() != asynSuccess)
             errlogPrintf("Thread 0 failed to start on model %s address %s\n\n",model_, address_);
-					
+
+         //Wait a second before checking thread status
          epicsThreadSleep(1);
 			
          //Check threads on controller
@@ -5049,39 +5159,40 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
                      if (atoi(resp_) == -1)
                         {
                         start_ok = false;
-                        errlogPrintf("\nThread %d failed to start on model %s, address %s\n", i, model_, address_);
+                        sprintf(mesg, "Thread %d failed to start on model %s, address %s\n", i, model_, address_);
+                        setCtrlError(mesg);
                         }
                      }
                   }
                }
             }
-         else if (numAxes_ > 0 && thread_mask_ == 0) //Check code is running for all created GalilAxis
+         else if ((numAxes_ > 0 || rio_) && thread_mask_ == 0) //Check code is running for all created GalilAxis
             {
+            if (rio_) //Check thread 0 on rio
+               numAxes_ = 1;
             for (i = 0;i < numAxes_;i++)
                {		
                //Check that code is running
-               sprintf(cmd_, "MG _XQ%d", axisList_[i] - AASCII);
+               if (rio_)
+                  sprintf(cmd_, "MG _XQ%d", i);
+               else
+                  sprintf(cmd_, "MG _XQ%d", axisList_[i] - AASCII);
                if (sync_writeReadController() == asynSuccess)
                   {
                   if (atoi(resp_) == -1)
                      {
                      start_ok = false;
-                     errlogPrintf("\nThread %d failed to start on model %s, address %s\n", axisList_[i] - AASCII, model_, address_);
+                     if (rio_)
+                        sprintf(mesg, "Thread %d failed to start on model %s, address %s\n", i, model_, address_);
+                     else
+                        sprintf(mesg, "Thread %d failed to start on model %s, address %s\n", axisList_[i] - AASCII, model_, address_);
+                     setCtrlError(mesg);
                      }
                   }
                }
             }
-		
-	 if (!start_ok && !rio_)
-            {
-            //Stop all motors on the crashed controller
-            sprintf(cmd_, "AB 1");
-            if (sync_writeReadController() != asynSuccess)
-               errlogPrintf("\nError aborting all motion on controller\n");
-            else
-               errlogPrintf("\nStopped all motion on crashed controller\n");
-            }
-         else
+
+	 if (start_ok)
             errlogPrintf("Code started successfully on model %s, address %s\n",model_, address_);
          }
 
@@ -5093,12 +5204,26 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
          pAxis->limitsDirState_ = unknown;
          }
 
+      //Retrieve controller time base
+      sprintf(cmd_, "MG _TM");
+      if (sync_writeReadController() == asynSuccess)
+         timeMultiplier_ = DEFAULT_TIME / atof(resp_);
+
       //Decrease timeout now finished manipulating controller code
       timeout_ = 1;
       //Wake poller, and re-start async records if needed
       poller_->wakePoller();
 
       }//connected_
+   else
+      start_ok = false;
+
+   //Set controller start status
+   if (start_ok && variables_ok && (download_status == 1 || download_status == 0))
+      start_ok = true;
+   else
+      start_ok = false;
+   setIntegerParam(GalilStart_, (int)start_ok);
 
    //Code is assembled.  Free RAM, and set flag accordingly
    //Keep card_code_ for re-connection/re-start capability
@@ -5121,7 +5246,6 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
 void GalilController::gen_card_codeend(void)
 {
    unsigned i;
-   int digports = 0, digvalues = 0;
    struct Galilmotor_enables *motor_enables = NULL;  //Convenience pointer to GalilController motor_enables[digport]
 
    //Calculate the digports and digvalues required for motor interlock function
@@ -5133,20 +5257,9 @@ void GalilController::gen_card_codeend(void)
       if (strlen(motor_enables->motors) > 0)
          {
          //Include the port
-         digports = digports | (1 << i);
+         digports_ = digports_ | (1 << i);
          //Include the disable value 
-         digvalues = digvalues | (motor_enables->disablestates[0] << i);
-         }
-      }
-
-   //Activate input interrupts for motor interlock function */
-   if (digitalinput_init_ == true)
-      {
-      if (digports != 0)
-         {
-         /*motor interlock.  output variable values to activate code embedded in thread A*/
-         sprintf(cmd_, "dpon=%d;dvalues=%d;mlock=1", digports, digvalues);
-         sync_writeReadController();
+         digvalues_ = digvalues_ | (motor_enables->disablestates[0] << i);
          }
       }
 
@@ -5156,16 +5269,17 @@ void GalilController::gen_card_codeend(void)
       // Add galil program termination code
       if (digitalinput_init_ == true)
          {
-         strcat(limit_code_, "RE 1\n");	/*we have written limit code, and we are done with LIMSWI but not prog end*/
+         //Limit code has been written, and we are done with LIMSWI but its not prog end
+         strcat(limit_code_, "RE 1\n");
          //Add controller wide motor interlock code to #ININT
-         if (digports != 0)
+         if (digports_ != 0)
             gen_motor_enables_code();
 	
          // Add code to end digital port interrupt routine, and end the prog
          strcat(digital_code_, "RI 1\nEN\n");	
          }
-      else
-         strcat(limit_code_, "RE 1\nEN\n");   /*we have written limit code, and we are done with LIMSWI and is prog end*/
+      else  //Limit code has been written, and we are done with LIMSWI and its prog end
+         strcat(limit_code_, "RE 1\nEN\n");
 					
       //Add command error handler
       sprintf(thread_code_, "%s#CMDERR\nerrstr=_ED;errcde=_TC;cmderr=cmderr+1\nEN\n", thread_code_);
@@ -5382,7 +5496,10 @@ asynStatus GalilController::read_codefile_part(const char *code_file, MAC_HANDLE
 			}
 		else
 			{
-			errlogPrintf("\nread_codefile_part: Can't open user code file \"%s\", using generated code\n\n", code_file);
+			if (rio_)
+				errlogPrintf("\nread_codefile_part: Can't open user code file \"%s\"\n\n", code_file);
+			else
+				errlogPrintf("\nread_codefile_part: Can't open user code file \"%s\", using generated code\n\n", code_file);
 			return asynError;
 			}
 		}

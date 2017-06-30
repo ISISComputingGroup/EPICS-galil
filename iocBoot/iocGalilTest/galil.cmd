@@ -43,7 +43,7 @@ GalilCreateController("Galil", "130.246.51.169", 20)
 #GalilCreateController("Galil", "COM1 115200", 100)
 
 # Create a Galil controller
-#GalilCreateController("RIO", "192.168.0.101", 8)
+#GalilCreateController("RIO", "192.168.0.5", 2)
 
 # GalilCreateAxis command parameters are:
 #
