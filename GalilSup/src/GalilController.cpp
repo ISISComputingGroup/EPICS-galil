@@ -775,8 +775,8 @@ void GalilController::shutdownController()
       //Burn parameters on exit ensuring controller has correct settings at next power on
       //This effects motor type, soft limits, limit configuration etc
       //It does not effect the galil program on the controller
-      sprintf(cmd_, "BN");
-      sync_writeReadController();
+      //sprintf(cmd_, "BN");
+      //sync_writeReadController();
       //Configure serial for unsolicited at exit as per factory default
       strcpy(cmd_, "CF S");
       sync_writeReadController();
@@ -785,10 +785,16 @@ void GalilController::shutdownController()
       sync_writeReadController();
       if (async_records_)
          {
+         //Turn off data record
+         strcpy(cmd_, "DR0");
+         sync_writeReadController();
          //Close all udp async connections
          strcpy(cmd_, "IHT=>-1");
          sync_writeReadController();
          }
+      //Close all tcp handles
+      strcpy(cmd_, "IHT=>-2");
+      sync_writeReadController();
       //Release the lock
       unlock();
       //Asyn exit handler will disconnect sync connection from here
