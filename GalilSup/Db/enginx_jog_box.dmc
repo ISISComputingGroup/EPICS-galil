@@ -1,0 +1,228 @@
+#AUTO
+'This will get run on startup of the Galil
+XQ#STARTUP,1
+EN
+#STARTUP
+WT1000
+XQ#MAIN,0
+EN
+#MAIN
+'This code needs to be running at all times in thread 0 to allow the pendant to
+'work. This should be included in any remote comms to ensure that it is running
+'Initialise the inputs for the interrupts
+PosA=_PAA;PosB=_PAB;PosC=_PAC;PosD=_PAD;PosE=_PAE
+PvPosA=_PAA;PvPosB=_PAB;PvPosC=_PAC;PvPosD=_PAD;PvPosE=_PAE
+IF(_CN0=1)
+  LimAct=1
+ELSE
+  LimAct=0
+ENDIF
+LimFA=0;LimFB=0;LimFC=0;LimFD=0;LimFE=0
+LimRA=0;LimRB=0;LimRC=0;LimRD=0;LimRE=0
+II1,8,,
+JOGS=0
+MT-2,-2.5,-2,-2.5,-2
+'Loop to keep the thread active throughout and deal with interrupts
+#KEEP;WT100
+JogM=@IN[8]
+ADI=@IN[4]
+BDI=@IN[1]
+CDI=@IN[2]
+DDI=@IN[3]
+EDI=@IN[5]
+LightC=@IN[6]
+EmStop=@IN[7]
+JVAL=@AN[5]
+JP#KEEP
+EN
+#CMDERR
+TC1
+#NOWT
+EN1
+#LIMSWI
+'Stop any Axis that is or was in motion when their limit was hit
+IF(@IN[4]=0)|(ADI=0)
+  HX1;VAB=_DCA;DCA=999000;STA
+  IF(_LRA=0);PRA+10000;ELSE;PRA10000;ENDIF
+  BGA;AMA;DCA=VA
+ENDIF
+IF(@IN[1]=0)|(BDI=0)
+  HX2;VB=_DCB;DCB=999000;STB
+  IF(_LRB=0);PRB+10000;ELSE;PRB10000;ENDIF
+  BGB;AMB;DCB=VB
+ENDIF
+IF(@IN[2]=0)|(CDI=0)
+  HX3;VC=_DCC;DCC=999000;STC
+  IF(_LRC=0);PRC+10000;ELSE;PRC10000;ENDIF
+  BGC;AMC;DCC=VC
+ENDIF
+IF(@IN[3]=0)|(DDI=0)
+  HX4;VD=_DCDac;DCD=999000;STD
+  IF(_LRD=0);PRD+10000;ELSE;PRD10000;ENDIF
+  BGD;AMD;DCD=VD
+ENDIF
+IF(@IN[5]=0)|(EDI=0)
+  HX5;VE=_DCE;DCE=999000;STE
+  IF(_LRE=0);PRE+10000;ELSE;PRE10000;ENDIF
+  BGE;AME;DCE=VE
+ENDIF
+RE1
+#ININT
+'This is the code to run during the interrupt
+JS#LOCCON;RI1
+#LOCCON
+'This subroutine ensures that the interrupt routine is not continuously called
+'Set variables to ensure that the control routines are only called once
+AIM=0
+BIM=0
+CIM=0
+DIM=0
+EIM=0
+'Label to loop back to in order to stay responsive
+#HOLD
+'Variables for the digital inputs to avoid race conditions
+JogM=@IN[8]
+ADI=@IN[4]
+BDI=@IN[1]
+CDI=@IN[2]
+DDI=@IN[3]
+EDI=@IN[5]
+LightC=@IN[6]
+EmStop=@IN[7]
+JVAL=@AN[5]
+IF((((ADI=0)|(BDI=0))|(CDI=0))|(DDI=0))|(EDI=0)
+LocM=1
+ELSE
+LocM=0
+ENDIF
+'Check the two safety interrupts and stop the system as appropriate
+IF(EmStop=1)
+AB1
+MO
+ENDIF
+IF((LightC=1)&(LocM=0))
+AB1
+ENDIF
+'Check each input and start the threads as appropriate
+IF((ADI=0)&(AIM<>1))
+XQ#MOVE1,1
+AIM=1
+ENDIF
+IF((BDI=0)&(BIM<>1))
+XQ#MOVE2,2
+BIM=1
+ENDIF
+IF((CDI=0)&(CIM<>1))
+XQ#MOVE3,3
+CIM=1
+ENDIF
+IF((DDI=0)&(DIM<>1))
+XQ#MOVE4,4
+DIM=1
+ENDIF
+IF((EDI=0)&(EIM<>1))
+XQ#MOVE5,5
+EIM=1
+ENDIF
+'Loop back for any of the control interrupts
+IF(LocM=1)
+JP#HOLD
+ENDIF
+EN
+'Code for external interactions
+#REMCON1
+LocM=0
+PvPosA=PosA
+XQ#MOVE1,1
+EN
+#REMCON2;LocM=0;PvPosB=PosB;XQ#MOVE2,2;EN
+#REMCON3;LocM=0;PvPosC=PosC;XQ#MOVE3,3;EN
+#REMCON4;LocM=0;PvPosD=PosD;XQ#MOVE4,4;EN
+#REMCON5;LocM=0;PvPosE=PosE;XQ#MOVE5,5;EN
+'The move threads
+#MOVE1
+'Check on local/remote mode
+IF(LocM=1)
+'If in local mode
+IF(JogM=JOGS)
+'If the Jog option is selected
+'Setup the motor and vairables
+ODCA=_DCA
+DCA=999000
+SHA
+'If on forward limit, set JG to a negative value, else set to 0
+IF(_LFA=0)
+  JG-1
+ELSE
+  JG0
+ENDIF
+'Loop to jog the system, using the analog input (JVAL) and constants to vary
+'the behaviour according to the appropriate axis (MultA and TwkA)
+#LOOP1;BGA;JVALA=MultA*((JVAL*TwkA)*@ABS[JVAL]);JGJVALA
+IF(ADI=1)
+'If the button has been released jump to the end steps of the loop
+JP#ENDLP1
+ELSE;
+'If the button is still pressed and this input is still active, loop again
+JP#LOOP1
+ENDIF
+#ENDLP1
+'Basic code to end the loop, end by jumping to the final end procedure
+STA;AMA;DCA=ODCA;JP#STMV1
+ELSE
+'This is in a mode to go to a previously set position
+SHA;PAA=PosA;BGA
+'Keep moving towards set position while the button is held
+#LOOP1A
+IF((ADI=1)|(_BGA=0))
+'If the button is released and the motor is moving end the motion
+'Finish by jumping to final end procedure
+STA;AMA;WT100;JP#STMV1
+ENDIF
+'The default state, is that the button is pressed, keep looping until it isn't
+JP#LOOP1A
+ENDIF
+ELSE
+'If the system is not in local mode, check on the light curtain before moving
+IF(LightC=0);SHA;BGA;ENDIF;ENDIF
+#STMV1
+'At the very end just get out of the routine
+RE
+'The other move commands follow the same pattern, but with different axis/vars
+#MOVE2;IF(LocM=1);IF(JogM=JOGS);ODCB=_DCB;DCB=999000;SHB
+IF(_LFB=0);JG,-1;ELSE;JG,0;ENDIF
+#LOOP2;BGB;JVALB=MultB*((JVAL*TwkB)*@ABS[JVAL]);JG,JVALB;IF(BDI=1);JP#ENDLP2
+ELSE
+JP#LOOP2;ENDIF
+#ENDLP2;STB;AMB;DCB=ODCB;JP#STMV2;ELSE;SHB;PAB=PosB;BGB
+#LOOP2A;IF((BDI=1)|(_BGB=0));STB;AMB;WT100;JP#STMV2;ENDIF;JP#LOOP2A;ENDIF;ELSE
+IF(LightC=0);SHB;BGB;ENDIF;ENDIF
+#STMV2;RE
+#MOVE3;IF(LocM=1);IF(JogM=JOGS);ODCC=_DCC;DCC=999000;SHC
+IF(_LFC=0);JG,,-1;ELSE;JG,,0;ENDIF
+#LOOP3;BGC;JVALC=MultC*((JVAL*TwkC)*@ABS[JVAL]);JG,,JVALC;IF(CDI=1);JP#ENDLP3
+ELSE
+JP#LOOP3;ENDIF
+#ENDLP3;STC;AMC;DCC=ODCC;JP#STMV3;ELSE;SHC;PAC=PosC;BGC
+#LOOP3A;IF((CDI=1)|(_BGC=0));STC;AMC;WT100;JP#STMV3;ENDIF;JP#LOOP3A;ENDIF;ELSE
+IF(LightC=0);SHC;BGC;ENDIF;ENDIF
+#STMV3;RE
+#MOVE4;IF(LocM=1);IF(JogM=JOGS);ODCD=_DCD;DCD=999000;SHD
+IF(_LFD=0);JG,,,-1;ELSE;JG,,,0;ENDIF
+#LOOP4;BGD;JVALD=MultD*((JVAL*TwkD)*@ABS[JVAL]);JG,,,JVALD;IF(DDI=1);JP#ENDLP4;
+ELSE
+JP#LOOP4;ENDIF
+#ENDLP4;STD;AMD;DCD=ODCD;JP#STMV4;ELSE;SHD;PAD=PosD;BGD
+#LOOP4A;IF((DDI=1)|(_BGD=0));STD;AMD;WT100;JP#STMV4;ENDIF;JP#LOOP4A;ENDIF;ELSE
+IF(LightC=0);SHD;BGD;ENDIF;ENDIF
+#STMV4;RE
+'Variations for E - DCE set lower to avoid reverb
+#MOVE5;IF(LocM=1);IF(JogM=JOGS);ODCE=_DCE;DCE=49950;SHE
+IF(_LFE=0);JG,,,,-1;ELSE;JG,,,,0;ENDIF
+#LOOP5;BGE;JVALE=MultE*((JVAL*TwkE)*@ABS[JVAL]);JG,,,,JVALE;IF(EDI=1);JP#ENDLP5
+ELSE
+JP#LOOP5;ENDIF
+#ENDLP5;STE;AME;DCE=ODCE;JP#STMV5;ELSE;SHE;PAE=PosE;BGE
+#LOOP5A;IF((EDI=1)|(_BGE=0));STE;AME;WT100;JP#STMV5;ENDIF;JP#LOOP5A;ENDIF;ELSE
+IF(LightC=0);SHE;BGE;ENDIF;ENDIF
+#STMV5;RE
