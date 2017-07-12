@@ -34,7 +34,7 @@ GMC += galil_Default_Footer.gmc  galil_Default_Header.gmc  galil_Home_ForwLimit.
 GMC += galil_Home_Home.gmc  galil_Home_Home+FIneg.gmc  galil_Home_Home+FIpos.gmc  galil_Home_RevLimit.gmc
 GMC += galil_Home_RevLimit_Home.gmc  galil_Piezo_Home.gmc  galil_Home_ForwLimit+FIneg.gmc  galil_Home_RevLimit+FIpos.gmc
 GMC += galil_Home_Pin_Hole_Selector.gmc  galil_Home_Thread.gmc  galil_Home_Dummy_Axis.gmc
-GMC += galil_Home_FIpos.gmc galil_Home_FIneg.gmc galil_Muon_Slits.gmc
+GMC += galil_Home_FIpos.gmc galil_Home_FIneg.gmc galil_Muon_Slits.gmc enginx_jog_box.dmc
 
 include $(TOP)/configure/RULES
 #----------------------------------------
