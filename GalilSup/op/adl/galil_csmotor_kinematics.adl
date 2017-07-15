@@ -1,14 +1,14 @@
 
 file {
-	name="/home/ics/git/Galil-3-0/3-2/GalilSup/op/adl/galil_csmotor_kinematics.adl"
-	version=030109
+	name="/home/ics/git/Galil-3-0/3-5/GalilSup/op/adl/galil_csmotor_kinematics.adl"
+	version=030105
 }
 display {
 	object {
 		x=252
 		y=55
 		width=446
-		height=768
+		height=552
 	}
 	clr=14
 	bclr=4
@@ -1143,463 +1143,42 @@ composite {
 		}
 	}
 }
-text {
+composite {
 	object {
-		x=17
-		y=515
-		width=97
-		height=16
+		x=12
+		y=513
+		width=419
+		height=30
+	}
+	"composite name"=""
+	children {
+		"text update" {
+			object {
+				x=22
+				y=530
+				width=409
+				height=13
+			}
+			monitor {
+				chan="$(P)ERROR_MON"
+				clr=14
+				bclr=56
+			}
+			format="string"
+			limits {
+			}
+		}
+		text {
+			object {
+				x=12
+				y=513
+				width=65
+				height=14
+			}
+			"basic attribute" {
+				clr=14
+			}
+			textix="Controller mesg"
+		}
 	}
-	"basic attribute" {
-		clr=14
-	}
-	textix="Kinematic variable values"
-}
-text {
-	object {
-		x=15
-		y=733
-		width=65
-		height=14
-	}
-	"basic attribute" {
-		clr=14
-	}
-	textix="Controller mesg"
-}
-"text update" {
-	object {
-		x=25
-		y=750
-		width=409
-		height=13
-	}
-	monitor {
-		chan="$(P)ERROR_MON"
-		clr=14
-		bclr=56
-	}
-	format="string"
-	limits {
-	}
-}
-"text entry" {
-	object {
-		x=26
-		y=712
-		width=269
-		height=20
-	}
-	control {
-		chan="$(P)Z_SP.DESC"
-		clr=14
-		bclr=51
-	}
-	limits {
-	}
-}
-"text entry" {
-	object {
-		x=295
-		y=712
-		width=139
-		height=20
-	}
-	control {
-		chan="$(P)Z_SP"
-		clr=14
-		bclr=51
-	}
-	limits {
-	}
-}
-"text entry" {
-	object {
-		x=26
-		y=613
-		width=269
-		height=20
-	}
-	control {
-		chan="$(P)U_SP.DESC"
-		clr=14
-		bclr=51
-	}
-	limits {
-	}
-}
-"text entry" {
-	object {
-		x=295
-		y=613
-		width=139
-		height=20
-	}
-	control {
-		chan="$(P)U_SP"
-		clr=14
-		bclr=51
-	}
-	limits {
-	}
-}
-"text entry" {
-	object {
-		x=26
-		y=553
-		width=269
-		height=20
-	}
-	control {
-		chan="$(P)R_SP.DESC"
-		clr=14
-		bclr=51
-	}
-	limits {
-	}
-}
-"text entry" {
-	object {
-		x=295
-		y=553
-		width=139
-		height=20
-	}
-	control {
-		chan="$(P)R_SP"
-		clr=14
-		bclr=51
-	}
-	limits {
-	}
-}
-"text entry" {
-	object {
-		x=26
-		y=533
-		width=269
-		height=20
-	}
-	control {
-		chan="$(P)Q_SP.DESC"
-		clr=14
-		bclr=51
-	}
-	limits {
-	}
-}
-"text entry" {
-	object {
-		x=295
-		y=533
-		width=139
-		height=20
-	}
-	control {
-		chan="$(P)Q_SP"
-		clr=14
-		bclr=51
-	}
-	limits {
-	}
-}
-"text entry" {
-	object {
-		x=26
-		y=573
-		width=269
-		height=20
-	}
-	control {
-		chan="$(P)S_SP.DESC"
-		clr=14
-		bclr=51
-	}
-	limits {
-	}
-}
-"text entry" {
-	object {
-		x=295
-		y=573
-		width=139
-		height=20
-	}
-	control {
-		chan="$(P)S_SP"
-		clr=14
-		bclr=51
-	}
-	limits {
-	}
-}
-"text entry" {
-	object {
-		x=26
-		y=593
-		width=269
-		height=20
-	}
-	control {
-		chan="$(P)T_SP.DESC"
-		clr=14
-		bclr=51
-	}
-	limits {
-	}
-}
-"text entry" {
-	object {
-		x=295
-		y=593
-		width=139
-		height=20
-	}
-	control {
-		chan="$(P)T_SP"
-		clr=14
-		bclr=51
-	}
-	limits {
-	}
-}
-"text entry" {
-	object {
-		x=26
-		y=633
-		width=269
-		height=20
-	}
-	control {
-		chan="$(P)V_SP.DESC"
-		clr=14
-		bclr=51
-	}
-	limits {
-	}
-}
-"text entry" {
-	object {
-		x=295
-		y=633
-		width=139
-		height=20
-	}
-	control {
-		chan="$(P)V_SP"
-		clr=14
-		bclr=51
-	}
-	limits {
-	}
-}
-"text entry" {
-	object {
-		x=26
-		y=652
-		width=269
-		height=20
-	}
-	control {
-		chan="$(P)W_SP.DESC"
-		clr=14
-		bclr=51
-	}
-	limits {
-	}
-}
-"text entry" {
-	object {
-		x=295
-		y=652
-		width=139
-		height=20
-	}
-	control {
-		chan="$(P)W_SP"
-		clr=14
-		bclr=51
-	}
-	limits {
-	}
-}
-"text entry" {
-	object {
-		x=26
-		y=672
-		width=269
-		height=20
-	}
-	control {
-		chan="$(P)X_SP.DESC"
-		clr=14
-		bclr=51
-	}
-	limits {
-	}
-}
-"text entry" {
-	object {
-		x=295
-		y=672
-		width=139
-		height=20
-	}
-	control {
-		chan="$(P)X_SP"
-		clr=14
-		bclr=51
-	}
-	limits {
-	}
-}
-"text entry" {
-	object {
-		x=26
-		y=692
-		width=269
-		height=20
-	}
-	control {
-		chan="$(P)Y_SP.DESC"
-		clr=14
-		bclr=51
-	}
-	limits {
-	}
-}
-"text entry" {
-	object {
-		x=295
-		y=692
-		width=139
-		height=20
-	}
-	control {
-		chan="$(P)Y_SP"
-		clr=14
-		bclr=51
-	}
-	limits {
-	}
-}
-text {
-	object {
-		x=9
-		y=539
-		width=10
-		height=14
-	}
-	"basic attribute" {
-		clr=14
-	}
-	textix="Q="
-}
-text {
-	object {
-		x=9
-		y=558
-		width=10
-		height=14
-	}
-	"basic attribute" {
-		clr=14
-	}
-	textix="R="
-}
-text {
-	object {
-		x=9
-		y=579
-		width=10
-		height=14
-	}
-	"basic attribute" {
-		clr=14
-	}
-	textix="S="
-}
-text {
-	object {
-		x=9
-		y=598
-		width=10
-		height=14
-	}
-	"basic attribute" {
-		clr=14
-	}
-	textix="T="
-}
-text {
-	object {
-		x=9
-		y=618
-		width=10
-		height=14
-	}
-	"basic attribute" {
-		clr=14
-	}
-	textix="U="
-}
-text {
-	object {
-		x=9
-		y=639
-		width=10
-		height=14
-	}
-	"basic attribute" {
-		clr=14
-	}
-	textix="V="
-}
-text {
-	object {
-		x=9
-		y=678
-		width=10
-		height=14
-	}
-	"basic attribute" {
-		clr=14
-	}
-	textix="X="
-}
-text {
-	object {
-		x=9
-		y=658
-		width=10
-		height=14
-	}
-	"basic attribute" {
-		clr=14
-	}
-	textix="W="
-}
-text {
-	object {
-		x=9
-		y=697
-		width=10
-		height=14
-	}
-	"basic attribute" {
-		clr=14
-	}
-	textix="Y="
-}
-text {
-	object {
-		x=9
-		y=717
-		width=10
-		height=14
-	}
-	"basic attribute" {
-		clr=14
-	}
-	textix="Z="
 }

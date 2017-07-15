@@ -58,18 +58,36 @@ public:
   asynStatus doCalc(const char *expr, double args[], double *result);
   //Calculate real axis orientation relative to this CSAxis
   asynStatus calcAxisLimitOrientation(void);
-  //Get motor position readbacks for kinematic transform, and pack into mrargs (motor readback args)
+  //Get forward axis setpoints (Related CSAxis), and pack into spargs
+  asynStatus packSetPointArgs(double spargs[]);
+  //Get axis position readbacks and pack into mrargs
   asynStatus packReadbackArgs(char *axes, double mrargs[]);
   //Peform forward kinematic transform using real axis readback data, and store results in GalilCSAxis
   asynStatus forwardTransform(void);
   //Perform reverse coordinate and velocity transform
-  asynStatus reverseTransform(double pos, double vel, double accel, CSTargets *targets, double npos[], double nvel[], double naccel[]);
+  asynStatus reverseTransform(double pos, double vel, double accel, CSTargets *targets, double npos[], double nvel[], double naccel[], bool useCSSetpoints = true);
   //Transform CSAxis profile into Axis profiles
   asynStatus transformCSAxisProfile(void);
   //Selects a free coordinate system S or T and returns coordsys number, or -1 if none free
   int selectFreeCoordinateSystem(void);
   //Uses vector mathematics to check requested real motor velocities
-  asynStatus checkMotorVelocities(double npos[], double nvel[]);
+  asynStatus checkMotorVelocities(double npos[], double nvel[], double naccel[]);
+  //Check motor enable interlock status of all reverse axis
+  asynStatus beginCheck(void);
+  //Validate motor record status of all related axis
+  asynStatus validateMRSettings(void);
+  //Check motor record status for this axis
+  asynStatus checkMRSettings(bool moveVelocity, char callaxis);
+  //Enforce CSAxis completion order
+  int enforceCSAxisCompletionOrder(int csmoving);
+  //Check CSAxis limit switch in requested move direction
+  asynStatus checkLimits(double position, int relative);
+  //Monitor CSAxis move, stop if problem
+  asynStatus monitorCSAxisMove(bool moving);
+  //Clear CSAxis move dynamics at move completion
+  asynStatus clearCSAxisDynamics(bool moving);
+  //Set CSAxis move flags prior to move
+  asynStatus setupCSAxisMove(bool moveVelocity);
 
   /* These are the methods we override from the base class */
   asynStatus move(double position, int relative, double min_velocity, double max_velocity, double acceleration);
@@ -77,9 +95,6 @@ public:
   asynStatus home(double minVelocity, double maxVelocity, double acceleration, int forwards);
   asynStatus stop(double acceleration);
   asynStatus initializeProfile(size_t maxProfilePoints);
-
-  //asynStatus setHighLimit(double highLimit);
-  //asynStatus setLowLimit(double lowLimit);
 
   ~GalilCSAxis();
 
@@ -100,9 +115,10 @@ private:
   bool stop_csaxis_;			//Stop all motors in CSAxis
   bool kinematicsAltered_;              //Have the kinematics equations been altered
   limitsState limitOrientation_[MAX_GALIL_AXES];//Orientation of real axis limits relative to this CSAxis
-  bool stop_issued_;			//CSAxis stop issued
+  bool move_started_;			//CSAxis move started
   bool kinematic_error_reported_;	//Kinematic error has been reported to user
   int last_done_;			//Done status stored from previous poll cycle
+  bool moveVelocity_;			//Indicates a jog move in progress
   double motor_position_;		//aux encoder or step count register
   double encoder_position_;		//main encoder register
   double last_motor_position_;		//aux encoder or step count register stored from previous poll
@@ -114,6 +130,7 @@ private:
   int deferredRelative_;		//Deferred move is relative or absolute
   bool deferredMove_;			//Has a deferred move been set
   int deferredMode_;			//Deferred mode.  Sync start only, sync start and stop
+  double setPoint_;			//CSAxis setpoint position
  
 friend class GalilController;
 };

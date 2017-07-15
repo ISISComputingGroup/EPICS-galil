@@ -73,35 +73,5 @@ file "$(GALIL)/GalilSup/Db/galil_reverse_transforms.template"
 
 }
 
-# Kinematic variables
-#
-# 10 variables per controller
-#
-# P    - PV prefix
-# R    - Record Name
-# PORT - Asyn port name
-# ADDR - Hardware port to read
-# PREC - Precision
-#
-# Regardless of record name, addr 0-9 is mapped Q-Z in driver
-# These variables Q-Z can be used in kinematics
-
-file "$(GALIL)/GalilSup/Db/galil_kinematic_variable.template"
-{ 
-   pattern { P,            R,    PORT,    ADDR,  PREC }
-
-           { "DMC01:",     "Q",  "Galil", "0",   "5"  }
-           { "DMC01:",     "R",  "Galil", "1",   "5"  }
-           { "DMC01:",     "S",  "Galil", "2",   "5"  }
-           { "DMC01:",     "T",  "Galil", "3",   "5"  }
-           { "DMC01:",     "U",  "Galil", "4",   "5"  }
-           { "DMC01:",     "V",  "Galil", "5",   "5"  }
-           { "DMC01:",     "W",  "Galil", "6",   "5"  }
-           { "DMC01:",     "X",  "Galil", "7",   "5"  }
-           { "DMC01:",     "Y",  "Galil", "8",   "5"  }
-           { "DMC01:",     "Z",  "Galil", "9",   "5"  }
-
-}
-
 # end
 

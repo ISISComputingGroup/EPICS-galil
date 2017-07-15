@@ -87,7 +87,6 @@ public:
 
   //Generate axis home routine
   void gen_homecode(char c, char axis_thread_code[]);
-   
   //Is the motor in an enabled/go state with current digital IO status
   bool motor_enabled(void);
   //Check SSI reading against disconnect value
@@ -96,6 +95,8 @@ public:
   asynStatus set_ssi(void);
   //Get SSI setting from controller
   asynStatus get_ssi(int function, epicsInt32 *value);
+  //Invert SSI encoder direction
+  asynStatus invert_ssi(void);
   //Set acceleration and velocity
   asynStatus setAccelVelocity(double acceleration, double velocity, bool setVelocity = true);
   //Extract axis data from GalilController data record
@@ -108,9 +109,9 @@ public:
   void syncEncodedStepper(void);
   //Stop motor if wrong limit activated and wrongLimitProtection is enabled
   void wrongLimitProtection(void);
-  //Sets time motor has been stopped for in GalilAxis::stopped_time_
+  //Sets time motor has been stopped for in GalilAxis::stoppedTime_
   void setStopTime(void);
-  //Reset homing if stopped_time_ great than HOMING_TIMEOUT
+  //Reset homing if stoppedTime_ greater than HOMING_TIMEOUT
   void checkHoming(void);
   //Service slow and infrequent requests from poll thread to write to the controller
   //We do this in a separate thread so the poll thread is not slowed
@@ -133,7 +134,7 @@ public:
   //Check velocity and wlp protection
   asynStatus beginCheck(const char *functionName, double maxVelocity, bool resetCtrlMessage = true);
   //Begin motor motion
-  asynStatus beginMotion(const char *caller, bool move = true);
+  asynStatus beginMotion(const char *caller, double position = 0.0, bool relative = false, bool checkpos = false, bool move = true);
   //Set axis brake state
   asynStatus setBrake(bool enable);
   //Restore the motor brake status after axisReady_
@@ -142,6 +143,10 @@ public:
   asynStatus setupHome(double maxVelocity, int forwards);
   //Copy profileBackupPositions_ back into profilePositions_ after a CSAxis profile has been built
   void restoreProfileData(void);
+  //Check motor record status for this axis
+  asynStatus checkMRSettings(bool moveVelocity, char callaxis);
+  //Send move to this motor via the motor record
+  asynStatus moveThruMotorRecord(double position, double maxVelocity, double acceleration, bool setCSA = true);
 
   /* These are the methods we override from the base class */
   asynStatus move(double position, int relative, double minVelocity, double maxVelocity, double acceleration);
@@ -169,7 +174,7 @@ private:
   bool limit_as_home_;	     		//use limit switches for homing
   int switch_type_;			//switch type for motor enable/disable function
   char *enables_string_;		//Motor enable/disable string specified by user
-  int invert_ssi_;			//Invert ssi encoder.  Reverse -ve, and +ve direction of ssi
+  bool invert_ssi_;			//Invert ssi encoder.  Reverse -ve, and +ve direction of ssi
 
   double highLimit_;			//High soft limit
   double lowLimit_;			//Low soft limit
@@ -206,6 +211,12 @@ private:
   int stop_code_;			//Axis stop code from controller
   bool fwd_;				//Forward limit status
   bool rev_;				//Reverse limit status
+
+  double csaAcceleration_;		//CSAxis requested acceleration
+  double csaVelocity_;			//CSAxis requested velocity
+  bool useCSADynamics_;			//Should this axis use CSAxis requested acceleration and velocity
+
+  bool startDeferredMoves_;		//Used to start deferred moves automatically
   
   limitsState limitsDirState_;		//Status of limits consistency with motor direction
   bool beginOnLimit_;			//Did move begin while on a limit switch
@@ -213,8 +224,10 @@ private:
   int done_;				//Motor done status passed to motor record
   int last_done_;			//Backup of done status at end of each poll.  Used to detect stop
   bool homing_;				//Is motor homing now
-  epicsTimeStamp stop_nowt_;		//Used to track length of motor stopped for.
-  epicsTimeStamp stop_begint_;		//Used to track length of motor stopped for.
+  bool jogAfterHome_;			//Is motor doing jah
+  bool stop_axis_;			//Poller will stop axis if true
+  epicsTimeStamp stop_nowt_;		//Used to track length of time motor stopped for.
+  epicsTimeStamp stop_begint_;		//Used to track length of time motor stopped for.
   double stoppedTime_;			//Time motor has been stopped for
   bool resetStoppedTime_;		//Request poll thread reset stopped time if done true
   epicsEventId stoppedTimeResetEventId_;//Signal that poller has completed reset stop time request

@@ -247,6 +247,25 @@
 //                  Improved CSAxis limit handling
 // 17/04/17 M.Clift
 //                  Fixed motor wont move initially after IOC start when part of CSAxis
+// 22/06/17 M.Clift
+//                  Removed kinematic variables
+//                  Removed ability to move related CSAxis at same time
+//                  Add CSAxis moves now support retries, backlash on individual motors aswell as on the CSAxis
+//                  Add motors to profile start move now supports backlash, retries
+//                  Add Jog after home move now supports backlash, retries
+//                  Add setpoint behaviour to CSAxis
+//                  Add HOMING_MONITOR PV for all axis
+//                  Fixed issue with motorStatusAtHome set 1 whilst motor on limit and limit_as_home is set 0
+//                  Add SSI encoder direction invert for open loop motors, and binary encoders
+//                  Fixed issue with home switch homing
+//                  Fixed issue programing home value after homing completion
+//                  Changed home value now specified in dial coordinates
+// 13/07/17 M.Clift
+//                  Add enforce CSAxis completion order rules
+//                  Add ability to move related CSAxis at same time when deferred moves true
+//                  Add unknown unsolicited messages now routed to controller message PV for display
+//                  Altered axis homeval now always 0 in dial coordinates
+//                  Removed home value from motor extras
 
 #include <stdio.h>
 #include <math.h>
@@ -408,7 +427,6 @@ GalilController::GalilController(const char *portName, const char *address, doub
   createParam(GalilOutputCompare1IncrString, asynParamFloat64, &GalilOutputCompareIncr_);
   createParam(GalilOutputCompareMessageString, asynParamOctet, &GalilOutputCompareMessage_);
 
-  createParam(GalilCSMotorVariableString, asynParamFloat64, &GalilCSMotorVariable_);
   createParam(GalilCSMotorForwardString, asynParamOctet, &GalilCSMotorForward_);
   createParam(GalilCSMotorReverseAString, asynParamOctet, &GalilCSMotorReverseA_);
   createParam(GalilCSMotorReverseBString, asynParamOctet, &GalilCSMotorReverseB_);
@@ -419,6 +437,9 @@ GalilController::GalilController(const char *portName, const char *address, doub
   createParam(GalilCSMotorReverseGString, asynParamOctet, &GalilCSMotorReverseG_);
   createParam(GalilCSMotorReverseHString, asynParamOctet, &GalilCSMotorReverseH_);
 
+  createParam(GalilMotorSetValString, asynParamFloat64, &GalilMotorSetVal_);
+  createParam(GalilMotorSetValEnableString, asynParamInt32, &GalilMotorSetValEnable_);
+  createParam(GalilMotorSetString, asynParamInt32, &GalilMotorSet_);
   createParam(GalilMotorStopGoString, asynParamInt32, &GalilMotorStopGo_);
 
   createParam(GalilSSIConnectedString, asynParamInt32, &GalilSSIConnected_);	
@@ -430,13 +451,13 @@ GalilController::GalilController(const char *portName, const char *address, doub
   createParam(GalilMotorConnectedString, asynParamInt32, &GalilMotorConnected_);
 
   createParam(GalilAfterLimitString, asynParamFloat64, &GalilAfterLimit_);
-  createParam(GalilHomeValueString, asynParamFloat64, &GalilHomeValue_);
   createParam(GalilWrongLimitProtectionString, asynParamInt32, &GalilWrongLimitProtection_);
   createParam(GalilWrongLimitProtectionActiveString, asynParamInt32, &GalilWrongLimitProtectionActive_);
 
   createParam(GalilUserOffsetString, asynParamFloat64, &GalilUserOffset_);
   createParam(GalilEncoderResolutionString, asynParamFloat64, &GalilEncoderResolution_);
   createParam(GalilUseEncoderString, asynParamInt32, &GalilUseEncoder_);
+  createParam(GalilStopPauseMoveGoString, asynParamInt32, &GalilStopPauseMoveGo_);
 
   createParam(GalilPremString, asynParamOctet, &GalilPrem_);
   createParam(GalilPostString, asynParamOctet, &GalilPost_);
@@ -460,7 +481,7 @@ GalilController::GalilController(const char *portName, const char *address, doub
   createParam(GalilAmpGainString, asynParamInt32, &GalilAmpGain_);
   createParam(GalilAmpCurrentLoopGainString, asynParamInt32, &GalilAmpCurrentLoopGain_);
   createParam(GalilAmpLowCurrentString, asynParamInt32, &GalilAmpLowCurrent_);
-
+  createParam(GalilHomingString, asynParamInt32, &GalilHoming_);
   createParam(GalilUserDataString, asynParamFloat64, &GalilUserData_);
   createParam(GalilUserDataDeadbString, asynParamFloat64, &GalilUserDataDeadb_);
 
@@ -483,6 +504,7 @@ GalilController::GalilController(const char *portName, const char *address, doub
   createParam(GalilAnalogOutRBVDeadbString, asynParamFloat64, &GalilAnalogOutRBVDeadb_);
 
   createParam(GalilDirectionString, asynParamInt32, &GalilDirection_);
+  createParam(GalilDmovString, asynParamInt32, &GalilDmov_);
   createParam(GalilSSICapableString, asynParamInt32, &GalilSSICapable_);
 
   createParam(GalilSSIInputString, asynParamInt32, &GalilSSIInput_);
@@ -491,6 +513,7 @@ GalilController::GalilController(const char *portName, const char *address, doub
   createParam(GalilSSIErrorBitsString, asynParamInt32, &GalilSSIErrorBits_);
   createParam(GalilSSITimeString, asynParamInt32, &GalilSSITime_);
   createParam(GalilSSIDataString, asynParamInt32, &GalilSSIData_);
+  createParam(GalilSSIInvertString, asynParamInt32, &GalilSSIInvert_);
   createParam(GalilErrorLimitString, asynParamFloat64, &GalilErrorLimit_);
   createParam(GalilErrorString, asynParamFloat64, &GalilError_);
   createParam(GalilOffOnErrorString, asynParamInt32, &GalilOffOnError_);
@@ -1132,29 +1155,28 @@ bool GalilController::anyMotorMoving()
 }
 
 /** Returns true if all motors in the provided list are moving
-  * Motors stopped less than off delay are still considered as moving here
+  * Takes retries and backlash into account
   * \param[in] Motor list
   */
-bool GalilController::allMotorsMoving()
+bool GalilController::allMotorsMoving(char *axes)
 {
-  int moving = 0;	//Moving status
+  int moving;		//Moving status
   GalilAxis *pAxis;	//GalilAxis instance
+  int dmov;		//GalilAxis dmov
   int i;		//Looping
-  double offdelay = 0.0;//Motor off delay
 
   //Look through motor list, if any not moving return false
-  for (i = 0; profileAxes_[i] != '\0'; i++)
+  for (i = 0; axes[i] != '\0'; i++)
 	{
 	//Retrieve the axis
-	pAxis = getAxis(profileAxes_[i] - AASCII);
+	pAxis = getAxis(axes[i] - AASCII);
 	//Process or skip
 	if (!pAxis) continue;
 	//Determine moving status
-	getIntegerParam(profileAxes_[i] - AASCII, motorStatusMoving_, &moving);
-	//Retrieve motor off delay
-	getDoubleParam(pAxis->axisNo_, GalilAutoOffDelay_, &offdelay);
-	//Motor considered stopped only if stopped time > offdelay seconds
-	if (!moving && pAxis->stoppedTime_ > offdelay) return false;
+	getIntegerParam(axes[i] - AASCII, motorStatusMoving_, &moving);
+	getIntegerParam(axes[i] - AASCII, GalilDmov_, &dmov);
+	//Motor considered stopped if not moving, and all retries, backlash completed
+	if (!moving && dmov) return false;
 	}
 
   //All the motors were moving
@@ -1172,13 +1194,16 @@ bool GalilController::motorsAtStart(double startp[])
   bool atStart = true;	//Are all motors in axes list moving or stopped without limit
   int moveMode;		//Move mode absolute or relative
   int moving;		//Axis moving status
+  int dmov;		//Axis done moving
   int fwd, rev;		//Axis fwd, rev limit status
   int axisNo;		//Axis number
-  double mtr_pos;	//Motor position
-  double enc_pos;	//Encoder position
   double readback;	//Axis position readback in egu
   double start;		//Desired motor start position in egu
   double eres, mres;	//Encoder, and motor resolution
+  double epos, mpos;	//Encoder, motor position
+  double off;		//User offset
+  int dir, dirm;	//Direction multiplier
+  int ueip;		//Use encoder if present
   double rdbd;		//Motor record retry deadband
   int i;		//Looping
 
@@ -1196,21 +1221,26 @@ bool GalilController::motorsAtStart(double startp[])
 	//If moveMode = Relative skip the axis
 	if (!moveMode) continue;
 	//Retrieve needed parameters
+	getIntegerParam(axisNo, GalilDmov_, &dmov);
 	getIntegerParam(axisNo, motorStatusMoving_, &moving);
 	getIntegerParam(axisNo, motorStatusLowLimit_, &rev);
 	getIntegerParam(axisNo, motorStatusHighLimit_, &fwd);
 	getDoubleParam(axisNo, motorResolution_, &mres);
 	getDoubleParam(axisNo, GalilEncoderResolution_, &eres);
 	getDoubleParam(axisNo, GalilMotorRdbd_, &rdbd);
-	getDoubleParam(axisNo, motorPosition_, &mtr_pos);
-	getDoubleParam(axisNo, motorEncoderPosition_, &enc_pos);
-	//Calculate axis readback in egu
-	//Is controller using main or auxillary encoder register
-	readback = (pAxis->ctrlUseMain_) ? (enc_pos * eres) : (mtr_pos * mres);
-	//Calculate the desired motor start position in egu
-	start = startp[axisNo] * mres;
+	getIntegerParam(axisNo, GalilUseEncoder_, &ueip);
+	getIntegerParam(axisNo, GalilDirection_, &dir);
+	getDoubleParam(axisNo, GalilUserOffset_, &off);
+	getDoubleParam(axisNo, motorEncoderPosition_, &epos);
+	getDoubleParam(axisNo, motorPosition_, &mpos);
+	//Calculate direction multiplier
+	dirm = (dir == 0) ? 1 : -1;
+	//Calculate readback in user coordinates
+	readback = (ueip) ? (epos * eres * dirm) + off : (mpos * mres * dirm) + off;
+	//Calculate the motor start position in user coordinates
+	start = (startp[axisNo] * mres * dirm) + off;
 	//Determine result
-	if ((!moving && (readback < start - rdbd || readback > start + rdbd)) || (rev || fwd)) 
+        if ((!moving && dmov && (readback < (start - rdbd))) || (!moving && dmov && (readback > (start + rdbd))) || (!moving && (rev || fwd)))
 		{
 		atStart = false;
 		break;
@@ -1220,7 +1250,10 @@ bool GalilController::motorsAtStart(double startp[])
   if (!atStart)
 	{
 	//Store message in paramList
-	sprintf(message, "Profile motor %c at %lf did not reach start %lf within retry deadband %lf", axisNo + AASCII, readback, start, rdbd);
+	if (rev || fwd)
+		sprintf(message, "Profile motor %c hit limit whilst moving to profile start position", axisNo + AASCII);
+	else
+		sprintf(message, "Profile motor %c at %2.4lf did not reach start %2.4lf within retry deadband %2.4lf", axisNo + AASCII, readback, start, rdbd);
 	setStringParam(profileExecuteMessage_, message);
 	}
 
@@ -2062,68 +2095,96 @@ asynStatus GalilController::motorsToProfileStartPosition(FILE *profFile, double 
   int i;				//Axis looping
   int axisNo;				//Axis number
   int moveMode[MAX_GALIL_AXES];  	//Move mode absolute or relative
-  double rdbd;				//Required mr attributes
-  double accl, velo, mres, eres;	//Required mr attributes
+  int moving;				//Axis moving status
+  double accl, velo, mres;		//Required mr attributes
   double velocity, acceleration;	//Used to move motors to start
   char message[MAX_GALIL_STRING_SIZE];	//Profile execute message
-  double readback;			//Readback controller is using
+  double begin_time;			//Time spent waiting for motion to begin
+  epicsTimeStamp lbegin_nowt_;		//Used to track length of time motor begin takes
+  epicsTimeStamp lbegin_begint_;	//Used to track length of time motor begin takes
   int status = asynSuccess;
 
   if (move)
-	{
-	//Update status
-	strcpy(message, "Moving motors to start position and buffering profile data...");
-	setStringParam(profileExecuteMessage_, message);
-	callParamCallbacks();
-	}
+     {
+     //Update status
+     strcpy(message, "Moving motors to start position and buffering profile data...");
+     setStringParam(profileExecuteMessage_, message);
+     callParamCallbacks();
+     }
 
   //If mode absolute, send motors to start position or stop them moving to start position
   for (i = 0; profileAxes_[i] != '\0'; i++)
-  	{
-	//Determine the axis number mentioned in profFile
-	axisNo = profileAxes_[i] - AASCII;
-	if (move) //Read profile start positions from file
-		fscanf(profFile, "%lf,", &startp[axisNo]);
-	//Retrieve GalilProfileMoveMode_ from ParamList
-	getIntegerParam(axisNo, GalilProfileMoveMode_, &moveMode[axisNo]);
-	//If moveMode = Relative skip move to start
-	if (!moveMode[axisNo]) continue;
-	//Retrieve axis instance
-	pAxis = getAxis(axisNo);
-	//Skip axis if not instantiated
-	if (!pAxis) continue;
-	//Retrieve needed mr attributes
-	getDoubleParam(axisNo, GalilMotorAccl_, &accl);
-	getDoubleParam(axisNo, GalilMotorVelo_, &velo);
-	getDoubleParam(axisNo, motorResolution_, &mres);
-	getDoubleParam(axisNo, GalilMotorRdbd_, &rdbd);
-	getDoubleParam(axisNo, GalilEncoderResolution_, &eres);
-	//Calculate deadband in motor steps
-	rdbd = rdbd/mres;
-	//Calculate velocity and acceleration in motor steps
-	velocity = fabs(velo/mres);
-	acceleration = fabs(velocity/accl);
-	if (move) //Move to first position in profile if moveMode = Absolute
-		{
-		//Is controller using main or auxillary encoder register
-		readback = (pAxis->ctrlUseMain_) ? pAxis->encoder_position_ : pAxis->motor_position_;
-		if (!(startp[axisNo] >= readback - rdbd && startp[axisNo] <= readback + rdbd))
-			status = pAxis->move(startp[axisNo], 0, 0, velocity, acceleration);
-		}
-	else    //Stop motor moving to start
-		pAxis->stop(acceleration);
-	if (status)
-		{
-		//Store message in paramList
-		sprintf(message, "Failed to move profile motor %c toward start position", pAxis->axisName_);
-		setStringParam(profileExecuteMessage_, message);
-		//break from the loop
-		break;
-		}
-	}
+     {
+     //Determine the axis number mentioned in profFile
+     axisNo = profileAxes_[i] - AASCII;
+     if (move) //Read profile start positions from file
+        fscanf(profFile, "%lf,", &startp[axisNo]);
+     //Retrieve GalilProfileMoveMode_ from ParamList
+     getIntegerParam(axisNo, GalilProfileMoveMode_, &moveMode[axisNo]);
+     //If moveMode = Relative skip move to start
+     if (!moveMode[axisNo]) continue;
+     //Retrieve axis instance
+     pAxis = getAxis(axisNo);
+     //Skip axis if not instantiated
+     if (!pAxis) continue;
+     //Retrieve needed mr attributes
+     getDoubleParam(axisNo, GalilMotorAccl_, &accl);
+     getDoubleParam(axisNo, GalilMotorVelo_, &velo);
+     getDoubleParam(axisNo, motorResolution_, &mres);
+     //Calculate velocity and acceleration in motor steps
+     velocity = fabs(velo/mres);
+     acceleration = fabs(velocity/accl);
+     if (move) //Move to first position in profile if moveMode = Absolute
+        {
+        //Check motor record settings before move
+        status = pAxis->checkMRSettings(false, pAxis->axisName_);
+        //Extra cautious here
+        //Check motor interlock before move
+        status |= pAxis->beginCheck("motorsToProfileStartPosition", 100, false);
+        if (!status)
+           {
+           //If all settings OK, do the move
+           if (!pAxis->moveThruMotorRecord(startp[axisNo], velocity, acceleration, false))
+              {
+              //Move success
+              //Default moving status
+              moving = 0;
+              //Unlock mutex so GalilAxis::move is called
+              unlock();
+              //Get time when attempt motor begin
+              epicsTimeGetCurrent(&lbegin_begint_);
+              while (!moving)//Allow time for motion to begin
+                 {
+                 //Retrieve moving status
+                 getIntegerParam(axisNo, motorStatusMoving_, &moving);
+                 if (!moving)
+                    {
+                    epicsThreadSleep(.001);
+                    epicsTimeGetCurrent(&lbegin_nowt_);
+                    //Calculate time begin has taken so far
+                    begin_time = epicsTimeDiffInSeconds(&lbegin_nowt_, &lbegin_begint_);
+                    if (begin_time > BEGIN_TIMEOUT)
+                       break;//Time is up, give up
+                    }
+                 }
+              lock();
+              }
+           }
+        }
+     else//Stop motor moving to start, prevent backlash, retries
+         pAxis->stop(acceleration);
+     if (status)
+        {
+        //Update profile execute message
+        sprintf(message, "Failed to move profile motor %c toward start position", pAxis->axisName_);
+        setStringParam(profileExecuteMessage_, message);
+        //break from the loop
+        break;
+        }
+     }
 
   if (move)  //Move file pointer down a line
-	fscanf(profFile, "\n");
+     fscanf(profFile, "\n");
 
   return (asynStatus)status;
 }
@@ -2238,6 +2299,8 @@ asynStatus GalilController::beginLinearGroupMotion(int coordsys, char coordName,
 
   //Execute motor record prem
   executePrem(axes);
+
+  getIntegerParam(coordsys, GalilCoordSysMoving_, &csmoving);
 
   //Begin the move
   //Get time when attempt motor begin
@@ -2538,7 +2601,7 @@ asynStatus GalilController::runProfile()
 		if (!profStarted && !atStart)
 			{
 			//Abort if motor stopped and not at start position, or limit
-			if (!allMotorsMoving())
+			if (!allMotorsMoving(profileAxes_))
 				status = motorsAtStart(startp) ? asynSuccess : asynError;
 			if (!anyMotorMoving())
 				{
@@ -2851,23 +2914,26 @@ asynStatus GalilController::prepSyncStartStopMoves(void)
            {
            //Deferred move found in this coordsys
            //Ensure motor is good to go
-           if (pAxis->beginCheck(functionName, pAxis->deferredVelocity_))
+           if (pAxis->beginCheck(functionName, pAxis->deferredVelocity_, false))
               {
               //Motor has problem, so turn off deferred move for this axis
               pAxis->deferredMove_ = false;
-              continue;
               }
-           //Store axis in coordinate system axes list
-           sprintf(axes, "%s%c", axes, pAxis->axisName_);
-           //Store axis relative move
-           sprintf(moves, "%s%.0lf", moves, pAxis->deferredPosition_);
-           //Sum vector acceleration, velocity for non zero move increments
-           if (rint(pAxis->deferredPosition_) != 0)
+           else
               {
-              //Add this motors' contribution to vector acceleration for this segment
-              vectorAcceleration += pow(pAxis->deferredAcceleration_, 2);
-              //Add this motors' contribution to vector velocity for this segment
-              vectorVelocity += pow(pAxis->deferredVelocity_, 2);
+              //Motor is ready to go
+              //Store axis in coordinate system axes list
+              sprintf(axes, "%s%c", axes, pAxis->axisName_);
+              //Store axis relative move
+              sprintf(moves, "%s%.0lf", moves, pAxis->deferredPosition_);
+              //Sum vector acceleration, velocity for non zero move increments
+              if (rint(pAxis->deferredPosition_) != 0)
+                 {
+                 //Add this motors' contribution to vector acceleration for this segment
+                 vectorAcceleration += pow(pAxis->deferredAcceleration_, 2);
+                 //Add this motors' contribution to vector velocity for this segment
+                 vectorVelocity += pow(pAxis->deferredVelocity_, 2);
+                 }
               }
            }
         //Add axis relative move separator character ',' as needed
@@ -2906,7 +2972,7 @@ asynStatus GalilController::beginGroupMotion(char *maxes, char *paxes)
   int moving = 0;			//Moving status
   double begin_time = 0;		//Time taken to begin
   bool fail = false;			//Fail flag
-  asynStatus status;			//Return status
+  asynStatus status = asynSuccess;	//Return status
   char allaxes[MAX_GALIL_AXES];		//Move axes, and prepareAxes list concatenated
 
   //Retrieve 1st motor GalilAxis instance
@@ -2929,35 +2995,64 @@ asynStatus GalilController::beginGroupMotion(char *maxes, char *paxes)
   if (sync_writeReadController() == asynSuccess)
      {
      unlock();
-     while (!moving) //Pause until 1st motor listed begins moving
+     while (!moving)//Allow time for motion to begin
         {
-        epicsThreadSleep(.001);
-        epicsTimeGetCurrent(&begin_nowt_);
-        //Calculate time begin has taken so far
-        begin_time = epicsTimeDiffInSeconds(&begin_nowt_, &begin_begint_);
-        if (begin_time > BEGIN_TIMEOUT)
-           {
-           fail = true;
-           break;  //Timeout, give up
-           }
-
         //Retrieve moving status
-        getIntegerParam(maxes[0] - AASCII, motorStatusMoving_, &moving);
+        moving = allMotorsInMotion(maxes);
+        if (!moving)
+           {
+           epicsThreadSleep(.001);
+           epicsTimeGetCurrent(&begin_nowt_);
+           //Calculate time begin has taken so far
+           begin_time = epicsTimeDiffInSeconds(&begin_nowt_, &begin_begint_);
+           if (begin_time > BEGIN_TIMEOUT)
+              {
+              fail = true;  //Time is up, give up
+              break;
+              }
+           }
         }
      lock();
      }
-  else  //Controller gave error at begin
+  else//Controller gave error at begin
      fail = true;
 
   if (fail)
      {
-     sprintf(mesg, "%s begin failure", functionName);
+     sprintf(mesg, "%s begin failure %s", functionName, maxes);
      //Set controller error mesg monitor
      setCtrlError(mesg);
      status = asynError;
      }
 
   return status;
+}
+
+/** Returns true if all motors in the provided list are moving
+  * Provides raw moving status direct from controller
+  * This function is not effected by deferredMoves true
+  * Called from beginGroupMotion
+  * \param[in] Motor list
+  */
+bool GalilController::allMotorsInMotion(char *axes)
+{
+  GalilAxis *pAxis;	//GalilAxis instance
+  int i;		//Looping
+
+  //Look through motor list, if any not moving return false
+  for (i = 0; axes[i] != '\0'; i++)
+	{
+	//Retrieve the axis
+	pAxis = getAxis(axes[i] - AASCII);
+	//Process or skip
+	if (!pAxis) continue;
+	//Determine moving status
+        if (!pAxis->inmotion_)
+           return false;
+        }
+
+  //All the motors were moving
+  return true;
 }
 
 /**
@@ -3012,7 +3107,7 @@ asynStatus GalilController::prepSyncStartOnlyMoves(void)
          {
          //Deferred move found
          //Check motor is good to go
-         if (pAxis->beginCheck(functionName, pAxis->deferredVelocity_))
+         if (pAxis->beginCheck(functionName, pAxis->deferredVelocity_, false))
             {
             //Motor has problem, so turn off deferred move for this axis
             pAxis->deferredMove_ = false;
@@ -3048,7 +3143,7 @@ asynStatus GalilController::setDeferredMoves(bool deferMoves)
   GalilCSAxis *pCSAxis;		//GalilCSAxis pointer
   unsigned axis;		//Axis looping
 
-  // If we are not ending deferred moves then return
+  //If we are not ending deferred moves then return
   if (deferMoves || !movesDeferred_)
      {
      movesDeferred_ = true;
@@ -3065,10 +3160,12 @@ asynStatus GalilController::setDeferredMoves(bool deferMoves)
   //Sync start only moves
   prepSyncStartOnlyMoves();
 
-  //All deferred moves have started.  Unset deferredMove flag on all CSAxis
+  //Clear deferredMove flag on all CSAxis
   for (axis = MAX_GALIL_AXES; axis < MAX_GALIL_AXES + MAX_GALIL_CSAXES; axis++)
      {
+     //Retrieve the CSAxis
      pCSAxis = getCSAxis(axis);
+     //Clear deferredMoves flag
      if (pCSAxis)
         pCSAxis->deferredMove_ = false;
      }
@@ -3403,12 +3500,12 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
   status = getAddress(pasynUser, &addr);
   if (status != asynSuccess) return(status);
 
-  //Check axis instance the easy way since no RIO commands in writeInt32
-  if (addr < MAX_GALIL_AXES)
+  //Check axis instance
+  if (addr < MAX_GALIL_AXES && !rio_)
      {
      if (!pAxis) return asynError;
      }
-  else
+  else if (!rio_)
      {
      if (!pCSAxis) return asynError;
      }
@@ -3554,15 +3651,14 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
 	{
 	//This is one of the last items pushed into driver at startup so flag
 	//Axis now ready for move commands
-	if (pAxis)
+	if (addr < MAX_GALIL_AXES)
 		{
-		pAxis->axisReady_ = true;	//Real motor
+		pAxis->axisReady_ = true;//Real motor
 		//Restore brake cmd state
-		if (addr < MAX_GALIL_AXES)
-			pAxis->restoreBrake();
+		pAxis->restoreBrake();
 		}
-	if (pCSAxis)
-		pCSAxis->axisReady_ = true;	//CS motor
+	else
+		pCSAxis->axisReady_ = true;//CS motor
 	}
   else if (function >= GalilSSIInput_ && function <= GalilSSIData_)
 	{
@@ -3574,6 +3670,10 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
 	if (ssicapable)
 		status = pAxis->set_ssi();
 	}
+  else if (function == GalilSSIInvert_)
+	{
+	pAxis->invert_ssi_ = (value == 0) ? false : true;
+        }
   else if (function == GalilOffOnError_)
 	{
 	sprintf(cmd_, "OE%c=%d", pAxis->axisName_, value);
@@ -3621,7 +3721,7 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
 	}
   else if (function == GalilAmpGain_)
 	{
-        int motorOff = 0;
+	int motorOff = 0;
 	//Retrieve motor off status
 	sprintf(cmd_, "MG _MO%c", pAxis->axisName_);
 	status = sync_writeReadController();
@@ -3913,16 +4013,19 @@ void GalilController::processUnsolicitedMesgs(void)
    ptrdiff_t index;		//Index where user variable found
    char *tokSave = NULL;	//Remaining tokens
    int uploading;		//Array uploading status
+   bool found;			//Found a user variable message
    int len;			//length of received message
 
    //Collect unsolicited message from controller
    len = unsolicitedQueue_.tryReceive(rawbuf, MAX_GALIL_STRING_SIZE);
-   //Terminate the buffer
-   rawbuf[len] = '\0';
 
    //Process the message
    if (len > 0)
       {
+      //Terminate the buffer
+      rawbuf[len] = '\0';
+      //Take backup before splitting into tokens
+      string rawbufOriginal = rawbuf;
       //Break message into tokens: name value name value    etc.
       charstr = epicsStrtok_r(rawbuf, " \r\n", &tokSave);
       while (charstr != NULL)
@@ -3955,7 +4058,6 @@ void GalilController::processUnsolicitedMesgs(void)
             if (charstr != NULL && pAxis)
                {
                value = atoi(charstr);
-
                //Process known messages
                //Motor homed message
                if (!abs(strcmp(mesg, "homed")))
@@ -3968,30 +4070,38 @@ void GalilController::processUnsolicitedMesgs(void)
                      pAxis->pollRequest_.send((void*)&MOTOR_HOMED, sizeof(int));
                      pAxis->homedSent_ = true;
                      }
+                  else
+                     {
+                     //Maintain homing asynParam that includes JAH
+                     //Homed failed, so dont do JAH
+                     setIntegerParam(GalilHoming_, 0);
+                     }
+                  //Set homing flag false
+                  //This homing flag does not include JAH
+                  pAxis->homing_ = false;
                   //Set motorRecord MSTA bit 15 motorStatusHomed_
                   //Homed is not part of Galil data record, we support it using Galil code and unsolicited messages instead
                   //We must use asynMotorAxis version of setIntegerParam to set MSTA bits for this MotorAxis
                   pAxis->setIntegerParam(motorStatusHomed_, value);
                   callParamCallbacks();
                   }
-
-               //Motor homing status message
-               if (!abs(strcmp(mesg, "home")))
-                  pAxis->homing_ = false;
                }
             }//Home related messages
          else
             {
-            //User variable messages
+            //Unknown or User variable message
+            //Default user variable message flag
+            found = false;
             //Retrieve the value
             charstr = epicsStrtok_r(NULL, " \r\n", &tokSave);
-            if (charstr != NULL)
+            if (charstr != NULL  && userVariables_.size())
                {
                //Attempt to find the user variable
                it = find(userVariables_.begin(), userVariables_.end(), mesg);
                if (it != userVariables_.end())
                   {
                   //User variable found
+                  found = true;
                   //Calculate exact index of user variable
                   index = it - userVariables_.begin();
                   //Grab the user defined record address
@@ -4002,6 +4112,17 @@ void GalilController::processUnsolicitedMesgs(void)
                   setDoubleParam(addr, GalilUserVar_, valuef);
                   callParamCallbacks(addr);
                   }
+               }
+            //Check for unknown message type
+            if (!found && userVariables_.size())
+               {
+               //Unknown message
+               //Display message in controller console
+               rawbufOriginal.erase(rawbufOriginal.find_last_not_of(" \n\r\t:")+1);
+               setCtrlError(rawbufOriginal.c_str());
+               callParamCallbacks();
+               //All complete
+               break;
                }
             }//User variable messages
          //Retrieve next mesg
@@ -4616,7 +4737,11 @@ asynStatus GalilController::arrayUpload(void)
   unsigned i, j;		//Looping
   char cmd[MAX_GALIL_STRING_SIZE];//Array upload command
   char buf[MAX_GALIL_STRING_SIZE];//Array upload raw data
+  char mesg[MAX_GALIL_STRING_SIZE];//Controller message
   char arrayName[MAX_FILENAME_LEN];//Array name on controller to upload
+
+  //Clear controller message
+  setCtrlError("");
 
   //Update arrayUpload status in paramList
   setIntegerParam(GalilUserArrayUpload_, 1);
@@ -4652,6 +4777,9 @@ asynStatus GalilController::arrayUpload(void)
                        {
                        //Error
                        done = true;
+                       sprintf(mesg, "Array upload failed, array name %s is unknown", arrayName);
+                       setCtrlError(mesg);
+                       callParamCallbacks();
                        status = asynError;
                        }
                     if (i > 0)//terminating characters

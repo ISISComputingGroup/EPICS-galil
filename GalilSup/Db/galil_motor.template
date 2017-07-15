@@ -178,6 +178,34 @@ record(bo,"$(P)$(M)_DIR_SP") {
 	field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_DIR")
 }
 
+# Require asynchronous record to monitor dmov
+# Due to threading issues in set/use calibration and dmov toggling
+record(calcout, "$(P)$(M)_DMOV_CALC") {
+	field(DESC, "Motor record DMOV")
+	field(INPA, "$(P)$(M).DMOV CP MS")
+	field(CALC, "A")
+	field(OOPT, "Every Time")
+	field(ODLY, ".001")
+	field(OUT,  "$(P)$(M)_DMOV_SP PP")
+}
+
+record(ao,"$(P)$(M)_DMOV_SP") {
+	field(DESC, "Motor record DMOV")
+	field(DOL,  "$(P)$(M).DMOV CP MS")
+	field(OMSL, "closed_loop")
+	field(SCAN, ".1 second")
+	field(DTYP, "asynInt32")
+	field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_DMOV")
+}
+
+record(ao,"$(P)$(M)_SET_SP") {
+	field(DESC, "Motor record SET")
+	field(DOL,  "$(P)$(M).SET CP MS")
+	field(OMSL, "closed_loop")
+	field(DTYP, "asynInt32")
+	field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_SET")
+}
+
 record(bo,"$(P)$(M)_UEIP_SP") {
 	field(DESC, "Motor record UEIP")
 	field(DOL,  "$(P)$(M).UEIP CP MS")
@@ -188,6 +216,14 @@ record(bo,"$(P)$(M)_UEIP_SP") {
 	field(ONAM, "Yes")
 	field(OSV,  "NO_ALARM")
 	field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_UEIP")
+}
+
+record(ao,"$(P)$(M)_SPMG_SP") {
+	field(DESC, "Motor record SPMG")
+	field(DTYP, "asynInt32")
+	field(OMSL, "closed_loop")
+	field(DOL,  "$(P)$(M).SPMG CP MS")
+	field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_SPMG")
 }
 
 record(stringout,"$(P)$(M)_PREM_CMD")
@@ -208,7 +244,30 @@ record(stringout,"$(P)$(M)_POST_CMD")
 	field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_POST")
 }
 
-#driver to mr command to stop/go
+#Motor homing status, including JAH
+record(bi,"$(P)$(M)_HOMING_STATUS")
+{
+	field(DESC, "Homing status")
+	field(DTYP, "asynInt32")
+	field(SCAN, "I/O Intr")
+	field(ZNAM, "No")
+   	field(ZSV,  "NO_ALARM")
+  	field(ONAM, "Yes")
+   	field(ZSV,  "NO_ALARM")
+   	field(INP,  "@asyn($(PORT),$(ADDR))MOTOR_HOMING")
+}
+
+#Overall/final homing status
+record(calcout,"$(P)$(M)_HOMING_MONITOR")
+{
+	field(DESC, "Homing status")
+	field(INPA, "$(P)$(M).HOMR CP MS")
+	field(INPB, "$(P)$(M).HOMF CP MS")
+	field(INPC, "$(P)$(M)_HOMING_STATUS CP MS")
+	field(CALC, "A || B || C")
+}
+
+#driver to mr SPMG field
 #motors in coordsys
 record(ai,"$(P)$(M)_STOPGO_MON")
 {
@@ -218,11 +277,42 @@ record(ai,"$(P)$(M)_STOPGO_MON")
 	field(INP,  "@asyn($(PORT),$(ADDR))MOTOR_STOPGO")
 }
 
-record(ao, "$(P)$(M)_STOPGO_CMD") 
+record(ao, "$(P)$(M)_STOPGO_CMD")
 {
-	field(OMSL, "closed_loop") 
+	field(OMSL, "closed_loop")
 	field(DOL,  "$(P)$(M)_STOPGO_MON CP MS")
-	field(OUT,  "$(P)$(M).SPMG CA")
+	field(OUT,  "$(P)$(M).SPMG PP")
+}
+
+#Below records are for writing values from driver to motor record
+#Enable record
+record(ai,"$(P)$(M)_MRSETVAL_ENABLE")
+{
+	field(DESC, "mr set val enable")
+	field(DTYP, "asynInt32")
+	field(SCAN, "I/O Intr")
+	field(VAL,  "0")
+	field(INP,  "@asyn($(PORT),$(ADDR))MOTOR_SETVAL_ENABLE")
+}
+
+#Write a new VAL to motor record
+record(ai,"$(P)$(M)_VALOUT_MON")
+{
+	field(DESC, "set mr VAL")
+	field(DTYP, "asynFloat64")
+	field(SCAN, "I/O Intr")
+	field(INP,  "@asyn($(PORT),$(ADDR))MOTOR_SET_VAL")
+}
+
+record(ao, "$(P)$(M)_VALOUT_SP")
+{
+	field(DESC, "set mr VAL")
+	field(OMSL, "closed_loop")
+	field(DOL,  "$(P)$(M)_VALOUT_MON CP MS")
+	field(DISV, "0")
+	field(SDIS, "$(P)$(M)_MRSETVAL_ENABLE CP MS")
+	field(OUT,  "$(P)$(M).VAL PP")
+	field(FLNK, "$(P)$(M)")
 }
 
 # end

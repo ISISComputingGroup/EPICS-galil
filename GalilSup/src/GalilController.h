@@ -26,7 +26,7 @@
 #define finite(x) _finite(x)
 #endif /* _WIN32/_WIN64 */
 
-#define BEGIN_TIMEOUT 2.5
+#define BEGIN_TIMEOUT 0.5
 #define AASCII 65
 #define IASCII 73
 #define QASCII 81
@@ -109,7 +109,6 @@
 #define GalilOutputCompare1IncrString	"OUTPUT_COMPARE_INCR"
 #define GalilOutputCompareMessageString	"OUTPUT_COMPARE_MESSAGE"
 
-#define GalilCSMotorVariableString	"CSMOTOR_KINEMATIC_VARIABLE"
 #define GalilCSMotorForwardString	"CSMOTOR_FORWARD_TRANSFORM"
 #define GalilCSMotorReverseAString	"CSMOTOR_REVERSEA_TRANSFORM"
 #define GalilCSMotorReverseBString	"CSMOTOR_REVERSEB_TRANSFORM"
@@ -120,6 +119,9 @@
 #define GalilCSMotorReverseGString	"CSMOTOR_REVERSEG_TRANSFORM"
 #define GalilCSMotorReverseHString	"CSMOTOR_REVERSEH_TRANSFORM"
 
+#define GalilMotorSetValString		"MOTOR_SET_VAL"
+#define GalilMotorSetValEnableString	"MOTOR_SETVAL_ENABLE"
+#define GalilMotorSetString		"MOTOR_SET"
 #define GalilMotorStopGoString		"MOTOR_STOPGO"
 #define GalilSSIConnectedString		"MOTOR_SSI_CONNECTED"
 #define GalilEncoderStallTimeString	"MOTOR_ENCODER_STALL_TIME"
@@ -127,13 +129,14 @@
 #define GalilMotorTypeString		"MOTOR_TYPE"
 #define GalilMotorConnectedString	"MOTOR_MCONN"
 #define GalilAfterLimitString		"MOTOR_EGUAFTER_LIMIT"
-#define GalilHomeValueString		"MOTOR_HOMEVAL"
 #define GalilWrongLimitProtectionString	"MOTOR_WLP"
 #define GalilWrongLimitProtectionActiveString	"MOTOR_WLP_ACTIVE"
 #define GalilUserOffsetString		"MOTOR_OFF"
 #define GalilEncoderResolutionString	"MOTOR_ERES"
 #define GalilDirectionString		"MOTOR_DIR"
+#define GalilDmovString			"MOTOR_DMOV"
 #define GalilUseEncoderString		"MOTOR_UEIP"
+#define GalilStopPauseMoveGoString	"MOTOR_SPMG"
 #define GalilPremString			"MOTOR_PREM"
 #define GalilPostString			"MOTOR_POST"
 #define GalilUseSwitchString 		"MOTOR_USESWITCH"
@@ -152,6 +155,7 @@
 #define GalilAmpGainString		"MOTOR_AMP_GAIN"
 #define GalilAmpCurrentLoopGainString	"MOTOR_AMP_CURRENTLOOP_GAIN"
 #define GalilAmpLowCurrentString	"MOTOR_AMP_LOWCURRENT"
+#define GalilHomingString		"MOTOR_HOMING"
 #define GalilUserDataString		"MOTOR_USER_DATA"
 #define GalilUserDataDeadbString	"MOTOR_USER_DATA_DEADB"
 
@@ -178,6 +182,7 @@
 #define GalilSSIErrorBitsString		"MOTOR_SSIERRBITS"
 #define GalilSSITimeString		"MOTOR_SSITIME"
 #define GalilSSIDataString		"MOTOR_SSIDATA"
+#define GalilSSIInvertString		"MOTOR_SSIINVERT"
 #define GalilErrorLimitString		"MOTOR_ERRLIM"
 #define GalilErrorString		"MOTOR_ERR"
 #define GalilOffOnErrorString		"MOTOR_OOE"
@@ -275,7 +280,7 @@ public:
   asynStatus beginPVTProfileMotion();
   asynStatus runProfile();
   bool anyMotorMoving();
-  bool allMotorsMoving();
+  bool allMotorsMoving(char *axes);
   bool motorsAtStart(double startp[]);
   asynStatus motorsToProfileStartPosition(FILE *profFile, double startp[], bool move);
   void profileGetSegsMoving(int profStarted, int coordsys, int *moving, int *segprocessed);
@@ -304,6 +309,7 @@ public:
   asynStatus setOutputCompare(int oc);
   asynStatus beginLinearGroupMotion(int coordsys, char coordName, const char *axes, bool profileAbort);
   asynStatus beginGroupMotion(char *maxes, char *paxes = (char *)"");
+  bool allMotorsInMotion(char *axes);
   //Execute motor record prem function for motor list
   void executePrem(const char *axes);
   //Execute auto motor power on, and brake off 
@@ -370,7 +376,6 @@ protected:
   int GalilOutputCompareIncr_;
   int GalilOutputCompareMessage_;
 
-  int GalilCSMotorVariable_;
   int GalilCSMotorForward_;
   int GalilCSMotorReverseA_;
   int GalilCSMotorReverseB_;
@@ -382,17 +387,20 @@ protected:
   int GalilCSMotorReverseH_;
 
   int GalilMotorStopGo_;
+  int GalilMotorSetVal_;
+  int GalilMotorSetValEnable_;
+  int GalilMotorSet_;
   int GalilEStallTime_;
   int GalilStepSmooth_;
   int GalilMotorType_;
   int GalilMotorConnected_;
   int GalilAfterLimit_;
-  int GalilHomeValue_;
   int GalilWrongLimitProtection_;
   int GalilWrongLimitProtectionActive_;
   int GalilUserOffset_;
   int GalilEncoderResolution_;
   int GalilUseEncoder_;
+  int GalilStopPauseMoveGo_;
   int GalilPrem_;
   int GalilPost_;
   int GalilUseSwitch_;
@@ -411,6 +419,7 @@ protected:
   int GalilAmpGain_;
   int GalilAmpCurrentLoopGain_;
   int GalilAmpLowCurrent_;
+  int GalilHoming_;
   int GalilUserData_;
   int GalilUserDataDeadb_;
 
@@ -429,6 +438,7 @@ protected:
   int GalilBinaryOut_;
   int GalilBinaryOutRBV_;
   int GalilDirection_;
+  int GalilDmov_;
   int GalilSSIConnected_;
   int GalilSSICapable_;
   int GalilSSIInput_;
@@ -437,6 +447,7 @@ protected:
   int GalilSSIErrorBits_;
   int GalilSSITime_;
   int GalilSSIData_;
+  int GalilSSIInvert_;
   int GalilErrorLimit_;
   int GalilError_;
   int GalilOffOnError_;
