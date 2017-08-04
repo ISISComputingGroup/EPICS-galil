@@ -94,8 +94,6 @@ static bool libverPrinted = false;
 #define MAX_RETRIES 3
 #define ALLOWED_TIMEOUTS 5
 
-#define ALLOWED_DR_TIMEOUTS 10
-
 #define MAX_FILENAME_LEN 256
 #define MAX_MESSAGE_LEN 256
 
