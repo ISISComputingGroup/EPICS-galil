@@ -352,9 +352,10 @@ void GalilController::connectManager(void)
   require_connect = false;
 
   //If we have received allowed timeouts
-  if (consecutive_timeouts_ > ALLOWED_TIMEOUTS)
+  if (consecutive_timeouts_ > ALLOWED_TIMEOUTS) {
 	 require_connect = true;	
-     async_records_ = false;
+	 async_records_ = false;
+  }
 
   //If not connected
   if (gco_ == NULL)
@@ -2909,7 +2910,7 @@ asynStatus GalilController::writeReadController(const char *caller)
 			strncpy(resp_, gco_->command(strcmd).c_str(), sizeof(resp_));
 			resp_[sizeof(resp_)-1] = '\0';
 			//No exception = success
-			done = true;
+			done = true;			
 		 	consecutive_timeouts_ = 0;
 			status = asynSuccess;
 			}
