@@ -356,7 +356,7 @@ void GalilController::connectManager(void)
   //If we have received allowed timeouts
   if (consecutive_timeouts_ > ALLOWED_TIMEOUTS) {
 	 require_connect = true;	
-	 // async_records_ = false;
+	 async_records_ = false;
   }
 
   //If not connected
