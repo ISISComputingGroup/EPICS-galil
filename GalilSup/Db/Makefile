@@ -47,5 +47,5 @@ galil_userdef_records8.template$(DEP) : $(TOP)/GalilSup/Db/galil_userdef_records
 endif
 
 galil_userdef_records8.template ../O.Common/galil_userdef_records8.template : $(TOP)/GalilSup/Db/galil_userdef_records.template $(TOP)/GalilSup/Db/galil_userdef_records8.substitutions
-	$(MSI) -o $@ -S $(TOP)/GalilSup/Db/galil_userdef_records8.substitutions $(TOP)/GalilSup/Db/galil_userdef_records.template
+	$(MSI3_15) -o $@ -S $(TOP)/GalilSup/Db/galil_userdef_records8.substitutions $(TOP)/GalilSup/Db/galil_userdef_records.template
 
