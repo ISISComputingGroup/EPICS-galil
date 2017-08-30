@@ -30,17 +30,22 @@ DB += galil_userdef_records8.template
 # galil_Muon_Slits is a routine used by the Muons
 
 # Example galil code templates
+GMC += ReadMe.md
 GMC += galil_Default_Footer.gmc  galil_Default_Header.gmc  galil_Home_ForwLimit.gmc  galil_Home_ForwLimit_Home.gmc
 GMC += galil_Home_Home.gmc  galil_Home_Home+FIneg.gmc  galil_Home_Home+FIpos.gmc  galil_Home_RevLimit.gmc
 GMC += galil_Home_RevLimit_Home.gmc  galil_Piezo_Home.gmc  galil_Home_ForwLimit+FIneg.gmc  galil_Home_RevLimit+FIpos.gmc
 GMC += galil_Home_Pin_Hole_Selector.gmc  galil_Home_Thread.gmc  galil_Home_Dummy_Axis.gmc
-GMC += galil_Home_FIpos.gmc galil_Home_FIneg.gmc galil_Muon_Slits.gmc
-
+GMC += galil_Home_FIpos.gmc galil_Home_FIneg.gmc galil_Muon_Slits.gmc 
+# Dummy routines mainly used for testing
+GMC += galil_Home_Dummy_Do_Nothing.gmc galil_Home_Dummy_Power_Light.gmc
 
 include $(TOP)/configure/RULES
 #----------------------------------------
 #  ADD RULES AFTER THIS LINE
+ifneq ($(BASE3_14),YES)
+galil_userdef_records8.template$(DEP) : $(TOP)/GalilSup/Db/galil_userdef_records.template $(TOP)/GalilSup/Db/galil_userdef_records8.substitutions
+endif
 
 galil_userdef_records8.template ../O.Common/galil_userdef_records8.template : $(TOP)/GalilSup/Db/galil_userdef_records.template $(TOP)/GalilSup/Db/galil_userdef_records8.substitutions
-	$(MSI) -o $@ -S $(TOP)/GalilSup/Db/galil_userdef_records8.substitutions $(TOP)/GalilSup/Db/galil_userdef_records.template
+	$(MSI3_15) -o $@ -S $(TOP)/GalilSup/Db/galil_userdef_records8.substitutions $(TOP)/GalilSup/Db/galil_userdef_records.template
 
