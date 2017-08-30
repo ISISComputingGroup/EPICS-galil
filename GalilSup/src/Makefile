@@ -68,6 +68,14 @@ Galil_DIR = $(LIBGALIL)/lib/$(EPICS_HOST_ARCH)
 GalilSupport_SYS_LIBS_Linux += Galil
 BIN_INSTALLS_Linux += $(wildcard $(LIBGALIL)/lib/$(EPICS_HOST_ARCH)/*.so.*)
 
+PROD_IOC += GalilDumpPos
+GalilDumpPos_SRCS += GalilDumpPos.cpp
+GalilDumpPos_LIBS_WIN32 += Galil1
+GalilDumpPos_SYS_LIBS_WIN32 += delayimp
+GalilDumpPos_LDFLAGS_WIN32 += /DELAYLOAD:Galil1.dll
+GalilDumpPos_LIBS += $(EPICS_BASE_IOC_LIBS)
+GalilDumpPos_SYS_LIBS_Linux += Galil
+
 include $(TOP)/configure/RULES
 #----------------------------------------
 #  ADD RULES AFTER THIS LINE
