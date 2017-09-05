@@ -355,7 +355,7 @@ void GalilController::connectManager(void)
   require_connect = false;
 
   //If we have received allowed timeouts
-  if (consecutive_acquire_timeouts_ > ALLOWED_TIMEOUTS) {
+  if (consecutive_acquire_timeouts_ > ALLOWED_TIMEOUTS || consecutive_read_timeouts_ > ALLOWED_TIMEOUTS) {
 	 require_connect = true;	
 	 async_records_ = false;
   }
