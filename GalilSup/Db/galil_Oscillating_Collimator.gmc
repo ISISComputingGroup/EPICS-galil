@@ -1,0 +1,64 @@
+'************LET Collimator*********
+'***********************************
+'DETERMINE INITIAL POSITION
+'***********************************
+#HOMER
+'*******STEP 1 - Retract Motor******
+mode="I"
+count=0
+MT~a=2
+DC~a=1024;AC~a=1024;SH~a
+JP #HOME, @IN[7]=1
+JG~a=250
+mode="H"
+BG~a
+#INI
+JP #INI, @IN[7]<>1
+WT 100
+ST~a
+AM~a
+'
+#HOME
+'*******STEP 2 - Find Analogue Home*******
+mode="H"
+AC~a=67107840;DC~a=1024;JG~a=-250
+BG~a
+#HEO
+JP #HEO, @IN[7]=1
+ST~a
+AM~a
+WT100
+'
+AC~a=1024;DC~a= 67107840;JG~a= 20
+BG~a
+#HR
+JP #HR, @IN[7]<>1
+ST~a
+AM~a
+WT1000
+DP~a=0
+WT1000
+'
+#OSCILSU
+'****Step 3 - Oscillation Setup*******
+mode="O"
+count=0
+AC~a=accel;DC~a=accel;SP~a=vel
+SH~a
+PA~a=-dist/2
+MC~a
+'
+#OSCIL
+'****Step 4 - Oscillations************
+time1=TIME
+PA~a=dist/2;BG~a;
+#CHECK1
+JP #CHECK1, @IN[7]=0
+check=_RP~a
+AM~a
+PA~a=-dist/2;BG~a;AM~a
+count=count+1
+time=TIME-time1
+'JP #HOMER, check>125
+JP#OSCIL
+EN
