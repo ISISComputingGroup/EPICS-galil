@@ -4,13 +4,13 @@
 '***********************************
 #HOMER
 '*******STEP 1 - Retract Motor******
-mode="I"
+mode="0"
 count=0
 MT~a=2
 DC~a=1024;AC~a=1024;SH~a
 JP #HOME, @IN[7]=1
 JG~a=250
-mode="H"
+mode="1"
 BG~a
 #INI
 JP #INI, @IN[7]<>1
@@ -20,7 +20,7 @@ AM~a
 '
 #HOME
 '*******STEP 2 - Find Analogue Home*******
-mode="H"
+mode="1"
 AC~a=67107840;DC~a=1024;JG~a=-250
 BG~a
 #HEO
@@ -41,7 +41,7 @@ WT1000
 '
 #OSCILSU
 '****Step 3 - Oscillation Setup*******
-mode="O"
+mode="2"
 count=0
 AC~a=accel;DC~a=accel;SP~a=vel
 SH~a
