@@ -3034,20 +3034,20 @@ bool GalilController::checkGalilThreads()
 }
 
 /*--------------------------------------------------------------*/
-/* Should just remove leading and trailing whitespace from      */
-/* each line of the string. For practical purposes though       */
-/* just removing all white space allows for testing functional  */
-/* equivalence.                                                 */
+/* Remove tabs, leading and trailing white space                */
 /*--------------------------------------------------------------*/
 string GalilController::trimWhitespace(string s)
 {
-	s = findReplace(s, " ", "");
-	s = findReplace(s, "\t", "");
+	s = findReplace(s, "\t", "    ");
+	s = findReplace(s, " \r", "\r");
+	s = findReplace(s, "\r ", "\r");
+	s = findReplace(s, " \n", "\n");
+	s = findReplace(s, "\n ", "\n");
 	return s;
 }
 
 /*--------------------------------------------------------------*/
-/* Find and replace text in string  */
+/* Find and replace text in string                              */
 /*--------------------------------------------------------------*/
 string GalilController::findReplace(string s, const string &toReplace, const string &replaceWith)
 {
@@ -3058,16 +3058,16 @@ string GalilController::findReplace(string s, const string &toReplace, const str
 }
 
 /*--------------------------------------------------------------*/
-/* Remove non-functional elements from the code   */
+/* Remove non-functional elements from the code                 */
 /*--------------------------------------------------------------*/
-string GalilController::compressCode(string s){
-	code = trimWhitespace(code);
+string GalilController::compressCode(string code){
 	code = findReplace(code, "\r", "");
+	code = trimWhitespace(code);
 	return code;
 }
 
 /*--------------------------------------------------------------*/
-/* Compare old code to new code   */
+/* Compare old code to new code                                 */
 /*--------------------------------------------------------------*/
 int GalilController::compareCode(const string& dc, const string& uc)
 {
@@ -3075,7 +3075,7 @@ int GalilController::compareCode(const string& dc, const string& uc)
 }
 
 /*--------------------------------------------------------------*/
-/* Start the card requested by user   */
+/* Start the card requested by user                             */
 /*--------------------------------------------------------------*/
 void GalilController::GalilStartController(char *code_file, int burn_program, int display_code, unsigned thread_mask)
 {
