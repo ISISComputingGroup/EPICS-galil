@@ -357,6 +357,11 @@ private:
 
   char cmd_[MAX_GALIL_STRING_SIZE];     //holds the assembled Galil cmd string
   char resp_[MAX_GALIL_STRING_SIZE];    //Response from Galil controller
+  
+  static int compareCode(const std::string& dc, const std::string& uc);
+  static std::string compressCode(std::string s);
+  static std::string findReplace(std::string s, const std::string& toFind, const std::string& toReplace);
+  static std::string trimWhitespace(std::string s);
 
 					//Stores the motor enable disable interlock digital IO setup, only first 8 digital in ports supported
   struct Galilmotor_enables motor_enables_[8];

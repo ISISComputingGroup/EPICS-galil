@@ -3032,6 +3032,48 @@ bool GalilController::checkGalilThreads()
 			}
             return result;
 }
+
+/*--------------------------------------------------------------*/
+/* Should just remove leading and trailing whitespace from      */
+/* each line of the string. For practical purposes though       */
+/* just removing all white space allows for testing functional  */
+/* equivalence.                                                 */
+/*--------------------------------------------------------------*/
+string GalilController::trimWhitespace(string s)
+{
+	s = findReplace(s, " ", "");
+	s = findReplace(s, "\t", "");
+	return s;
+}
+
+/*--------------------------------------------------------------*/
+/* Find and replace text in string  */
+/*--------------------------------------------------------------*/
+string GalilController::findReplace(string s, const string &toReplace, const string &replaceWith)
+{
+	while(s.find(toReplace) != std::string::npos) {
+		s = s.replace(s.find(toReplace), toReplace.length(), replaceWith);
+	}
+	return s;
+}
+
+/*--------------------------------------------------------------*/
+/* Remove non-functional elements from the code   */
+/*--------------------------------------------------------------*/
+string GalilController::compressCode(string s){
+	code = trimWhitespace(code);
+	code = findReplace(code, "\r", "");
+	return code;
+}
+
+/*--------------------------------------------------------------*/
+/* Compare old code to new code   */
+/*--------------------------------------------------------------*/
+int GalilController::compareCode(const string& dc, const string& uc)
+{
+	return compressCode(dc).compare(compressCode(uc));
+}
+
 /*--------------------------------------------------------------*/
 /* Start the card requested by user   */
 /*--------------------------------------------------------------*/
@@ -3124,7 +3166,7 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
 		dc.erase (std::remove(dc.begin(), dc.end(), '\r'), dc.end());
 
 		/*If code we wish to download differs from controller current code then download the new code*/
-		if (dc.compare(uc) != 0 && dc.compare("") != 0)
+		if (compareCode(dc, uc) && dc.compare("") != 0)
 			{
 			//Change \n to \r (Galil Communications Library expects \r separated lines)
 			std::replace(dc.begin(), dc.end(), '\n', '\r');
