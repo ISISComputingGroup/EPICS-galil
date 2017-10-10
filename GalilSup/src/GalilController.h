@@ -185,7 +185,7 @@ public:
   //asynStatus readbackProfile();
 
   /* These are the methods that are new to this class */
-  void GalilStartController(char *code_file, int eeprom_write, int display_code, unsigned thread_mask);
+  void GalilStartController(char *code_file, int eeprom_write, int display_code, unsigned thread_mask, int quiet_start);
   void connectManager(void);
   void connect(void);
   void disconnect(void);
@@ -361,7 +361,9 @@ private:
   static int compareCode(const std::string& dc, const std::string& uc);
   static std::string compressCode(std::string s);
   static std::string findReplace(std::string s, const std::string& toFind, const std::string& toReplace);
-  static std::string trimWhitespace(std::string s);
+  
+  void stopThreads();
+  void stopAxes();
 
 					//Stores the motor enable disable interlock digital IO setup, only first 8 digital in ports supported
   struct Galilmotor_enables motor_enables_[8];

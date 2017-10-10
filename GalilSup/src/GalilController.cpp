@@ -570,52 +570,12 @@ void GalilController::connected(void)
 		setIntegerParam(GalilSSICapable_, 0);
 	else
 		setIntegerParam(GalilSSICapable_, 1);
-	
-	//Determine number of threads supported
-	//RIO
-	numThreads_ = (strncmp(model_,"RIO",3) == 0)? 4 : numThreads_;
-	//DMC4 range
-	if ((model_[0] == 'D' && model_[3] == '4'))
-		numThreads_ = 8;
-	//DMC2 range
-	numThreads_ = (model_[3] == '2')? 8 : numThreads_;
-	//DMC1 range
-	numThreads_ = (model_[3] == '1')? 2 : numThreads_;
-
-	//Stop all threads running on the controller
-	for (i=0;i<numThreads_;i++)
-		{
-		sprintf(cmd_, "HX%d",i);
-		writeReadController(functionName);
-		}
-
-	//Stop all moving motors, and turn all motors off
-	for (i=0;i<numAxesMax_;i++)
-		{
-		//Query moving status
-		sprintf(cmd_, "MG _BG%c", (i + AASCII));
-		writeReadController(functionName);
-		if (atoi(resp_))
-			{
-			//Stop moving motor
-			sprintf(cmd_, "ST%c", (i + AASCII));
-			writeReadController(functionName);
-			//Allow time for motor stop
-		        epicsThreadSleep(1.0);
-			//Ensure home process is stopped
-			sprintf(cmd_, "home%c=0", (i + AASCII));
-			writeReadController(functionName);
-			}
-		//This is now done in via PINI of autosaved $(M)_ON_CMD PV 
-		// sprintf(cmd_, "MO%c", (i + AASCII));
-		// writeReadController(functionName);
-		}
 
 	//Has code for the GalilController been assembled
 	if (code_assembled_)
 		{
 	        //Deliver and start the code on controller
-		GalilStartController(code_file_, burn_program_, 0, thread_mask_);
+		GalilStartController(code_file_, burn_program_, 0, thread_mask_, 0);
 		}
 	if (try_async_)
 	{
@@ -3034,19 +2994,6 @@ bool GalilController::checkGalilThreads()
 }
 
 /*--------------------------------------------------------------*/
-/* Remove tabs, leading and trailing white space                */
-/*--------------------------------------------------------------*/
-string GalilController::trimWhitespace(string s)
-{
-	s = findReplace(s, "\t", "    ");
-	s = findReplace(s, " \r", "\r");
-	s = findReplace(s, "\r ", "\r");
-	s = findReplace(s, " \n", "\n");
-	s = findReplace(s, "\n ", "\n");
-	return s;
-}
-
-/*--------------------------------------------------------------*/
 /* Find and replace text in string                              */
 /*--------------------------------------------------------------*/
 string GalilController::findReplace(string s, const string &toReplace, const string &replaceWith)
@@ -3061,8 +3008,15 @@ string GalilController::findReplace(string s, const string &toReplace, const str
 /* Remove non-functional elements from the code                 */
 /*--------------------------------------------------------------*/
 string GalilController::compressCode(string code){
-	code = findReplace(code, "\r", "");
-	code = trimWhitespace(code);
+	code = findReplace(code, "\r ", "");
+	// Tabs to space
+	code = findReplace(code, "\t", "    ");
+	// Trailing whitespace
+	code = findReplace(code, " \n", "\n");
+	// Leading whitespace
+	code = findReplace(code, "\n ", "\n");
+	// Blank lines
+	code = findReplace(code, "\n\n", "\n");
 	return code;
 }
 
@@ -3075,9 +3029,63 @@ int GalilController::compareCode(const string& dc, const string& uc)
 }
 
 /*--------------------------------------------------------------*/
+/* Halt all threads                                             */
+/*--------------------------------------------------------------*/
+void GalilController::stopThreads()
+{		
+	const char *functionName = "stopThreads";
+	//Determine number of threads supported
+	//RIO
+	numThreads_ = (strncmp(model_,"RIO",3) == 0)? 4 : numThreads_;
+	//DMC4 range
+	if ((model_[0] == 'D' && model_[3] == '4'))
+		numThreads_ = 8;
+	//DMC2 range
+	numThreads_ = (model_[3] == '2')? 8 : numThreads_;
+	//DMC1 range
+	numThreads_ = (model_[3] == '1')? 2 : numThreads_;
+
+	//Stop all threads running on the controller
+	for (int i=0;i<numThreads_;i++)
+		{
+		sprintf(cmd_, "HX%d",i);
+		writeReadController(functionName);
+		}
+}
+
+/*--------------------------------------------------------------*/
+/* Stop all axes                                                */
+/*--------------------------------------------------------------*/
+void GalilController::stopAxes()
+{	
+	const char *functionName = "stopAxes";
+	//Stop all moving motors, and turn all motors off
+	for (int i=0;i<numAxesMax_;i++)
+		{
+		//Query moving status
+		sprintf(cmd_, "MG _BG%c", (i + AASCII));
+		writeReadController(functionName);
+		if (atoi(resp_))
+			{
+			//Stop moving motor
+			sprintf(cmd_, "ST%c", (i + AASCII));
+			writeReadController(functionName);
+			//Allow time for motor stop
+				epicsThreadSleep(1.0);
+			//Ensure home process is stopped
+			sprintf(cmd_, "home%c=0", (i + AASCII));
+			writeReadController(functionName);
+			}
+		//This is now done in via PINI of autosaved $(M)_ON_CMD PV 
+		// sprintf(cmd_, "MO%c", (i + AASCII));
+		// writeReadController(functionName);
+		}
+}
+
+/*--------------------------------------------------------------*/
 /* Start the card requested by user                             */
 /*--------------------------------------------------------------*/
-void GalilController::GalilStartController(char *code_file, int burn_program, int display_code, unsigned thread_mask)
+void GalilController::GalilStartController(char *code_file, int burn_program, int display_code, unsigned thread_mask, int quiet_start)
 {
 	const char *functionName = "GalilStartController";
 	int homed[MAX_GALIL_AXES];			//Backup of homed status
@@ -3164,9 +3172,20 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
 
 		//Remove the \r characters
 		dc.erase (std::remove(dc.begin(), dc.end(), '\r'), dc.end());
+		
+		int code_changed = compareCode(dc, uc) && dc.compare("") != 0;
+		
+		if (code_changed || !quiet_start) {
+			stopThreads();
+			stopAxes();
+		}
+		else
+		{
+			printf("\nControl code and quiet start requested. Threads will not be restarted\n");
+		}
 
 		/*If code we wish to download differs from controller current code then download the new code*/
-		if (compareCode(dc, uc) && dc.compare("") != 0)
+		if (code_changed)
 			{
 			//Change \n to \r (Galil Communications Library expects \r separated lines)
 			std::replace(dc.begin(), dc.end(), '\n', '\r');
@@ -3986,12 +4005,14 @@ extern "C" asynStatus GalilCreateCSAxes(const char *portName,     //specify whic
   * \param[in] burn_program      Burn program to EEPROM
   * \param[in] display_code	 Display code options
   * \param[in] thread_mask	 Indicates which threads to expect running after code file has been delivered and thread 0 has been started. Bit 0 = thread 0 etc.
+  * \param[in] quiet_start	 Don't stop threads and motors if control code is unchanged.
   */
 extern "C" asynStatus GalilStartController(const char *portName,        	//specify which controller by port name
 					   const char *code_file,
 					   int burn_program,
 					   int display_code, 
-					   unsigned thread_mask)
+					   unsigned thread_mask,
+					   int quiet_start)
 {
   GalilController *pC;
   static const char *functionName = "GalilStartController";
@@ -4006,7 +4027,7 @@ extern "C" asynStatus GalilStartController(const char *portName,        	//speci
   }
   pC->lock();
   //Call GalilController::GalilStartController to do the work
-  pC->GalilStartController((char *)code_file, burn_program, display_code, thread_mask);
+  pC->GalilStartController((char *)code_file, burn_program, display_code, thread_mask, quiet_start);
   pC->unlock();
   return asynSuccess;
 }
@@ -4101,17 +4122,19 @@ static const iocshArg GalilStartControllerArg1 = {"Code file", iocshArgString};
 static const iocshArg GalilStartControllerArg2 = {"Burn program", iocshArgInt};
 static const iocshArg GalilStartControllerArg3 = {"Display code", iocshArgInt};
 static const iocshArg GalilStartControllerArg4 = {"Thread mask", iocshArgInt};
+static const iocshArg GalilStartControllerArg5 = {"Quiet start", iocshArgInt};
 static const iocshArg * const GalilStartControllerArgs[] = {&GalilStartControllerArg0,
                                                             &GalilStartControllerArg1,
                                                             &GalilStartControllerArg2,
                                                             &GalilStartControllerArg3,
-                                                            &GalilStartControllerArg4};
+                                                            &GalilStartControllerArg4,
+                                                            &GalilStartControllerArg5};
                                                              
-static const iocshFuncDef GalilStartControllerDef = {"GalilStartController", 5, GalilStartControllerArgs};
+static const iocshFuncDef GalilStartControllerDef = {"GalilStartController", 6, GalilStartControllerArgs};
 
 static void GalilStartControllerCallFunc(const iocshArgBuf *args)
 {
-  GalilStartController(args[0].sval, args[1].sval, args[2].ival, args[3].ival, (unsigned)args[4].ival);
+  GalilStartController(args[0].sval, args[1].sval, args[2].ival, args[3].ival, (unsigned)args[4].ival, args[5].ival);
 }
 
 //Construct GalilController iocsh function register
