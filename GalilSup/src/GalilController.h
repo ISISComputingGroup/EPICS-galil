@@ -149,7 +149,7 @@ struct Galilmotor_enables {
 
 class GalilController : public asynMotorController {
 public:
-  GalilController(const char *portName, const char *address, double updatePeriod);
+  GalilController(const char *portName, const char *address, double updatePeriod, int quiet_start);
   
   /* These are the methods that we override from asynMotorController */
   asynStatus poll(void);
@@ -185,7 +185,7 @@ public:
   //asynStatus readbackProfile();
 
   /* These are the methods that are new to this class */
-  void GalilStartController(char *code_file, int eeprom_write, int display_code, unsigned thread_mask, int quiet_start);
+  void GalilStartController(char *code_file, int eeprom_write, int display_code, unsigned thread_mask);
   void connectManager(void);
   void connect(void);
   void disconnect(void);
@@ -364,6 +364,7 @@ private:
   
   void stopThreads();
   void stopAxes();
+  int quiet_start_;
 
 					//Stores the motor enable disable interlock digital IO setup, only first 8 digital in ports supported
   struct Galilmotor_enables motor_enables_[8];

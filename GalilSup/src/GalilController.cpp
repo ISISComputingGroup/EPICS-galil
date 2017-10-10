@@ -126,7 +126,7 @@ static void myHookFunction(initHookState state)
   * \param[in] updatePeriod  	 The time between polls when any axis is moving 
   *                              If (updatePeriod < 0), polled/synchronous at abs(updatePeriod) is done regardless of bus type
   */
-GalilController::GalilController(const char *portName, const char *address, double updatePeriod)
+GalilController::GalilController(const char *portName, const char *address, double updatePeriod, int quietStart)
   :  asynMotorController(portName, (int)(MAX_GALIL_AXES + MAX_GALIL_CSAXES), (int)NUM_GALIL_PARAMS,	//MAX_GALIL_AXES paramLists are needed for binary IO at all times
                          (int)(asynInt32Mask | asynFloat64Mask | asynUInt32DigitalMask | asynOctetMask | asynDrvUserMask), 
                          (int)(asynInt32Mask | asynFloat64Mask | asynUInt32DigitalMask | asynOctetMask),
@@ -274,6 +274,8 @@ GalilController::GalilController(const char *portName, const char *address, doub
   strcpy(limit_code_, "");
   strcpy(digital_code_, "");
   strcpy(card_code_, "");
+  // Store startup mode
+  quiet_start_ = quietStart;
  
   if (updatePeriod < 0) {
       try_async_ = false;
@@ -570,12 +572,21 @@ void GalilController::connected(void)
 		setIntegerParam(GalilSSICapable_, 0);
 	else
 		setIntegerParam(GalilSSICapable_, 1);
+	
+	if (quiet_start_==0)
+	{
+		cout << "Stopping running threads and moving axes." << endl;
+		stopThreads();
+		stopAxes();
+	}
+	else
+		cout << "Quiet start requested. Running threads and moving axes will not be stopped." << endl;
 
 	//Has code for the GalilController been assembled
 	if (code_assembled_)
 		{
 	        //Deliver and start the code on controller
-		GalilStartController(code_file_, burn_program_, 0, thread_mask_, 0);
+		GalilStartController(code_file_, burn_program_, 0, thread_mask_);
 		}
 	if (try_async_)
 	{
@@ -3085,7 +3096,7 @@ void GalilController::stopAxes()
 /*--------------------------------------------------------------*/
 /* Start the card requested by user                             */
 /*--------------------------------------------------------------*/
-void GalilController::GalilStartController(char *code_file, int burn_program, int display_code, unsigned thread_mask, int quiet_start)
+void GalilController::GalilStartController(char *code_file, int burn_program, int display_code, unsigned thread_mask)
 {
 	const char *functionName = "GalilStartController";
 	int homed[MAX_GALIL_AXES];			//Backup of homed status
@@ -3175,14 +3186,17 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
 		
 		int code_changed = compareCode(dc, uc) && dc.compare("") != 0;
 		
-		if (code_changed || !quiet_start) {
-			stopThreads();
-			stopAxes();
-		}
-		else
+		if (quiet_start_)
 		{
-			printf("\nControl code and quiet start requested. Threads will not be restarted\n");
+			if (code_changed)
+			{
+				stopThreads();
+				stopAxes();
+			}
+			else
+				printf("\nControl code unchanged and quiet start requested. Threads will not be restarted\n");
 		}
+		// Else do nothing. Threads and axes are restarted in the GalilController constructor.
 
 		/*If code we wish to download differs from controller current code then download the new code*/
 		if (code_changed)
@@ -3844,10 +3858,11 @@ void GalilController::setCtrlError(const char* mesg)
   * \param[in] address      	 The name or address to provide to Galil communication library
   * \param[in] updatePeriod	     The time in ms between datarecords.  Async if controller + bus supports it, otherwise is polled/synchronous.
   *                              If (updatePeriod < 0), polled/synchronous at abs(updatePeriod) is done regardless of bus type
+  * \param[in] quietStart	 Don't stop threads and motors if control code is unchanged.
   */
-extern "C" int GalilCreateController(const char *portName, const char *address, int updatePeriod)
+extern "C" int GalilCreateController(const char *portName, const char *address, int updatePeriod, int quietStart)
 {
-  GalilController *pGalilController = new GalilController(portName, address, updatePeriod);
+  GalilController *pGalilController = new GalilController(portName, address, updatePeriod, quietStart);
   pGalilController = NULL;
   return(asynSuccess);
 }
@@ -4005,14 +4020,12 @@ extern "C" asynStatus GalilCreateCSAxes(const char *portName,     //specify whic
   * \param[in] burn_program      Burn program to EEPROM
   * \param[in] display_code	 Display code options
   * \param[in] thread_mask	 Indicates which threads to expect running after code file has been delivered and thread 0 has been started. Bit 0 = thread 0 etc.
-  * \param[in] quiet_start	 Don't stop threads and motors if control code is unchanged.
   */
 extern "C" asynStatus GalilStartController(const char *portName,        	//specify which controller by port name
 					   const char *code_file,
 					   int burn_program,
 					   int display_code, 
-					   unsigned thread_mask,
-					   int quiet_start)
+					   unsigned thread_mask)
 {
   GalilController *pC;
   static const char *functionName = "GalilStartController";
@@ -4027,7 +4040,7 @@ extern "C" asynStatus GalilStartController(const char *portName,        	//speci
   }
   pC->lock();
   //Call GalilController::GalilStartController to do the work
-  pC->GalilStartController((char *)code_file, burn_program, display_code, thread_mask, quiet_start);
+  pC->GalilStartController((char *)code_file, burn_program, display_code, thread_mask);
   pC->unlock();
   return asynSuccess;
 }
@@ -4056,15 +4069,17 @@ extern "C" asynStatus GalilCreateProfile(const char *portName,         /* specif
 static const iocshArg GalilCreateControllerArg0 = {"Controller Port name", iocshArgString};
 static const iocshArg GalilCreateControllerArg1 = {"IP address", iocshArgString};
 static const iocshArg GalilCreateControllerArg2 = {"update period (ms)", iocshArgInt};
+static const iocshArg GalilCreateControllerArg3 = {"quiet start", iocshArgInt};
 static const iocshArg * const GalilCreateControllerArgs[] = {&GalilCreateControllerArg0,
                                                              &GalilCreateControllerArg1,
-                                                             &GalilCreateControllerArg2};
+                                                             &GalilCreateControllerArg2,
+                                                             &GalilCreateControllerArg3};
                                                              
-static const iocshFuncDef GalilCreateControllerDef = {"GalilCreateController", 3, GalilCreateControllerArgs};
+static const iocshFuncDef GalilCreateControllerDef = {"GalilCreateController", 4, GalilCreateControllerArgs};
 
 static void GalilCreateContollerCallFunc(const iocshArgBuf *args)
 {
-  GalilCreateController(args[0].sval, args[1].sval, args[2].ival);
+  GalilCreateController(args[0].sval, args[1].sval, args[2].ival, args[3].ival);
 }
 
 //GalilCreateAxis iocsh function
@@ -4122,19 +4137,17 @@ static const iocshArg GalilStartControllerArg1 = {"Code file", iocshArgString};
 static const iocshArg GalilStartControllerArg2 = {"Burn program", iocshArgInt};
 static const iocshArg GalilStartControllerArg3 = {"Display code", iocshArgInt};
 static const iocshArg GalilStartControllerArg4 = {"Thread mask", iocshArgInt};
-static const iocshArg GalilStartControllerArg5 = {"Quiet start", iocshArgInt};
 static const iocshArg * const GalilStartControllerArgs[] = {&GalilStartControllerArg0,
                                                             &GalilStartControllerArg1,
                                                             &GalilStartControllerArg2,
                                                             &GalilStartControllerArg3,
-                                                            &GalilStartControllerArg4,
-                                                            &GalilStartControllerArg5};
+                                                            &GalilStartControllerArg4};
                                                              
-static const iocshFuncDef GalilStartControllerDef = {"GalilStartController", 6, GalilStartControllerArgs};
+static const iocshFuncDef GalilStartControllerDef = {"GalilStartController", 5, GalilStartControllerArgs};
 
 static void GalilStartControllerCallFunc(const iocshArgBuf *args)
 {
-  GalilStartController(args[0].sval, args[1].sval, args[2].ival, args[3].ival, (unsigned)args[4].ival, args[5].ival);
+  GalilStartController(args[0].sval, args[1].sval, args[2].ival, args[3].ival, (unsigned)args[4].ival);
 }
 
 //Construct GalilController iocsh function register
