@@ -3291,9 +3291,14 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
 		//Its assumed that thread 0 starts any other required threads on controller
 		if ((int)uc.length()>2)
 			{
-			sprintf(cmd_, "XQ 0,0");
-			if (writeReadController(functionName) != asynSuccess)
-				errlogPrintf("Thread 0 failed to start on model %s address %s\n\n",model_, address_);
+			
+			// Only try and start thread 0 if it isn't already running
+			if (checkGalilThread(0))
+			{
+				sprintf(cmd_, "XQ 0,0");
+				if (writeReadController(functionName) != asynSuccess)
+					errlogPrintf("Thread 0 failed to start on model %s address %s\n\n",model_, address_);
+			}
 					
 			epicsThreadSleep(1);
 			
