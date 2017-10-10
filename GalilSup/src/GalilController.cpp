@@ -3293,7 +3293,7 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
 			{
 			
 			// Only try and start thread 0 if it isn't already running
-			if (checkGalilThread(0))
+			if (!checkGalilThread(0))
 			{
 				sprintf(cmd_, "XQ 0,0");
 				if (writeReadController(functionName) != asynSuccess)
