@@ -3007,36 +3007,36 @@ bool GalilController::checkGalilThreads()
 /*--------------------------------------------------------------*/
 /* Find and replace text in string                              */
 /*--------------------------------------------------------------*/
-string GalilController::findReplace(string s, const string &toReplace, const string &replaceWith)
+void GalilController::findReplace(string& s, const string &toReplace, const string &replaceWith)
 {
 	while(s.find(toReplace) != std::string::npos) {
-		s = s.replace(s.find(toReplace), toReplace.length(), replaceWith);
+		s.replace(s.find(toReplace), toReplace.length(), replaceWith);
 	}
-	return s;
 }
 
 /*--------------------------------------------------------------*/
 /* Remove non-functional elements from the code                 */
 /*--------------------------------------------------------------*/
-string GalilController::compressCode(string code){
-	code = findReplace(code, "\r ", "");
+void GalilController::compressCode(string& code){
+	findReplace(code, "\r ", "");
 	// Tabs to space
-	code = findReplace(code, "\t", "    ");
+	findReplace(code, "\t", "    ");
 	// Trailing whitespace
-	code = findReplace(code, " \n", "\n");
+	findReplace(code, " \n", "\n");
 	// Leading whitespace
-	code = findReplace(code, "\n ", "\n");
+	findReplace(code, "\n ", "\n");
 	// Blank lines
-	code = findReplace(code, "\n\n", "\n");
-	return code;
+	findReplace(code, "\n\n", "\n");
 }
 
 /*--------------------------------------------------------------*/
 /* Compare old code to new code                                 */
 /*--------------------------------------------------------------*/
-int GalilController::compareCode(const string& dc, const string& uc)
+int GalilController::compareCode(string dc, string uc)
 {
-	return compressCode(dc).compare(compressCode(uc));
+	compressCode(dc);
+	compressCode(uc);
+	return dc.compare(uc);
 }
 
 /*--------------------------------------------------------------*/

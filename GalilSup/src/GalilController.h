@@ -358,9 +358,9 @@ private:
   char cmd_[MAX_GALIL_STRING_SIZE];     //holds the assembled Galil cmd string
   char resp_[MAX_GALIL_STRING_SIZE];    //Response from Galil controller
   
-  static int compareCode(const std::string& dc, const std::string& uc);
-  static std::string compressCode(std::string s);
-  static std::string findReplace(std::string s, const std::string& toFind, const std::string& toReplace);
+  static int compareCode(std::string dc, std::string uc);
+  static void compressCode(std::string& s);
+  static void findReplace(std::string& s, const std::string& toFind, const std::string& toReplace);
   
   void stopThreads();
   void stopAxes();
