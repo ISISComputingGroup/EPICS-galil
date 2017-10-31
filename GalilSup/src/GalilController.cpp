@@ -126,7 +126,7 @@ static void myHookFunction(initHookState state)
   * \param[in] updatePeriod  	 The time between polls when any axis is moving 
   *                              If (updatePeriod < 0), polled/synchronous at abs(updatePeriod) is done regardless of bus type
   */
-GalilController::GalilController(const char *portName, const char *address, double updatePeriod)
+GalilController::GalilController(const char *portName, const char *address, double updatePeriod, int quietStart)
   :  asynMotorController(portName, (int)(MAX_GALIL_AXES + MAX_GALIL_CSAXES), (int)NUM_GALIL_PARAMS,	//MAX_GALIL_AXES paramLists are needed for binary IO at all times
                          (int)(asynInt32Mask | asynFloat64Mask | asynUInt32DigitalMask | asynOctetMask | asynDrvUserMask), 
                          (int)(asynInt32Mask | asynFloat64Mask | asynUInt32DigitalMask | asynOctetMask),
@@ -274,6 +274,8 @@ GalilController::GalilController(const char *portName, const char *address, doub
   strcpy(limit_code_, "");
   strcpy(digital_code_, "");
   strcpy(card_code_, "");
+  // Store startup mode
+  quiet_start_ = quietStart;
  
   if (updatePeriod < 0) {
       try_async_ = false;
@@ -571,45 +573,14 @@ void GalilController::connected(void)
 	else
 		setIntegerParam(GalilSSICapable_, 1);
 	
-	//Determine number of threads supported
-	//RIO
-	numThreads_ = (strncmp(model_,"RIO",3) == 0)? 4 : numThreads_;
-	//DMC4 range
-	if ((model_[0] == 'D' && model_[3] == '4'))
-		numThreads_ = 8;
-	//DMC2 range
-	numThreads_ = (model_[3] == '2')? 8 : numThreads_;
-	//DMC1 range
-	numThreads_ = (model_[3] == '1')? 2 : numThreads_;
-
-	//Stop all threads running on the controller
-	for (i=0;i<numThreads_;i++)
-		{
-		sprintf(cmd_, "HX%d",i);
-		writeReadController(functionName);
-		}
-
-	//Stop all moving motors, and turn all motors off
-	for (i=0;i<numAxesMax_;i++)
-		{
-		//Query moving status
-		sprintf(cmd_, "MG _BG%c", (i + AASCII));
-		writeReadController(functionName);
-		if (atoi(resp_))
-			{
-			//Stop moving motor
-			sprintf(cmd_, "ST%c", (i + AASCII));
-			writeReadController(functionName);
-			//Allow time for motor stop
-		        epicsThreadSleep(1.0);
-			//Ensure home process is stopped
-			sprintf(cmd_, "home%c=0", (i + AASCII));
-			writeReadController(functionName);
-			}
-		//This is now done in via PINI of autosaved $(M)_ON_CMD PV 
-		// sprintf(cmd_, "MO%c", (i + AASCII));
-		// writeReadController(functionName);
-		}
+	if (quiet_start_==0)
+	{
+		cout << "Stopping running threads and moving axes." << endl;
+		stopThreads();
+		stopAxes();
+	}
+	else
+		cout << "Quiet start requested. Running threads and moving axes will not be stopped." << endl;
 
 	//Has code for the GalilController been assembled
 	if (code_assembled_)
@@ -3032,8 +3003,98 @@ bool GalilController::checkGalilThreads()
 			}
             return result;
 }
+
 /*--------------------------------------------------------------*/
-/* Start the card requested by user   */
+/* Find and replace text in string                              */
+/*--------------------------------------------------------------*/
+void GalilController::findReplace(string& s, const string &toReplace, const string &replaceWith)
+{
+	while(s.find(toReplace) != std::string::npos) {
+		s.replace(s.find(toReplace), toReplace.length(), replaceWith);
+	}
+}
+
+/*--------------------------------------------------------------*/
+/* Remove non-functional elements from the code                 */
+/*--------------------------------------------------------------*/
+void GalilController::compressCode(string& code){
+	findReplace(code, "\r ", "");
+	// Tabs to space
+	findReplace(code, "\t", "    ");
+	// Trailing whitespace
+	findReplace(code, " \n", "\n");
+	// Leading whitespace
+	findReplace(code, "\n ", "\n");
+	// Blank lines
+	findReplace(code, "\n\n", "\n");
+}
+
+/*--------------------------------------------------------------*/
+/* Compare old code to new code                                 */
+/*--------------------------------------------------------------*/
+int GalilController::compareCode(string dc, string uc)
+{
+	compressCode(dc);
+	compressCode(uc);
+	return dc.compare(uc);
+}
+
+/*--------------------------------------------------------------*/
+/* Halt all threads                                             */
+/*--------------------------------------------------------------*/
+void GalilController::stopThreads()
+{		
+	const char *functionName = "stopThreads";
+	//Determine number of threads supported
+	//RIO
+	numThreads_ = (strncmp(model_,"RIO",3) == 0)? 4 : numThreads_;
+	//DMC4 range
+	if ((model_[0] == 'D' && model_[3] == '4'))
+		numThreads_ = 8;
+	//DMC2 range
+	numThreads_ = (model_[3] == '2')? 8 : numThreads_;
+	//DMC1 range
+	numThreads_ = (model_[3] == '1')? 2 : numThreads_;
+
+	//Stop all threads running on the controller
+	for (int i=0;i<numThreads_;i++)
+		{
+		sprintf(cmd_, "HX%d",i);
+		writeReadController(functionName);
+		}
+}
+
+/*--------------------------------------------------------------*/
+/* Stop all axes                                                */
+/*--------------------------------------------------------------*/
+void GalilController::stopAxes()
+{	
+	const char *functionName = "stopAxes";
+	//Stop all moving motors, and turn all motors off
+	for (int i=0;i<numAxesMax_;i++)
+		{
+		//Query moving status
+		sprintf(cmd_, "MG _BG%c", (i + AASCII));
+		writeReadController(functionName);
+		if (atoi(resp_))
+			{
+			//Stop moving motor
+			sprintf(cmd_, "ST%c", (i + AASCII));
+			writeReadController(functionName);
+			//Allow time for motor stop
+				epicsThreadSleep(1.0);
+			//Ensure home process is stopped
+			sprintf(cmd_, "home%c=0", (i + AASCII));
+			writeReadController(functionName);
+			}
+		//This is now done in via PINI of autosaved $(M)_ON_CMD PV 
+		// sprintf(cmd_, "MO%c", (i + AASCII));
+		// writeReadController(functionName);
+		}
+}
+
+/*--------------------------------------------------------------*/
+/* Start the card requested by user                             */
 /*--------------------------------------------------------------*/
 void GalilController::GalilStartController(char *code_file, int burn_program, int display_code, unsigned thread_mask)
 {
@@ -3122,9 +3183,23 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
 
 		//Remove the \r characters
 		dc.erase (std::remove(dc.begin(), dc.end(), '\r'), dc.end());
+		
+		int code_changed = compareCode(dc, uc) && dc.compare("") != 0;
+		
+		if (quiet_start_)
+		{
+			if (code_changed)
+			{
+				stopThreads();
+				stopAxes();
+			}
+			else
+				printf("\nControl code unchanged and quiet start requested. Threads will not be restarted\n");
+		}
+		// Else do nothing. Threads and axes are restarted in the GalilController constructor.
 
 		/*If code we wish to download differs from controller current code then download the new code*/
-		if (dc.compare(uc) != 0 && dc.compare("") != 0)
+		if (code_changed)
 			{
 			//Change \n to \r (Galil Communications Library expects \r separated lines)
 			std::replace(dc.begin(), dc.end(), '\n', '\r');
@@ -3216,9 +3291,14 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
 		//Its assumed that thread 0 starts any other required threads on controller
 		if ((int)uc.length()>2)
 			{
-			sprintf(cmd_, "XQ 0,0");
-			if (writeReadController(functionName) != asynSuccess)
-				errlogPrintf("Thread 0 failed to start on model %s address %s\n\n",model_, address_);
+			
+			// Only try and start thread 0 if it isn't already running
+			if (!checkGalilThread(0))
+			{
+				sprintf(cmd_, "XQ 0,0");
+				if (writeReadController(functionName) != asynSuccess)
+					errlogPrintf("Thread 0 failed to start on model %s address %s\n\n",model_, address_);
+			}
 					
 			epicsThreadSleep(1);
 			
@@ -3783,10 +3863,11 @@ void GalilController::setCtrlError(const char* mesg)
   * \param[in] address      	 The name or address to provide to Galil communication library
   * \param[in] updatePeriod	     The time in ms between datarecords.  Async if controller + bus supports it, otherwise is polled/synchronous.
   *                              If (updatePeriod < 0), polled/synchronous at abs(updatePeriod) is done regardless of bus type
+  * \param[in] quietStart	 Don't stop threads and motors if control code is unchanged.
   */
-extern "C" int GalilCreateController(const char *portName, const char *address, int updatePeriod)
+extern "C" int GalilCreateController(const char *portName, const char *address, int updatePeriod, int quietStart)
 {
-  GalilController *pGalilController = new GalilController(portName, address, updatePeriod);
+  GalilController *pGalilController = new GalilController(portName, address, updatePeriod, quietStart);
   pGalilController = NULL;
   return(asynSuccess);
 }
@@ -3993,15 +4074,17 @@ extern "C" asynStatus GalilCreateProfile(const char *portName,         /* specif
 static const iocshArg GalilCreateControllerArg0 = {"Controller Port name", iocshArgString};
 static const iocshArg GalilCreateControllerArg1 = {"IP address", iocshArgString};
 static const iocshArg GalilCreateControllerArg2 = {"update period (ms)", iocshArgInt};
+static const iocshArg GalilCreateControllerArg3 = {"quiet start", iocshArgInt};
 static const iocshArg * const GalilCreateControllerArgs[] = {&GalilCreateControllerArg0,
                                                              &GalilCreateControllerArg1,
-                                                             &GalilCreateControllerArg2};
+                                                             &GalilCreateControllerArg2,
+                                                             &GalilCreateControllerArg3};
                                                              
-static const iocshFuncDef GalilCreateControllerDef = {"GalilCreateController", 3, GalilCreateControllerArgs};
+static const iocshFuncDef GalilCreateControllerDef = {"GalilCreateController", 4, GalilCreateControllerArgs};
 
 static void GalilCreateContollerCallFunc(const iocshArgBuf *args)
 {
-  GalilCreateController(args[0].sval, args[1].sval, args[2].ival);
+  GalilCreateController(args[0].sval, args[1].sval, args[2].ival, args[3].ival);
 }
 
 //GalilCreateAxis iocsh function

@@ -149,7 +149,7 @@ struct Galilmotor_enables {
 
 class GalilController : public asynMotorController {
 public:
-  GalilController(const char *portName, const char *address, double updatePeriod);
+  GalilController(const char *portName, const char *address, double updatePeriod, int quiet_start);
   
   /* These are the methods that we override from asynMotorController */
   asynStatus poll(void);
@@ -357,6 +357,14 @@ private:
 
   char cmd_[MAX_GALIL_STRING_SIZE];     //holds the assembled Galil cmd string
   char resp_[MAX_GALIL_STRING_SIZE];    //Response from Galil controller
+  
+  static int compareCode(std::string dc, std::string uc);
+  static void compressCode(std::string& s);
+  static void findReplace(std::string& s, const std::string& toFind, const std::string& toReplace);
+  
+  void stopThreads();
+  void stopAxes();
+  int quiet_start_;
 
 					//Stores the motor enable disable interlock digital IO setup, only first 8 digital in ports supported
   struct Galilmotor_enables motor_enables_[8];
