@@ -37,7 +37,7 @@ GMC += galil_Home_RevLimit_Home.gmc  galil_Piezo_Home.gmc  galil_Home_ForwLimit+
 GMC += galil_Home_Pin_Hole_Selector.gmc  galil_Home_Thread.gmc  galil_Home_Dummy_Axis.gmc
 GMC += galil_Home_FIpos.gmc galil_Home_FIneg.gmc galil_Muon_Slits.gmc 
 # Device specific routines
-GMC += galil_Oscillating_Collimator.gmc
+GMC += galil_Oscillating_Collimator.gmc galil_Oscillating_Collimator_Merlin.gmc
 # Dummy routines mainly used for testing
 GMC += galil_Home_Dummy_Do_Nothing.gmc galil_Home_Dummy_Power_Light.gmc
 
