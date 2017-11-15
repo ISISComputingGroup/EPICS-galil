@@ -255,7 +255,7 @@ GalilController::GalilController(const char *portName, const char *address, doub
   connect_fail_reported_ = false;
   //We have not recieved a timeout yet
   consecutive_acquire_timeouts_ = 0;
-  consecutive_read_timeouts = 0;
+  consecutive_read_timeouts_ = 0;
   //Store period in ms between data records
   updatePeriod_ = fabs(updatePeriod);
   //Code generator has not been initialized
@@ -441,7 +441,7 @@ void GalilController::connect(void)
 	//Success, continue
 	//No timeouts have occurred
 	consecutive_acquire_timeouts_ = 0;
-	consecutive_read_timeouts = 0;
+	consecutive_read_timeouts_ = 0;
 	//A connection fail mesg not issued, because connect succeeded
 	connect_fail_reported_ = false;
 	}
