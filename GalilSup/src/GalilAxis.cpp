@@ -582,8 +582,21 @@ asynStatus GalilAxis::home(double minVelocity, double maxVelocity, double accele
   // check homing thread is available
   if ( !pC_->checkGalilThreads() )
   {
-      errlogPrintf("Cannot start homing as galil threads are not running");
-      return asynError;
+  errlogPrintf("Galil home threads are not running. Attempting to restart homing threads.\n");
+  sprintf(pC_->cmd_, "HX0;HX1");
+  pC_->writeReadController(functionName);
+  sprintf(pC_->cmd_, "XQ 0,0");
+  pC_->writeReadController(functionName);
+  epicsThreadSleep(.2);
+  if ( !pC_->checkGalilThreads() )
+  {
+  errlogPrintf("Unable to start Galil homing threads.\n");
+  return asynError;
+  }
+  else
+  {
+  errlogPrintf("Galil homing threads restarted successfully.\n");
+  }
   }
   
   //Check velocity and wlp protection
