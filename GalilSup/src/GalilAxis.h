@@ -34,6 +34,21 @@
 #define HOME_FWD 2
 #define HOME_BOTH 3
 
+//Stop codes
+//These are Galil Stop codes
+#define MOTOR_STOP_FWD 2
+#define MOTOR_STOP_REV 3
+#define MOTOR_STOP_STOP 4
+#define MOTOR_STOP_ONERR 8
+#define MOTOR_STOP_ENC 12
+#define MOTOR_STOP_AMP 15
+#define MOTOR_STOP_ECATCOMM 70
+#define MOTOR_STOP_ECATAMP 71
+//Our custom codes
+#define MOTOR_OKAY 0
+#define MOTOR_STOP_ONWLP 255
+#define MOTOR_STOP_ONSTALL 256
+
 //pollServices request numbers
 static const int MOTOR_STOP = 0;
 static const int MOTOR_POST = 1;
@@ -44,6 +59,24 @@ static const int MOTOR_BRAKE_ON = 5;
 static const int MOTOR_STEP_SYNC_ATSTOP = 6;
 static const int MOTOR_STEP_SYNC_ATENC = 7;
 
+//BISS constants
+const int BISS_INPUT_MIN = 0;
+const int BISS_INPUT_MAX = 2;
+const int BISS_DATA1_MIN = -38;
+const int BISS_DATA1_MAX = 38;
+const int BISS_DATA2_MIN = 0;
+const int BISS_DATA2_MAX = 38;
+const int BISS_ZP_MIN = 0;
+const int BISS_ZP_MAX = 7;
+const int BISS_CD_MIN = 4;
+const int BISS_CD_MAX = 26;
+
+const epicsUInt32 BISS_STAT_TIMEOUT = 0;
+const epicsUInt32 BISS_STAT_CRC =     1;
+const epicsUInt32 BISS_STAT_ERROR =   2;
+const epicsUInt32 BISS_STAT_WARN =    3;
+
+//limitState enum used in wrong limit protection
 typedef enum limitsState
    {
    unknown, consistent, not_consistent
@@ -87,7 +120,6 @@ public:
 
   //Generate axis home routine
   void gen_homecode(char c, char axis_thread_code[]);
-   
   //Is the motor in an enabled/go state with current digital IO status
   bool motor_enabled(void);
   //Check SSI reading against disconnect value
@@ -96,6 +128,12 @@ public:
   asynStatus set_ssi(void);
   //Get SSI setting from controller
   asynStatus get_ssi(int function, epicsInt32 *value);
+  //Invert SSI encoder direction
+  asynStatus invert_ssi(void);
+  //Set BISS setting on controller
+  asynStatus set_biss(void);
+  //Get BISS setting from controller
+  asynStatus get_biss(int function, epicsInt32 *value);
   //Set acceleration and velocity
   asynStatus setAccelVelocity(double acceleration, double velocity, bool setVelocity = true);
   //Extract axis data from GalilController data record
@@ -108,9 +146,9 @@ public:
   void syncEncodedStepper(void);
   //Stop motor if wrong limit activated and wrongLimitProtection is enabled
   void wrongLimitProtection(void);
-  //Sets time motor has been stopped for in GalilAxis::stopped_time_
+  //Sets time motor has been stopped for in GalilAxis::stoppedTime_
   void setStopTime(void);
-  //Reset homing if stopped_time_ great than HOMING_TIMEOUT
+  //Reset homing if stoppedTime_ greater than HOMING_TIMEOUT
   void checkHoming(void);
   //Service slow and infrequent requests from poll thread to write to the controller
   //We do this in a separate thread so the poll thread is not slowed
@@ -133,7 +171,7 @@ public:
   //Check velocity and wlp protection
   asynStatus beginCheck(const char *functionName, double maxVelocity, bool resetCtrlMessage = true);
   //Begin motor motion
-  asynStatus beginMotion(const char *caller, bool move = true);
+  asynStatus beginMotion(const char *caller, double position = 0.0, bool relative = false, bool checkpos = false, bool move = true);
   //Set axis brake state
   asynStatus setBrake(bool enable);
   //Restore the motor brake status after axisReady_
@@ -142,6 +180,19 @@ public:
   asynStatus setupHome(double maxVelocity, int forwards);
   //Copy profileBackupPositions_ back into profilePositions_ after a CSAxis profile has been built
   void restoreProfileData(void);
+  //Check motor record status for this axis
+  asynStatus checkMRSettings(bool moveVelocity, char callaxis);
+  //Tell this axis to use CSAxis dynamics
+  void setCSADynamics(double acceleration, double velocity);
+  //Send move to this motor via the motor record
+  asynStatus moveThruMotorRecord(double position);
+  //Driver internal version of axis stop, prevents backlash, retries till dmov
+  asynStatus stopInternal(double acceleration);
+  //Check the BiSS encoder status if it's enabled
+  asynStatus checkBISSStatus(void);
+  asynStatus checkBISSStatusService(void);
+  //Thread function for polling any axis or encoder status that is not part of the data record 
+  void axisStatusThread();
 
   /* These are the methods we override from the base class */
   asynStatus move(double position, int relative, double minVelocity, double maxVelocity, double acceleration);
@@ -160,16 +211,19 @@ public:
   asynStatus setClosedLoop(bool closedLoop);
   asynStatus initializeProfile(size_t maxProfilePoints);
 
-  ~GalilAxis();
+  virtual ~GalilAxis();
 
 private:
+
+  void axisStatusShutdown(void);        //Function to shutdown axis status thread.
+
   GalilController *pC_;      		/**< Pointer to the asynMotorController to which this axis belongs.
                                 	*   Abbreviated because it is used very frequently */
   char axisName_;			//The axis letter A-H
   bool limit_as_home_;	     		//use limit switches for homing
   int switch_type_;			//switch type for motor enable/disable function
   char *enables_string_;		//Motor enable/disable string specified by user
-  int invert_ssi_;			//Invert ssi encoder.  Reverse -ve, and +ve direction of ssi
+  bool invert_ssi_;			//Invert ssi encoder.  Reverse -ve, and +ve direction of ssi
 
   double highLimit_;			//High soft limit
   double lowLimit_;			//Low soft limit
@@ -199,13 +253,19 @@ private:
   double motor_position_;		//aux encoder or step count register
   double encoder_position_;		//main encoder register
   double last_encoder_position_;	//main encoder register stored from previous poll.  Used to detect movement.
-  double velocity_;			//Motor velocity
-  double error_;			//Position error
+  double velocity_;			//Motor velocity readback
+  double error_;			//Position error readback
   int direction_;			//Movement direction
   bool inmotion_;			//Axis in motion status from controller
   int stop_code_;			//Axis stop code from controller
   bool fwd_;				//Forward limit status
   bool rev_;				//Reverse limit status
+
+  double csaAcceleration_;		//CSAxis requested acceleration
+  double csaVelocity_;			//CSAxis requested velocity
+  bool useCSADynamics_;			//Should this axis use CSAxis requested acceleration and velocity
+
+  bool startDeferredMoves_;		//Used to start deferred moves automatically
   
   limitsState limitsDirState_;		//Status of limits consistency with motor direction
   bool beginOnLimit_;			//Did move begin while on a limit switch
@@ -213,8 +273,11 @@ private:
   int done_;				//Motor done status passed to motor record
   int last_done_;			//Backup of done status at end of each poll.  Used to detect stop
   bool homing_;				//Is motor homing now
-  epicsTimeStamp stop_nowt_;		//Used to track length of motor stopped for.
-  epicsTimeStamp stop_begint_;		//Used to track length of motor stopped for.
+  bool jogAfterHome_;			//Is motor doing jah
+  bool stop_axis_;			//Used to prevent retries after stop
+  int stop_reason_;			//Reason axis stop requested
+  epicsTimeStamp stop_nowt_;		//Used to track length of time motor stopped for.
+  epicsTimeStamp stop_begint_;		//Used to track length of time motor stopped for.
   double stoppedTime_;			//Time motor has been stopped for
   bool resetStoppedTime_;		//Request poll thread reset stopped time if done true
   epicsEventId stoppedTimeResetEventId_;//Signal that poller has completed reset stop time request
@@ -240,6 +303,10 @@ private:
   bool restoreProfile_;			//Should profileBackupPositions_ be copied into profilePositions_ after orofile built complete? 
                                 	//True for all GalilAxis involved in CSAxis profile build, set false at built end
   double *profileBackupPositions_;	//Profile positions backup for this axis, restored after profile is built
+
+  bool axisStatusShutdown_;		//Flag to shutdown axis status thread
+  bool axisStatusRunning_;		//Flag to indicate if axis status thread is running
+  epicsEventId axisStatusShutdownId_;	//Shutdown signal for axis status thread
 
 friend class GalilController;
 friend class GalilCSAxis;

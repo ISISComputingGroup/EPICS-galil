@@ -1,6 +1,6 @@
 
 file {
-	name="/home/ics/git/Galil-3-0/3-4/GalilSup/op/adl/galil_amp.adl"
+	name="/home/ics/git/Galil-3-0/3-5/GalilSup/op/adl/galil_amp.adl"
 	version=030105
 }
 display {
