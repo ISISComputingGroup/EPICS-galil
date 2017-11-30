@@ -1741,7 +1741,6 @@ void GalilAxis::setStopTime(void)
 //Cancel home if either true
 void GalilAxis::checkHoming(void)
 {
-   const char *functionName = "GalilAxis::checkHoming";
    char message[MAX_GALIL_STRING_SIZE];
    //Is controller using main or auxillary encoder register for positioning
    double readback = (ctrlUseMain_) ? encoder_position_ : motor_position_;
@@ -1792,7 +1791,6 @@ static void pollServicesThreadC(void *pPvt)
 //We do this in a separate thread so the poll thread is not slowed, and poll thread doesnt have a lock
 void GalilAxis::pollServices(void)
 {
-  static const char *functionName = "GalilAxis::pollServices";
   char post[MAX_GALIL_STRING_SIZE];	//Motor record post field
   int request = -1; 			//Real service numbers start at 0
   int jah;				//Jog after home feature status
@@ -1979,7 +1977,6 @@ void GalilAxis::pollServices(void)
 //Caller requires lock
 void GalilAxis::executePrem(void)
 {
-  static const char *functionName = "GalilAxis::executePrem";
   char prem[MAX_GALIL_STRING_SIZE];		//Motor record prem field
 
   if (pC_->getStringParam(axisNo_, pC_->GalilPrem_, (int)sizeof(prem), prem) == asynSuccess)

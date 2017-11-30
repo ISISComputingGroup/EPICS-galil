@@ -959,7 +959,6 @@ void GalilController::connected(void)
   int status;
   double minUpdatePeriod;		//Min update period given model
   char mesg[MAX_GALIL_STRING_SIZE];	//Connected mesg
-  unsigned i;
   //Flag connected as true
   connected_ = true;
   setIntegerParam(GalilCommunicationError_, 0);
@@ -2919,7 +2918,6 @@ asynStatus GalilController::beginSyncStartStopMove(int coordsys, char *axes, cha
   const char *functionName = "beginSyncStartStopMove";
   GalilAxis *pAxis;		//GalilAxis pointer
   char coordName;		//Coordinate system name
-  int csmoving = 0;		//Coordinate system moving status
   asynStatus status;	//Result
   unsigned index;		//looping
   char mesg[MAX_GALIL_STRING_SIZE];	//Controller error mesg if begin fail
@@ -4887,7 +4885,6 @@ asynStatus GalilController::async_writeReadController(const char *output, char *
 // return true if thread running, false if not
 bool GalilController::checkGalilThread(int thread)
 {
-	const char *functionName = "checkGalilThread";
 	sprintf(cmd_, "MG _XQ%d\n", thread);
 	if (sync_writeReadController() == asynSuccess)
 	{
@@ -4909,7 +4906,6 @@ bool GalilController::checkGalilThread(int thread)
 // return true if all expected threads running, else return false and write message to epics errlog
 bool GalilController::checkGalilThreads()
 {
-	const char *functionName = "checkThreads";
     bool result = true;
     if ( !checkGalilThread(0) ) // thread 0 should always be running
     {	
@@ -4983,8 +4979,6 @@ int GalilController::compareCode(string dc, string uc)
 /*--------------------------------------------------------------*/
 void GalilController::stopThreads()
 {		
-	const char *functionName = "stopThreads";
-
 	//Stop all threads running on the controller
 	for (int i=0;i<numThreads_;i++)
 		{
@@ -4998,7 +4992,6 @@ void GalilController::stopThreads()
 /*--------------------------------------------------------------*/
 void GalilController::stopAxes()
 {	
-	const char *functionName = "stopAxes";
   //Stop all moving motors
   for (int i=0;i<numAxesMax_;i++)
      {
@@ -5740,7 +5733,6 @@ asynStatus GalilController::read_codefile(const char *code_file)
 {
 	char* code_file_copy = strdup(code_file); 	//As epicsStrtok_r() modifies string
 	char *tokSave = NULL;				//Remaining tokens
-	char axis_value[MAX_GALIL_AXES];	//Substitute axis name
 
 	if (strcmp(code_file, "") == 0)
 	{	//No code file(s) specified, use generated code
