@@ -648,7 +648,6 @@ asynStatus GalilAxis::move(double position, int relative, double minVelocity, do
 		    move_command[sizeof(move_command)-1] = '\0';
 			if (epicsSnprintf(pC_->cmd_, sizeof(pC_->cmd_), move_command, position) > 0)
 			{
-			    pos_ok = true;
 			    pC_->sync_writeReadController();
 			}
 		}
