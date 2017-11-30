@@ -56,7 +56,8 @@ grecord(motor,"$(P)$(M)")
 	field(PCOF,"$(PCOF)")
 	field(ICOF,"$(ICOF)")
 	field(DCOF,"$(DCOF)")
-	info(archive,"0.02 VAL RBV DVAL OFF MSTA DIR CNEN MOVN DMOV")
+	field(HLSV,"MINOR")
+	info(archive,"0.02 VAL RBV DVAL OFF MSTA DIR CNEN MOVN DMOV MISS RCNT")
 	info(alarm,"Motors")
 }
 

@@ -243,7 +243,7 @@ public:
   char model_[MAX_GALIL_STRING_SIZE];	//model string
 
   //Class constructor
-  GalilController(const char *portName, const char *address, double updatePeriod);
+  GalilController(const char *portName, const char *address, double updatePeriod, int quiet_start);
 
   asynStatus async_writeReadController(const char *output, char *input, size_t maxChars, size_t *nread, double timeout);
   asynStatus async_writeReadController(void);
@@ -303,7 +303,7 @@ public:
   /* These are the methods that are new to this class */
   asynStatus poller(void);
   int GalilInitializeVariables(bool burn_variables);
-  void GalilStartController(char *code_file, int eeprom_write, int thread_mask);
+  void GalilStartController(char *code_file, int eeprom_write, unsigned thread_mask);
   void connect(void);
   void disconnect(void);
   void connected(void);
@@ -566,6 +566,14 @@ private:
   int timeout_;				//Timeout for communications
   int controller_number_;		//The controller number as counted in GalilCreateController
   epicsMessageQueue unsolicitedQueue_;	//Unsolicted messages recieved are placed here initially
+  
+  static int compareCode(std::string dc, std::string uc);
+  static void compressCode(std::string& s);
+  static void findReplace(std::string& s, const std::string& toFind, const std::string& toReplace);
+  
+  void stopThreads();
+  void stopAxes();
+  int quiet_start_;
 
   unsigned datarecsize_;			//Calculated size of controller datarecord based on response from QZ command
   
