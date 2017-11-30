@@ -26,7 +26,7 @@
 #define finite(x) _finite(x)
 #endif /* _WIN32/_WIN64 */
 
-#define BEGIN_TIMEOUT 0.5
+#define BEGIN_TIMEOUT 2.0
 #define AASCII 65
 #define IASCII 73
 #define QASCII 81
@@ -303,7 +303,7 @@ public:
   /* These are the methods that are new to this class */
   asynStatus poller(void);
   int GalilInitializeVariables(bool burn_variables);
-  void GalilStartController(char *code_file, int eeprom_write, unsigned thread_mask);
+  void GalilStartController(char *code_file, int eeprom_write, int thread_mask);
   void connect(void);
   void disconnect(void);
   void connected(void);
@@ -316,6 +316,7 @@ public:
   void write_gen_codefile(const char* suffix);
   asynStatus read_codefile(const char *code_file);
   asynStatus read_codefile_part(const char *code_file, MAC_HANDLE* mac_handle);
+  asynStatus read_codefile_hf(const char *code_files);
   asynStatus get_integer(int function, epicsInt32 *value, int axisNo);
   asynStatus get_double(int function, epicsFloat64 *value, int axisNo);
   void profileThread();
@@ -495,7 +496,7 @@ protected:
   #define LAST_GALIL_PARAM GalilCommunicationError_
 
 private:
-
+					
   std::unordered_map<std::string, Source> map; //data structure for data record
 
   char cmd_[MAX_GALIL_STRING_SIZE];	//holds the assembled Galil cmd string
@@ -559,13 +560,6 @@ private:
   char *digital_code_;			//Code generated for digital inputs on this controller
   char *card_code_;			//All code generated for the controller.  This is the buffer actually sent to controller
   char *user_code_;			//Code supplied by user for the controller.  This is copied to card_code_ above if all goes well
-
-  char asynccmd_[MAX_GALIL_STRING_SIZE];	//holds the assembled Galil cmd string
-  char asyncresp_[MAX_GALIL_DATAREC_SIZE];	//For asynchronous messages including datarecord
-
-  int timeout_;				//Timeout for communications
-  int controller_number_;		//The controller number as counted in GalilCreateController
-  epicsMessageQueue unsolicitedQueue_;	//Unsolicted messages recieved are placed here initially
   
   static int compareCode(std::string dc, std::string uc);
   static void compressCode(std::string& s);
@@ -574,6 +568,13 @@ private:
   void stopThreads();
   void stopAxes();
   int quiet_start_;
+
+  char asynccmd_[MAX_GALIL_STRING_SIZE];	//holds the assembled Galil cmd string
+  char asyncresp_[MAX_GALIL_DATAREC_SIZE];	//For asynchronous messages including datarecord
+
+  int timeout_;				//Timeout for communications
+  int controller_number_;		//The controller number as counted in GalilCreateController
+  epicsMessageQueue unsolicitedQueue_;	//Unsolicted messages recieved are placed here initially
 
   unsigned datarecsize_;			//Calculated size of controller datarecord based on response from QZ command
   
