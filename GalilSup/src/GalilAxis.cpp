@@ -804,9 +804,9 @@ asynStatus GalilAxis::home(double minVelocity, double maxVelocity, double accele
   {
   errlogPrintf("Galil home threads are not running. Attempting to restart homing threads.\n");
   sprintf(pC_->cmd_, "HX0;HX1");
-  pC_->writeReadController(functionName);
+  pC_->sync_writeReadController(functionName);
   sprintf(pC_->cmd_, "XQ 0,0");
-  pC_->writeReadController(functionName);
+  pC_->sync_writeReadController(functionName);
   epicsThreadSleep(.2);
   if ( !pC_->checkGalilThreads() )
   {
