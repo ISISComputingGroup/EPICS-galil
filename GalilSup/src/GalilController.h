@@ -316,7 +316,6 @@ public:
   void write_gen_codefile(const char* suffix);
   asynStatus read_codefile(const char *code_file);
   asynStatus read_codefile_part(const char *code_file, MAC_HANDLE* mac_handle);
-  asynStatus read_codefile_hf(const char *code_files);
   asynStatus get_integer(int function, epicsInt32 *value, int axisNo);
   asynStatus get_double(int function, epicsFloat64 *value, int axisNo);
   void profileThread();

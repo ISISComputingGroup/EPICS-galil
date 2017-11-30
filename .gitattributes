@@ -16,6 +16,7 @@
 *.template text
 *.substitutions text
 *.gmc text
+*.dmc text
 *.req text
 
 # Declare files that will always have CRLF line endings on checkout.

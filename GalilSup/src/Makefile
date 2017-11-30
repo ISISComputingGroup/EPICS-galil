@@ -26,10 +26,6 @@ GalilSupport_SRCS += GalilController.cpp GalilAxis.cpp GalilCSAxis.cpp GalilConn
 GalilSupport_LIBS += asyn motor calc sscan autosave busy
 GalilSupport_LIBS += $(EPICS_BASE_IOC_LIBS)
 
-Galil_DIR = $(LIBGALIL)/lib/$(EPICS_HOST_ARCH)
-GalilSupport_SYS_LIBS_Linux += Galil
-BIN_INSTALLS_Linux += $(wildcard $(LIBGALIL)/lib/$(EPICS_HOST_ARCH)/*.so.*)
-
 include $(TOP)/configure/RULES
 #----------------------------------------
 #  ADD RULES AFTER THIS LINE

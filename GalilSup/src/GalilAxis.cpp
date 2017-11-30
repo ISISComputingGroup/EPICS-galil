@@ -1581,7 +1581,6 @@ void GalilAxis::checkEncoder(void)
       //Reset stalled encoder flag when moving ok
       //Pass stall status to higher layers
       setIntegerParam(pC_->motorStatusSlip_, 0);
-      //setIntegerParam(pC_->GalilEStall_, 0);
       //possible encoder stall not detected
       pestall_detected_ = false;
       }
@@ -1969,7 +1968,6 @@ void GalilAxis::executePrem(void)
 {
   static const char *functionName = "GalilAxis::executePrem";
   char prem[MAX_GALIL_STRING_SIZE];		//Motor record prem field
-  //premExecuted_ = true; // need to set this even if no PREM as it is used by POST
 
   if (pC_->getStringParam(axisNo_, pC_->GalilPrem_, (int)sizeof(prem), prem) == asynSuccess)
      {

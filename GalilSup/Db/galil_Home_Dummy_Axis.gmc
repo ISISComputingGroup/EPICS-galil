@@ -1,13 +1,15 @@
 NO***************Dummy Axis*****************
 NO**********Execute in own thread******************
-#HOMEB1
-SHB
+#HOME${AXIS}
+IF ((home${AXIS}=1))
+    inhome${AXIS}=1
+SH${AXIS}
 WT200
-ACB=1024;DCB=1024
-JGB=1024
-BGB
+AC${AXIS}=1024;DC${AXIS}=1024
+JG${AXIS}=1024
+BG${AXIS}
 WT15000
-STB
-AMB
-MOB
+ST${AXIS}
+AM${AXIS}
+MO${AXIS}
 EN

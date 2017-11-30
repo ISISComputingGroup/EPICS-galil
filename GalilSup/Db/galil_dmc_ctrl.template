@@ -465,7 +465,7 @@ record(stringout,"$(P)SEND_STR_CMD")
 	field(DTYP, "asynOctetWrite")
 	field(OUT,  "@asyn($(PORT),0)USER_OCTET")
 }
-alias("$(P):SEND_STR_CMD","$(P):SEND_CMD_STR")
+alias("$(P)SEND_STR_CMD","$(P)SEND_CMD_STR")
 
 record(waveform,"$(P)SEND_STR_MON")
 {

@@ -2111,6 +2111,7 @@ void GalilController::executeAutoOnBrakeOff(const char *axes)
       axisNo = axes[i] - AASCII;
       //Retrieve axis instance
       pAxis = getAxis(axisNo);
+      //Execute AutoOnBrakeOff for this axis
       if (pAxis)
          {
          //Retrieve Auto power on/off feature status
@@ -2932,8 +2933,7 @@ asynStatus GalilController::beginSyncStartStopMove(int coordsys, char *axes, cha
   const char *functionName = "beginSyncStartStopMove";
   GalilAxis *pAxis;		//GalilAxis pointer
   char coordName;		//Coordinate system name
-  int csmoving = 0;		//Coordinate system moving status
-  asynStatus status;	//Result
+  asynStatus status;		//Result
   unsigned index;		//looping
   char mesg[MAX_GALIL_STRING_SIZE];	//Controller error mesg if begin fail
 
@@ -2950,16 +2950,6 @@ asynStatus GalilController::beginSyncStartStopMove(int coordsys, char *axes, cha
 
   //Update coordinate system motor list at record layer
   setStringParam(coordsys, GalilCoordSysMotors_, axes);
-
-  //Loop through the axes list for this coordinate system
-  //Ensure all motors are enabled
-  for (index = 0; index < strlen(axes); index++)
-     {
-     //Retrieve axis specified in axes list
-     pAxis = getAxis(axes[index] - AASCII);
-     if (!pAxis->motor_enabled())
-        return asynError;
-     }
 
   //Set linear interpolation mode and include motor list provided
   sprintf(cmd_, "LM %s", axes);
@@ -2980,12 +2970,6 @@ asynStatus GalilController::beginSyncStartStopMove(int coordsys, char *axes, cha
   //End linear mode
   sprintf(cmd_, "LE");
   sync_writeReadController();
-
-  //Execute motor auto on function
-  executeAutoOnBrakeOff(axes);
-
-  //Execute motor record prem
-  executePrem(axes);
 
   //move the coordinate system
   status = beginLinearGroupMotion(coordsys, coordName, axes);
@@ -3776,6 +3760,7 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
 			sprintf(cmd_, "DP%c=%.0lf", pAxis->axisName_, pAxis->encoder_position_ * (eres/mres));
 			//Write setting to controller
 			status = sync_writeReadController();
+			std::cerr << "GalilController::writeInt32(GalilMotorType_) " << cmd_ << std::endl;
 			}
 		}
 
@@ -3787,6 +3772,7 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
 		sprintf(cmd_, "DP%c=%.0lf", pAxis->axisName_, pAxis->encoder_position_);
 		//Write setting to controller
 		status = sync_writeReadController();
+		std::cerr << "GalilController::writeInt32(GalilMotorType_) " << cmd_ << std::endl;
 		}
 
 	//Changing motor polarity will change motor limits direction consistency
@@ -3806,7 +3792,7 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
 	else if (oldmotor != newmtr)
 		pAxis->limitsDirState_ = unknown;
 	}
-  else if (function == GalilJogAfterHome_)
+  else if (function == GalilUseEncoder_)
 	{
 	//This is one of the last items pushed into driver at startup so flag
 	//Axis now ready for move commands
@@ -4156,14 +4142,11 @@ asynStatus GalilController::writeOctet(asynUser *pasynUser, const char*  value, 
         //ai monitor
         aivalue = atof(resp_);
         setDoubleParam(0, GalilUserOctetVal_, aivalue);
-        //Num of chars written to controller
-        *nActual = nChars;
         }
      else
         {
         //Set readback value = response from controller
         setStringParam(GalilUserOctet_, "error");
-        *nActual = 0;
         }
      }
   else if (function >= GalilCSMotorForward_ && function <= GalilCSMotorReverseH_)
@@ -4890,7 +4873,6 @@ asynStatus GalilController::async_writeReadController(const char *output, char *
 {
   size_t nwrite;
   asynStatus status;
-
   int eomReason;
   // const char *functionName="writeReadController";
 
@@ -5851,7 +5833,6 @@ asynStatus GalilController::drvUserCreate(asynUser *pasynUser, const char* drvIn
      }
 }
 
-
 asynStatus GalilController::drvUserDestroy(asynUser *pasynUser)
 {
    const char *functionName = "drvUserDestroy";
@@ -5869,7 +5850,6 @@ asynStatus GalilController::drvUserDestroy(asynUser *pasynUser)
       return asynMotorController::drvUserDestroy(pasynUser);
       }
 }
-
 
 /** Record an error message, and also display to ioc window
   * \param[in] mesg      	 Error message
@@ -6712,8 +6692,6 @@ void GalilController::dq_analog(int byte, int input_num)
 	map[map_address] = Source(byte, type, -1, "V", description, divisor, offset);
 	}
 }
-
-
 
 //IocShell functions
 

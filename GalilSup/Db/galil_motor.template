@@ -268,25 +268,6 @@ record(stringout,"$(P)$(M)_POST_CMD")
 	field(DTYP, "asynOctetWrite")
 	field(DOL,  "$(P)$(M).POST CP MS")
 	field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_POST")
->>>>>>> vendor_3_4
-}
-
-record(stringout,"$(P):$(M)_PREM_CMD")
-{
-	field(DESC, "Motor record PREM")
-	field(OMSL, "closed_loop")
-	field(DTYP, "asynOctetWrite")
-	field(DOL,  "$(P):$(M).PREM CP MS")
-	field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_PREM")
-}
-
-record(stringout,"$(P):$(M)_POST_CMD")
-{
-	field(DESC, "Motor record POST")
-	field(OMSL, "closed_loop")
-	field(DTYP, "asynOctetWrite")
-	field(DOL,  "$(P):$(M).POST CP MS")
-	field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_POST")
 }
 
 #Motor homing status, including JAH

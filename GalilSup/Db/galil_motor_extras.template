@@ -76,21 +76,6 @@ record(ao,"$(P)$(M)_ESTALLTIME_SP")
 	field(FLNK,"$(P)$(M)_ESTALLTIME_MON")
 }
 
-#This function also populates mr MSTA bit 15 homed.
-record(bi,"$(P)$(M)_HOMED_STATUS")
-{
-	field(DESC, "homed status")
-	field(DTYP, "asynInt32")
-	field(SCAN, "I/O Intr")
-	field(ZNAM, "No")
-   	field(ZSV,  "MINOR")
-
-  	field(ONAM, "Yes")
-  	field(OSV,  "NO_ALARM")
-
-   	field(INP,  "@asyn($(PORT),$(ADDR))MOTOR_HOMED")
-}
-
 record(ai,"$(P)$(M)_STEPSMOOTH_MON")
 {
 	field(DESC,"Step smoothing")

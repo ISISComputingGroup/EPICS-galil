@@ -1,29 +1,29 @@
 epicsEnvSet("GALILCRATE","01")
-calc("GCID", "$(GALILCRATE) - 1", 2, 2)
+epicsEnvSet("GCID","0")
 
 #Load motor records
-dbLoadRecords("$(TOP)/db/galil_motor.db", "P=$(MYPVPREFIX)MOT,CC=$(GCID),CCP=$(GALILCRATE),IFSIM=#,IFNOTSIM=")
+dbLoadRecords("$(TOP)/db/galil_motor.db", "P=$(MYPVPREFIX)MOT:,CC=$(GCID),CCP=$(GALILCRATE),IFSIM=#,IFNOTSIM=")
 
 #Load extra features that have controller wide scope (eg.  Limit switch type, home switch type)
-dbLoadRecords("$(TOP)/db/galil_ctrl_extras.db", "P=$(MYPVPREFIX)MOT,CC=$(GCID),CCP=$(GALILCRATE),IFSIM=#,IFNOTSIM=")
+dbLoadRecords("$(TOP)/db/galil_dmc_ctrl.db", "P=$(MYPVPREFIX)MOT:,CC=$(GCID),CCP=$(GALILCRATE),IFSIM=#,IFNOTSIM=")
 
 #Load extra features for axis/motors (eg. Motor type, encoder type)
-dbLoadRecords("$(TOP)/db/galil_motor_extras.db", "P=$(MYPVPREFIX)MOT,CC=$(GCID),CCP=$(GALILCRATE),IFSIM=#,IFNOTSIM=")
+dbLoadRecords("$(TOP)/db/galil_motor_extras.db", "P=$(MYPVPREFIX)MOT:,CC=$(GCID),CCP=$(GALILCRATE),IFSIM=#,IFNOTSIM=")
 
 #Load coordinate system features
 #dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_coordinate_systems.substitutions")
 
 #Load digital IO databases
 #dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_digital_ports.substitutions")
-dbLoadRecords("$(TOP)/db/galil_digital_ports.db", "P=$(MYPVPREFIX)MOT,CC=$(GCID),CCP=$(GALILCRATE),IFSIM=#,IFNOTSIM=")
+dbLoadRecords("$(TOP)/db/galil_digital_ports.db", "P=$(MYPVPREFIX)MOT:,CC=$(GCID),CCP=$(GALILCRATE),IFSIM=#,IFNOTSIM=")
 
 #Load analog IO databases
 #dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_analog_ports.substitutions")
-dbLoadRecords("$(TOP)/db/galil_analog_ports.db", "P=$(MYPVPREFIX)MOT,CC=$(GCID),CCP=$(GALILCRATE),IFSIM=#,IFNOTSIM=")
+dbLoadRecords("$(TOP)/db/galil_analog_ports.db", "P=$(MYPVPREFIX)MOT:,CC=$(GCID),CCP=$(GALILCRATE),IFSIM=#,IFNOTSIM=")
 
 #Load user defined functions
 #dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_userdef_records.substitutions")
-dbLoadRecords("$(TOP)/db/galil_userdef_records8.db", "P=$(MYPVPREFIX)MOT,CC=$(GCID),CCP=$(GALILCRATE),IFSIM=#,IFNOTSIM=")
+dbLoadRecords("$(TOP)/db/galil_userdef_records8.db", "P=$(MYPVPREFIX)MOT:,CC=$(GCID),CCP=$(GALILCRATE),IFSIM=#,IFNOTSIM=")
 
 #Load profiles
 #dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_profileMoveController.substitutions")
@@ -102,7 +102,7 @@ GalilCreateCSAxes("Galil","I=(A+B)/2,J=B-A","A=I-J/2,B=I+J/2")
 # 4. int   display code. Set bit 1 to display generated code and or the code file specified.  Set bit 2 to display uploaded code
 
 # Start the controller
-GalilStartController("Galil", "$(GALIL)/gmc/galil_Default_Header.gmc;$(GALIL)/gmc/galil_Home_RevLimit.gmc!$(GALIL)/gmc/galil_Home_ForwLimit.gmc!$(GALIL)/gmc/galil_Home_Home.gmc!$(GALIL)/gmc/galil_Home_ForwLimit.gmc!$(GALIL)/gmc/galil_Piezo_Home.gmc!$(GALIL)/gmc/galil_Piezo_Home.gmc!$(GALIL)/gmc/galil_Piezo_Home.gmc!$(GALIL)/gmc/galil_Piezo_Home.gmc;$(GALIL)/gmc/galil_Default_Footer.gmc", 0, 0, 3)
+GalilStartController("Galil", "$(GALIL)/gmc/galil_Default_Header.gmc;$(GALIL)/gmc/galil_Home_RevLimit.gmc!$(GALIL)/gmc/galil_Home_ForwLimit.gmc!$(GALIL)/gmc/galil_Home_Home.gmc!$(GALIL)/gmc/galil_Home_ForwLimit.gmc!$(GALIL)/gmc/galil_Piezo_Home.gmc!$(GALIL)/gmc/galil_Piezo_Home.gmc!$(GALIL)/gmc/galil_Piezo_Home.gmc!$(GALIL)/gmc/galil_Piezo_Home.gmc;$(GALIL)/gmc/galil_Default_Footer.gmc", 0, 3)
 #GalilStartController("Galil", "", 0, 0)
 #GalilStartController("RIO", "rio.gmc", 1, 0)
 
