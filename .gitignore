@@ -16,4 +16,6 @@ NULL
 *_info_positions.req
 *_info_settings.req
 /iocBoot/ioc*/*.gmc
+/iocBoot/ioc*/*.dmc
+/iocBoot/ioc*/autosave/
 .project
