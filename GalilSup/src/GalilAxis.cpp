@@ -1812,6 +1812,8 @@ void GalilAxis::pollServices(void)
      {
      //Wait for poll to request a service
      pollRequest_.receive(&request, sizeof(int));
+	 if (pC_->shutdownRequested())
+		 break;
      //Obtain the lock
      pC_->lock();
      //What did poll request

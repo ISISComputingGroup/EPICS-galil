@@ -419,7 +419,7 @@ GalilController::GalilController(const char *portName, const char *address, doub
                          (int)(ASYN_CANBLOCK | ASYN_MULTIDEVICE),
                          (int)1, // autoconnect
                          (int)0, (int)0),  // Default priority and stack size
-  numAxes_(0), unsolicitedQueue_(MAX_GALIL_AXES, MAX_GALIL_STRING_SIZE)
+  numAxes_(0), unsolicitedQueue_(MAX_GALIL_AXES, MAX_GALIL_STRING_SIZE), shutdown_requested_(false)
 {
   struct Galilmotor_enables *motor_enables = NULL;	//Convenience pointer to GalilController motor_enables[digport]
   char mesg[MAX_GALIL_STRING_SIZE];			//Connected mesg
@@ -519,17 +519,6 @@ GalilController::GalilController(const char *portName, const char *address, doub
   createParam(GalilUserDataDeadbString, asynParamFloat64, &GalilUserDataDeadb_);
 
   createParam(GalilLimitDisableString, asynParamInt32, &GalilLimitDisable_);
-
-  createParam(GalilPremString, asynParamOctet, &GalilPrem_);
-  createParam(GalilPostString, asynParamOctet, &GalilPost_);
-
-  createParam(GalilUseIndexString, asynParamInt32, &GalilUseIndex_);
-  createParam(GalilJogAfterHomeString, asynParamInt32, &GalilJogAfterHome_);
-  createParam(GalilJogAfterHomeValueString, asynParamFloat64, &GalilJogAfterHomeValue_);
-
-  createParam(GalilAutoOnOffString, asynParamInt32, &GalilAutoOnOff_);
-  createParam(GalilAutoOnDelayString, asynParamFloat64, &GalilAutoOnDelay_);
-  createParam(GalilAutoOffDelayString, asynParamFloat64, &GalilAutoOffDelay_);
 
   createParam(GalilMainEncoderString, asynParamInt32, &GalilMainEncoder_);
   createParam(GalilAuxEncoderString, asynParamInt32, &GalilAuxEncoder_);
@@ -813,6 +802,11 @@ void GalilController::shutdownController()
    unsigned i;
    GalilAxis *pAxis;
    GalilCSAxis *pCSAxis;
+   shutdown_requested_ = true;
+
+   // wake these threads, which should then check shutdown_requested_ and exit
+   epicsEventSignal(arrayUploadEvent_);
+   epicsEventSignal(profileExecuteEvent_);
 
    //Destroy the poller for this GalilController.
    if (poller_ != NULL)
@@ -2015,7 +2009,9 @@ void GalilController::profileThread()
 {
   while (true) {
     epicsEventWait(profileExecuteEvent_);
-    runProfile();
+	if (shutdown_requested_)
+		break;
+	runProfile();
   }
 }
 
@@ -2048,6 +2044,8 @@ void GalilController::arrayUploadThread()
 {
   while (true) {
     epicsEventWait(arrayUploadEvent_);
+	if (shutdown_requested_)
+		break;
     arrayUpload();
   }
 }

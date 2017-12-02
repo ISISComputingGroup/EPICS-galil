@@ -354,6 +354,7 @@ public:
   asynStatus prepSyncStartOnlyMoves(void);
 
   void shutdownController();
+  bool shutdownRequested() { return shutdown_requested_; }
   ~GalilController();
 
 protected:
@@ -568,6 +569,7 @@ private:
   void stopThreads();
   void stopAxes();
   int quiet_start_;
+  bool shutdown_requested_;
 
   char asynccmd_[MAX_GALIL_STRING_SIZE];	//holds the assembled Galil cmd string
   char asyncresp_[MAX_GALIL_DATAREC_SIZE];	//For asynchronous messages including datarecord

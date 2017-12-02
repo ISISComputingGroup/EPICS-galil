@@ -17,7 +17,8 @@ save_restoreSet_SeqPeriodInSeconds(300)
 
 # specify where save files should be
 #set_savefile_path(${TOP}, "autosaveSaves")
-set_savefile_path("/autosave", "")
+#set_savefile_path("/autosave", "")
+set_savefile_path("./autosave", "")
 
 # specify what save files should be restored.  Note these files must be
 # in the directory specified in set_savefile_path(), or, if that function

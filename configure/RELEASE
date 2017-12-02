@@ -1,10 +1,18 @@
-# top level master release and local private options 
-include $(TOP)/../../../configure/MASTER_RELEASE
--include $(TOP)/../../../configure/MASTER_RELEASE.$(EPICS_HOST_ARCH)
--include $(TOP)/../../../configure/MASTER_RELEASE.private
--include $(TOP)/../../../configure/MASTER_RELEASE.private.$(EPICS_HOST_ARCH)
+TEMPLATE_TOP=$(EPICS_BASE)/templates/makeBaseApp/top
 
-#include $(TOP)/config/GALILRELEASE
+# this is nedeed for linking asyn statically on windows if asyn has vxi11 support
+ONCRPC=$(SUPPORT)/oncrpc/master
+
+ASYN=$(SUPPORT)/asyn/master
+AUTOSAVE=$(SUPPORT)/autosave/master
+BUSY=$(SUPPORT)/busy/master
+CALC=$(SUPPORT)/calc/master
+MOTOR=$(SUPPORT)/motor/master
+SSCAN=$(SUPPORT)/sscan/master
+GALIL=$(SUPPORT)/galil/master
+
+# optional extra local definitions here
+-include $(TOP)/configure/RELEASE.private
 
 include $(TOP)/../../../ISIS_CONFIG
 -include $(TOP)/../../../ISIS_CONFIG.$(EPICS_HOST_ARCH)

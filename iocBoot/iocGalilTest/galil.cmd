@@ -1,49 +1,53 @@
-epicsEnvSet("GALILCRATE","01")
-epicsEnvSet("GCID","0")
+## uncomment to see every command sent to galil
+#epicsEnvSet("GALIL_DEBUG_FILE", "galil_debug.txt")
 
-#Load motor records
-dbLoadRecords("$(TOP)/db/galil_motor.db", "P=$(MYPVPREFIX)MOT:,CC=$(GCID),CCP=$(GALILCRATE),IFSIM=#,IFNOTSIM=")
+#Load motor records for real and coordinate system (CS) motors
+dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_motors.substitutions")
 
-#Load extra features that have controller wide scope (eg.  Limit switch type, home switch type)
-dbLoadRecords("$(TOP)/db/galil_dmc_ctrl.db", "P=$(MYPVPREFIX)MOT:,CC=$(GCID),CCP=$(GALILCRATE),IFSIM=#,IFNOTSIM=")
+#Load DMC controller features (eg.  Limit switch type, home switch type, output compare, message consoles)
+dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_dmc_ctrl.substitutions")
 
-#Load extra features for axis/motors (eg. Motor type, encoder type)
-dbLoadRecords("$(TOP)/db/galil_motor_extras.db", "P=$(MYPVPREFIX)MOT:,CC=$(GCID),CCP=$(GALILCRATE),IFSIM=#,IFNOTSIM=")
+#Load RIO controller features (eg.  Model, IP address, message consoles)
+dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_rio_ctrl.substitutions")
 
-#Load coordinate system features
-#dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_coordinate_systems.substitutions")
+#Load extra features for real axis/motors (eg. Motor type, encoder type)
+dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_motor_extras.substitutions")
+
+#Load kinematics for CS axis/motors (eg. Forward and reverse kinematics, kinematic variables)
+dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_csmotor_kinematics.substitutions")
+
+#Load coordinate system features (eg. Coordinate system S and T status, motor list, segments processed, moving status)
+dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_coordinate_systems.substitutions")
 
 #Load digital IO databases
-#dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_digital_ports.substitutions")
-dbLoadRecords("$(TOP)/db/galil_digital_ports.db", "P=$(MYPVPREFIX)MOT:,CC=$(GCID),CCP=$(GALILCRATE),IFSIM=#,IFNOTSIM=")
+dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_digital_ports.substitutions")
 
 #Load analog IO databases
-#dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_analog_ports.substitutions")
-dbLoadRecords("$(TOP)/db/galil_analog_ports.db", "P=$(MYPVPREFIX)MOT:,CC=$(GCID),CCP=$(GALILCRATE),IFSIM=#,IFNOTSIM=")
+dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_analog_ports.substitutions")
 
 #Load user defined functions
-#dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_userdef_records.substitutions")
-dbLoadRecords("$(TOP)/db/galil_userdef_records8.db", "P=$(MYPVPREFIX)MOT:,CC=$(GCID),CCP=$(GALILCRATE),IFSIM=#,IFNOTSIM=")
+dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_userdef_records.substitutions")
+
+#Load user defined array support
+dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_user_array.substitutions")
 
 #Load profiles
-#dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_profileMoveController.substitutions")
-#dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_profileMoveAxis.substitutions")
-dbLoadRecords("$(TOP)/db/galil_profileMoveController.db", "P=$(MYPVPREFIX)MOT:,CC=$(GCID),CCP=$(GALILCRATE),IFSIM=#,IFNOTSIM=")
-dbLoadRecords("$(TOP)/db/galil_profileMoveAxis.db", "P=$(MYPVPREFIX)MOT:,CC=$(GCID),CCP=$(GALILCRATE),IFSIM=#,IFNOTSIM=")
+dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_profileMoveController.substitutions")
+dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_profileMoveAxis.substitutions")
 
 # GalilCreateController command parameters are:
 #
 # 1. Const char *portName 	- The name of the asyn port that will be created for this controller
 # 2. Const char *address 	- The address of the controller
-# 3. double updatePeriod	- The time in ms between datarecords 8ms minimum.  Async if controller + bus supports it, otherwise is polled/synchronous.
+# 3. double updatePeriod	- The time in ms between datarecords 2ms min, 200ms max.  Async if controller + bus supports it, otherwise is polled/synchronous.
+#                       	- Recommend 50ms or less for ethernet
+#                       	- Specify negative updatePeriod < 0 to force synchronous tcp poll period.  Otherwise will try async udp mode first
 
 # Create a Galil controller
-GalilCreateController("Galil", "130.246.51.169", 20)
-# NOTE: Galil controller hardware must have XON/XOFF switched enabled for program download to work with RS232
-#GalilCreateController("Galil", "COM1 115200", 100)
+GalilCreateController("Galil", "192.168.0.45", 8)
 
 # Create a Galil controller
-#GalilCreateController("RIO", "192.168.0.5", 2)
+GalilCreateController("RIO", "192.168.0.5", 2)
 
 # GalilCreateAxis command parameters are:
 #
@@ -63,48 +67,35 @@ GalilCreateAxis("Galil","F",1,"",1)
 GalilCreateAxis("Galil","G",1,"",1)
 GalilCreateAxis("Galil","H",1,"",1)
 
-# GalilCreateCSAxis command parameters are:
+# GalilCreateCSAxes command parameters are:
 #
 # 1. char *portName Asyn port for controller
-# 2. char *forward Comma separated list of forward kinematic transforms eg. I=(A+B)/2,J=B-A
-# 3. char *reverse Comma separated list of reverse kinematic transforms eg. A=I-J/2,B=I+J/2
-#
-#    Real axis are: A-H
-#    Coordinate axis are: I-P
-#    Variables are: Q-Z
-#    16 Args maximum per equation
-#
-#    Real, csaxis, and variables are allowed in forward transform equation
-#    Real, csaxis, and variables are allowed in reverse transform equation
-#
-# Create example coordinate system axis
-# 2Slit example using real motors A, and B
-# I = Slit centre coordinate system axis
-# J = Slit width coordinate system axis
 
-#Normal slit example
-GalilCreateCSAxes("Galil","I=(A+B)/2,J=B-A","A=I-J/2,B=I+J/2")
-
-#Example to lock slit motor B position, and move only A slit
-#GalilCreateCSAxes("Galil","I=(A+B)/2,J=B-A","A=B-J,B=B")
-
-#Example to swap slit blades using kinematic variable Z
-#GalilCreateCSAxes("Galil","I=(A+B)/2,J=(Z==0)?B-A:A-B","A=(Z==0)?I-J/2:I+J/2,B=(Z==0)?I+J/2:I-J/2")
+#Create all CS axes (ie. I-P axis)
+GalilCreateCSAxes("Galil")
 
 # GalilStartController command parameters are:
 #
 # 1. char *portName Asyn port for controller
-# 2. char *code file to deliver to the controller we are starting. "" = use generated code
-# 3. int   Burn to EEPROM conditions
-#             0 = transfer code if differs from eeprom, dont burn code to eeprom, then finally execute/restart code.
-#             1 = transfer code if differs from eeprom, burn code to eeprom, then finally execute/restart code.
-#
-# 4. int   display code. Set bit 1 to display generated code and or the code file specified.  Set bit 2 to display uploaded code
+# 2. char *code file(s) to deliver to the controller we are starting. "" = use generated code (recommended)
+#             Specify a single file or to use templates use: headerfile;bodyfile1!bodyfile2!bodyfileN;footerfile
+# 3. int   Burn program to EEPROM conditions
+#             0 = transfer code if differs from eeprom, dont burn code to eeprom, then finally execute code thread 0
+#             1 = transfer code if differs from eeprom, burn code to eeprom, then finally execute code thread 0
+#             It is asssumed thread 0 starts all other required threads
+# 4. int   Thread mask.  Check these threads are running after controller code start.  Bit 0 = thread 0 and so on
+#             if thread mask < 0 nothing is checked
+#             if thread mask = 0 and GalilCreateAxis appears > 0 then threads 0 to number of GalilCreateAxis is checked (good when using the generated code)
 
 # Start the controller
-GalilStartController("Galil", "$(GALIL)/gmc/galil_Default_Header.gmc;$(GALIL)/gmc/galil_Home_RevLimit.gmc!$(GALIL)/gmc/galil_Home_ForwLimit.gmc!$(GALIL)/gmc/galil_Home_Home.gmc!$(GALIL)/gmc/galil_Home_ForwLimit.gmc!$(GALIL)/gmc/galil_Piezo_Home.gmc!$(GALIL)/gmc/galil_Piezo_Home.gmc!$(GALIL)/gmc/galil_Piezo_Home.gmc!$(GALIL)/gmc/galil_Piezo_Home.gmc;$(GALIL)/gmc/galil_Default_Footer.gmc", 0, 3)
-#GalilStartController("Galil", "", 0, 0)
-#GalilStartController("RIO", "rio.gmc", 1, 0)
+GalilStartController("Galil", "", 1, 0)
+
+# Start the controller
+# Example using homing routine template assembly
+#GalilStartController("Galil", "$(GALIL)/GalilSup/Db/galil_Default_Header.dmc;$(GALIL)/GalilSup/Db/galil_Home_RevLimit.dmc!$(GALIL)/GalilSup/Db/galil_Home_ForwLimit.dmc!$(GALIL)/GalilSup/Db/galil_Home_Home.dmc!$(GALIL)/GalilSup/Db/galil_Home_ForwLimit.dmc!$(GALIL)/GalilSup/Db/galil_Piezo_Home.dmc!$(GALIL)/GalilSup/Db/galil_Piezo_Home.dmc!$(GALIL)/GalilSup/Db/galil_Piezo_Home.dmc!$(GALIL)/GalilSup/Db/galil_Piezo_Home.dmc;$(GALIL)/GalilSup/Db/galil_Default_Footer.dmc", 0, 0, 3)
+
+# Start the controller
+GalilStartController("RIO", "rio.dmc", 1, 0)
 
 # GalilCreateProfile command parameters are:
 #

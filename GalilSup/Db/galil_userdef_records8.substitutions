@@ -47,7 +47,7 @@ pattern
 { "\$(P)", "\$(PORT)", 0, "VAR", "\$(EN)03_\$(GS)", "\$(GS)C", "\$(DESC)", "\$(SCAN)", "\$(PINI)", "\$(EGU)", "\$(LOW)", "\$(LSV)", "\$(HIGH)", "\$(HSV)", "\$(ZNAM)", "\$(ONAM)", "\$(ZSV)", "\$(OSV)", "\$(DEFAULT)", "\$(DRVL)", "\$(DRVH)" }
 { "\$(P)", "\$(PORT)", 0, "VAR", "\$(EN)04_\$(GS)", "\$(GS)D", "\$(DESC)", "\$(SCAN)", "\$(PINI)", "\$(EGU)", "\$(LOW)", "\$(LSV)", "\$(HIGH)", "\$(HSV)", "\$(ZNAM)", "\$(ONAM)", "\$(ZSV)", "\$(OSV)", "\$(DEFAULT)", "\$(DRVL)", "\$(DRVH)" }
 { "\$(P)", "\$(PORT)", 0, "VAR", "\$(EN)05_\$(GS)", "\$(GS)E", "\$(DESC)", "\$(SCAN)", "\$(PINI)", "\$(EGU)", "\$(LOW)", "\$(LSV)", "\$(HIGH)", "\$(HSV)", "\$(ZNAM)", "\$(ONAM)", "\$(ZSV)", "\$(OSV)", "\$(DEFAULT)", "\$(DRVL)", "\$(DRVH)" }
-{ "\$(P)", "\$(PORT)", 0, "VAR", "\$(EN)06_\$(GS)", "\$(GS)F", "\$(DESC)", "\$(SCAN)", "\$(PINI)", "\$(EGU)", "\$(LOW)", "\$(LSV)", "\$(HIGH)", "\$(HSV)", "\$(ZNAM)", "\$(ONAM)", "\$(ZSV)", "\$(OSV)", "\$(DEFAULT)", "\$(DRVL" "\$(DRVH)" }
+{ "\$(P)", "\$(PORT)", 0, "VAR", "\$(EN)06_\$(GS)", "\$(GS)F", "\$(DESC)", "\$(SCAN)", "\$(PINI)", "\$(EGU)", "\$(LOW)", "\$(LSV)", "\$(HIGH)", "\$(HSV)", "\$(ZNAM)", "\$(ONAM)", "\$(ZSV)", "\$(OSV)", "\$(DEFAULT)", "\$(DRVL)" "\$(DRVH)" }
 { "\$(P)", "\$(PORT)", 0, "VAR", "\$(EN)07_\$(GS)", "\$(GS)G", "\$(DESC)", "\$(SCAN)", "\$(PINI)", "\$(EGU)", "\$(LOW)", "\$(LSV)", "\$(HIGH)", "\$(HSV)", "\$(ZNAM)", "\$(ONAM)", "\$(ZSV)", "\$(OSV)", "\$(DEFAULT)", "\$(DRVL)", "\$(DRVH)" }
 { "\$(P)", "\$(PORT)", 0, "VAR", "\$(EN)08_\$(GS)", "\$(GS)H", "\$(DESC)", "\$(SCAN)", "\$(PINI)", "\$(EGU)", "\$(LOW)", "\$(LSV)", "\$(HIGH)", "\$(HSV)", "\$(ZNAM)", "\$(ONAM)", "\$(ZSV)", "\$(OSV)", "\$(DEFAULT)", "\$(DRVL)", "\$(DRVH)" }
 }
