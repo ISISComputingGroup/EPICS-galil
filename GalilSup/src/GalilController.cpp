@@ -4905,6 +4905,7 @@ bool GalilController::checkGalilThread(int thread)
 bool GalilController::checkGalilThreads()
 {
     bool result = true;
+	int stat;
     if ( !checkGalilThread(0) ) // thread 0 should always be running
     {	
         result = false;
@@ -4922,12 +4923,17 @@ bool GalilController::checkGalilThreads()
                     }
 				}
 			}
-			else if (numAxes_ > 0) //Check code is running for all created GalilAxis
+            else if ((numAxes_ > 0 || rio_) && thread_mask_ == 0) //Check code is running for all created GalilAxis
 			{
+                if (rio_) //Check thread 0 on rio
+                   numAxes_ = 1;
                 for (int i=0;i<numAxes_;++i)
                 {		
-					/*check that code is running*/
-                    if ( !checkGalilThread(i) )
+                    if (rio_)
+						stat = checkGalilThread(i);
+					else
+						stat = checkGalilThread(axisList_[i] - AASCII);
+                    if ( !stat )
 					{
                         result = false;
 						errlogPrintf("Thread %d not running on model %s, address %s\n", i, model_, address_);
