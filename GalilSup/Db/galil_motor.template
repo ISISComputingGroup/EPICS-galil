@@ -305,7 +305,7 @@ record(ai,"$(P):$(M):DMOV")
 
 record(ao, "$(P):$(M):INV_MRES")
 {
-	field(DESC, "Set the motor resolution in steps per EGU")
+	field(DESC, "Set the motor res in steps per EGU")
 	field(FLNK, "$(P):$(M):INV_MRES:SP_CALC")
 	field(PREC, "3")
 }
