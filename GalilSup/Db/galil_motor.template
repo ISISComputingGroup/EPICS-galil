@@ -301,4 +301,52 @@ record(ai,"$(P):$(M):DMOV")
     field(INP, "$(P):$(M).DMOV CP")
 }
 
+# Allow setting MRES/ERES as inverse
+
+record(ao, "$(P):$(M):INV_MRES")
+{
+	field(DESC, "Set the motor resolution in steps per EGU")
+	field(FLNK, "$(P):$(M):INV_MRES:SP_CALC")
+	field(PREC, "3")
+}
+
+record(calcout, "$(P):$(M):INV_MRES:SP_CALC")
+{
+	field(INPA, "$(P):$(M):INV_MRES")
+	field(CALC, "1/A")
+	field(OUT, "$(P):$(M).MRES")
+	field(OOPT, "On Change")
+}
+
+record(calcout, "$(P):$(M):INV_MRES_CALC")
+{
+	field(INPA, "$(P):$(M).MRES CP")
+	field(CALC, "1/A")
+	field(OUT, "$(P):$(M):INV_MRES PP")
+	field(OOPT, "On Change")
+}
+
+record(ao, "$(P):$(M):INV_ERES")
+{
+	field(DESC, "Set the encoder res in steps per EGU")
+	field(FLNK, "$(P):$(M):INV_ERES:SP_CALC")
+	field(PREC, "3")
+}
+
+record(calcout, "$(P):$(M):INV_ERES:SP_CALC")
+{
+	field(INPA, "$(P):$(M):INV_ERES")
+	field(CALC, "1/A")
+	field(OUT, "$(P):$(M).ERES")
+	field(OOPT, "On Change")
+}
+
+record(calcout, "$(P):$(M):INV_ERES_CALC")
+{
+	field(INPA, "$(P):$(M).ERES CP")
+	field(CALC, "1/A")
+	field(OUT, "$(P):$(M):INV_ERES PP")
+	field(OOPT, "On Change")
+}
+
 # end
