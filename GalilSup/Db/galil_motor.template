@@ -27,6 +27,7 @@
 
 grecord(motor,"$(P):$(M)")
 {
+	field(ASG, "$(ASG=DEFAULT)")
 	field(DTYP,"asynMotor")
 	field(VMAX,"$(VMAX)")
 	field(VBAS,"0")
