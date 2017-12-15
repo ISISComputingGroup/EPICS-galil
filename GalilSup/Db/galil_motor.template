@@ -28,7 +28,7 @@
 record(scalcout, "$(P):$(M):MANAGERMODE")
 {
     field(ASG, "READONLY")
-    field(DESC, "Non-zero if manager is required for this axis")
+    field(DESC, "Non-zero if manager is required")
     field(PINI, "YES")
     field(INPA, "$(PVPREFIX)CS:MANAGER CP")
     field(BB, "$(ASG)")
