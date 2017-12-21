@@ -2885,10 +2885,7 @@ asynStatus GalilController::writeReadController(const char *caller)
 			resp_[sizeof(resp_)-1] = '\0';
 			//No exception = success
 			done = true;
-			// Only track consecutive timeouts for same messages as in catch
-			if (strncmp(cmd_, "BP",2)==0 || strncmp(cmd_, "MT",2) == 0) {
-				consecutive_read_timeouts_ = 0;
-			}
+			consecutive_read_timeouts_ = 0;
 			status = asynSuccess;
 		}
 		else 	//Not connected
