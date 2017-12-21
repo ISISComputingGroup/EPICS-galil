@@ -25,8 +25,20 @@
 # 800 Blackburn Road, Clayton, Victoria 3168, Australia.
 #
 
+record(scalcout, "$(P):$(M):MANAGERMODE")
+{
+    field(ASG, "READONLY")
+    field(DESC, "Non-zero if manager is required")
+    field(PINI, "YES")
+    field(INPA, "$(PVPREFIX)CS:MANAGER CP")
+    field(BB, "$(ASG)")
+    field(CALC, "A = 0 && BB = 'MANAGER'")
+    field(OOPT, "Every Time")
+}
+
 grecord(motor,"$(P):$(M)")
 {
+	field(ASG, "$(ASG=DEFAULT)")
 	field(DTYP,"asynMotor")
 	field(VMAX,"$(VMAX)")
 	field(VBAS,"0")
@@ -56,7 +68,7 @@ grecord(motor,"$(P):$(M)")
 	field(ICOF,"$(ICOF)")
 	field(DCOF,"$(DCOF)")
 	field(HLSV,"MINOR")
-	info(archive,"0.02 VAL RBV DVAL OFF MSTA DIR CNEN MOVN DMOV")
+	info(archive,"0.02 VAL RBV DVAL OFF MSTA DIR CNEN MOVN DMOV MISS RCNT")
 	info(alarm,"Motors")
 }
 
@@ -299,6 +311,54 @@ record(ai,"$(P):$(M):DMOV")
     field(SCAN, "Passive")
     field(DTYP, "Soft Channel")
     field(INP, "$(P):$(M).DMOV CP")
+}
+
+# Allow setting MRES/ERES as inverse
+
+record(ao, "$(P):$(M):INV_MRES")
+{
+	field(DESC, "Set the motor res in steps per EGU")
+	field(FLNK, "$(P):$(M):INV_MRES:SP_CALC")
+	field(PREC, "3")
+}
+
+record(calcout, "$(P):$(M):INV_MRES:SP_CALC")
+{
+	field(INPA, "$(P):$(M):INV_MRES")
+	field(CALC, "1/A")
+	field(OUT, "$(P):$(M).MRES")
+	field(OOPT, "On Change")
+}
+
+record(calcout, "$(P):$(M):INV_MRES_CALC")
+{
+	field(INPA, "$(P):$(M).MRES CP")
+	field(CALC, "1/A")
+	field(OUT, "$(P):$(M):INV_MRES PP")
+	field(OOPT, "On Change")
+}
+
+record(ao, "$(P):$(M):INV_ERES")
+{
+	field(DESC, "Set the encoder res in steps per EGU")
+	field(FLNK, "$(P):$(M):INV_ERES:SP_CALC")
+	field(PREC, "3")
+}
+
+record(calcout, "$(P):$(M):INV_ERES:SP_CALC")
+{
+	field(INPA, "$(P):$(M):INV_ERES")
+	field(CALC, "1/A")
+	field(OUT, "$(P):$(M).ERES")
+	field(OOPT, "On Change")
+}
+
+record(calcout, "$(P):$(M):INV_ERES_CALC")
+{
+	field(INPA, "$(P):$(M).ERES CP")
+	field(CALC, "1/A")
+	field(OUT, "$(P):$(M):INV_ERES PP")
+	field(OOPT, "On Change")
 }
 
 # end

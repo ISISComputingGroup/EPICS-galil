@@ -1,0 +1,73 @@
+' status=1 clamped
+' status=2 parked
+' status=3 moving
+' status=5 error
+#Park
+IF(_LFF=1)
+MTF=2;
+ACF=1024;
+DCF=16384;
+'
+SHF;
+'
+WT1000
+SPF=1000;
+HMF;
+BGF;
+status=3; 'moving
+'
+AMF;
+IF(_SCF=10)
+WT=1000;
+SPF=5000;
+PRF=369*1280; 'mm x usteps/mm
+BGF;
+'
+AMF;
+'
+IF(_LFF=0)
+status=2; 'parked
+ELSE
+status=5; 'ERROR
+ENDIF
+'
+ELSE
+status=5; 'ERROR
+ENDIF
+ENDIF
+MOF
+EN
+'
+#Clamp
+IF(_LRF=1)
+MTF=2;
+ACF=1024;
+DCF=16384;
+'
+SHF;
+SPF=5000;
+HMF;
+BGF;
+status=4; 'moving
+'
+AMF;
+IF(_SCF=10)
+WT=1000;
+SPF=1000;
+PRF=-9*1280; 'mm x usteps/mm
+BGF;
+'
+AMF;
+'
+IF(_LRF=0)
+status=1; 'clamped
+ELSE
+status=5; 'ERROR
+ENDIF
+'
+ELSE
+status=5; 'ERROR
+ENDIF
+ENDIF
+MOF
+EN
