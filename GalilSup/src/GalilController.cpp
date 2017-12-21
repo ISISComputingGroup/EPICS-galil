@@ -355,9 +355,12 @@ void GalilController::connectManager(void)
   require_connect = false;
 
   //If we have received allowed timeouts
-  if (consecutive_acquire_timeouts_ > ALLOWED_TIMEOUTS || consecutive_read_timeouts_ > ALLOWED_TIMEOUTS) {
-	 require_connect = true;	
-	 async_records_ = false;
+  if (consecutive_read_timeouts_ > ALLOWED_TIMEOUTS) {
+	 require_connect = true;
+  }
+  if (consecutive_acquire_timeouts_ > ALLOWED_TIMEOUTS) {
+	 try_async_ = false; // this is likely caused by a DR failure which doesn't recover, so switch to QR
+	 require_connect = true;
   }
 
   //If not connected
