@@ -254,7 +254,8 @@ GalilController::GalilController(const char *portName, const char *address, doub
   //We have not reported any connect failures
   connect_fail_reported_ = false;
   //We have not recieved a timeout yet
-  consecutive_timeouts_ = 0;
+  consecutive_acquire_timeouts_ = 0;
+  consecutive_read_timeouts_ = 0;
   //Store period in ms between data records
   updatePeriod_ = fabs(updatePeriod);
   //Code generator has not been initialized
@@ -354,8 +355,13 @@ void GalilController::connectManager(void)
   require_connect = false;
 
   //If we have received allowed timeouts
-  if (consecutive_timeouts_ > ALLOWED_TIMEOUTS)
-	 require_connect = true;	
+  if (consecutive_read_timeouts_ > ALLOWED_TIMEOUTS) {
+	 require_connect = true;
+  }
+  if (consecutive_acquire_timeouts_ > ALLOWED_TIMEOUTS) {
+	 try_async_ = false; // this is likely caused by a DR failure which doesn't recover, so switch to QR
+	 require_connect = true;
+  }
 
   //If not connected
   if (gco_ == NULL)
@@ -439,7 +445,8 @@ void GalilController::connect(void)
 
 	//Success, continue
 	//No timeouts have occurred
-	consecutive_timeouts_ = 0;
+	consecutive_acquire_timeouts_ = 0;
+	consecutive_read_timeouts_ = 0;
 	//A connection fail mesg not issued, because connect succeeded
 	connect_fail_reported_ = false;
 	}
@@ -2815,6 +2822,7 @@ asynStatus GalilController::acquireDataRecord(string cmd)
 
       //Success.  Set status in GalilController instance
       recstatus_ = asynSuccess;
+	  consecutive_acquire_timeouts_ = 0;
       }
     else //Failure.  Not connected
       {
@@ -2832,7 +2840,7 @@ asynStatus GalilController::acquireDataRecord(string cmd)
        {
        //Increment consecutive timeout counter
        //GalilController::connectManager thread watches this 
-       consecutive_timeouts_++;
+       consecutive_acquire_timeouts_++;
        }
     }
     //Forgiveness is cheap.
@@ -2874,15 +2882,15 @@ asynStatus GalilController::writeReadController(const char *caller)
   	try	{
 		//If connected, then do the command
 		if (gco_ != NULL)
-		       	{
+		{
 		 	//send the command, and get the response
 			strncpy(resp_, gco_->command(strcmd).c_str(), sizeof(resp_));
 			resp_[sizeof(resp_)-1] = '\0';
 			//No exception = success
 			done = true;
-		 	consecutive_timeouts_ = 0;
+			consecutive_read_timeouts_ = 0;
 			status = asynSuccess;
-			}
+		}
 		else 	//Not connected
 		       	return asynError;
 		}
@@ -2910,8 +2918,8 @@ asynStatus GalilController::writeReadController(const char *caller)
 				{
 				//Increment consecutive timeout counter
 				//GalilController::connectManager watches this 
-				consecutive_timeouts_++;
-				if (consecutive_timeouts_ > ALLOWED_TIMEOUTS)
+				consecutive_read_timeouts_++;
+				if (consecutive_read_timeouts_ > ALLOWED_TIMEOUTS)
 					{
 					//Give connect thread chance to obtain lock in case disconnect is required
 					unlock();
