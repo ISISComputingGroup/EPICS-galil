@@ -1333,7 +1333,7 @@ asynStatus GalilAxis::invert_ssi(void)
       pC_->getIntegerParam(axisNo_, pC_->GalilSSIErrorBits_, &ssierrbits);
       //Determine SSI input location
       if ((!encoderSwapped_ && ssiinput == 1) || (encoderSwapped_ && ssiinput == 2))//SSI in main
-         encoder_position_ = (pow(2,(ssitotalbits - ssierrbits)) - 1) - encoder_position_;
+         encoder_position_ = (pow(2.0,(ssitotalbits - ssierrbits)) - 1) - encoder_position_;
       }
    else
       {
@@ -2181,7 +2181,7 @@ asynStatus GalilAxis::beginMotion(const char *caller, double position, bool rela
          pC_->getIntegerParam(axisNo_, pC_->GalilUseEncoder_, &ueip);
          readback = (ueip) ? encoder_position_ : motor_position_;
          //If new position differs from readback, then write new position
-         if (trunc(position) == trunc(readback))
+         if ((long long) position == (long long) readback)
             return asynSuccess;//Nothing to do
          }
       }
