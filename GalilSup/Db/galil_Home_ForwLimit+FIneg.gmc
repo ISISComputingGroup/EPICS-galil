@@ -15,7 +15,6 @@ IF (home${AXIS}=1)
 		ST${AXIS};ENDIF
 	IF ((hjog${AXIS}=1) & (_BG${AXIS}=0) & (home${AXIS}=1) & (_LF${AXIS}<>0))
 		oldecel${AXIS}=_DC${AXIS};speed${AXIS}=_SP${AXIS}
-		AC${AXIS}=(@ABS[hjgdc${AXIS}])
 		DC${AXIS}=(@ABS[hjgdc${AXIS}])
 		JG${AXIS}=(@ABS[hjgsp${AXIS}])
 		SH${AXIS};WT100;BG${AXIS};hjog${AXIS}=2
@@ -24,19 +23,16 @@ IF (home${AXIS}=1)
         hjog${AXIS}=2
     ENDIF
 	IF ((hjog${AXIS}=2) & (_BG${AXIS}=0) & (home${AXIS}=1) & (_LF${AXIS}=0))
-		AC${AXIS}=(@ABS[hjgdc${AXIS}])
 		DC${AXIS}=(@ABS[hjgdc${AXIS}])
 		JG${AXIS}=((@ABS[hjgsp${AXIS}])*-1)
 		FI${AXIS};SH${AXIS};WT100;BG${AXIS};hjog${AXIS}=3
 	ENDIF
 	IF ((hjog${AXIS}=3) & (_BG${AXIS}=0) & (home${AXIS}=1) & (_SC${AXIS}=10))
-		AC${AXIS}=(@ABS[hjgdc${AXIS}])
 		DC${AXIS}=(@ABS[hjgdc${AXIS}])
 		PR${AXIS}=((@ABS[hjgsp${AXIS}])*-2)
 		SH${AXIS};WT100;BG${AXIS};hjog${AXIS}=4
 	ENDIF
 	IF ((hjog${AXIS}=4) & (_BG${AXIS}=0) & (home${AXIS}=1) & (_SC${AXIS}=1))
-		AC${AXIS}=(@ABS[hjgdc${AXIS}])
 		DC${AXIS}=(@ABS[hjgdc${AXIS}])
 		JG${AXIS}=((@ABS[hjgsp${AXIS}])*0.1)
 		FI${AXIS};SH${AXIS};WT100;BG${AXIS};hjog${AXIS}=5
