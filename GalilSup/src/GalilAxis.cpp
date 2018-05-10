@@ -1561,12 +1561,20 @@ asynStatus GalilAxis::beginMotion(const char *caller)
          begin_time = epicsTimeDiffInSeconds(&begin_nowt_, &begin_begint_);
          if (begin_time > begin_timeout)
             {
-            sprintf(mesg, "%s begin failure axis %c", caller, axisName_);
-			std::cerr << mesg << std::endl;
+		    // get last stop code
+	        sprintf(pC_->cmd_, "MG _SC%c\n", axisName_);
+            pC_->writeReadController(functionName);
+            double sc_code = atof(pC_->resp_);
+            // get axis moving state
+	        sprintf(pC_->cmd_, "MG _BG%c\n", axisName_);
+            pC_->writeReadController(functionName);
+            double bg_code = atof(pC_->resp_);
+            sprintf(mesg, "%s begin failure axis %c after %f seconds: _BG%c=%f _SC%c=%f", caller, axisName_, begin_time, axisName_, bg_code, axisName_, sc_code);
 			// getting these a lot, it it moving to somewhere very near current position?
 			// comment out sending to errlog for now
             //Set controller error mesg monitor
 //            pC_->setCtrlError(mesg);
+			std::cerr << mesg << std::endl;
             return asynError;
             }
          }
