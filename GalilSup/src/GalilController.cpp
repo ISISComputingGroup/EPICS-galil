@@ -240,6 +240,7 @@ GalilController::GalilController(const char *portName, const char *address, doub
 
 //Add new parameters here
   createParam(GalilMoveCommandString, asynParamOctet, &GalilMoveCommand_);
+  createParam(GalilMotorEncoderSyncTolString, asynParamFloat64, &GalilMotorEncoderSyncTol_);
 
   createParam(GalilCommunicationErrorString, asynParamInt32, &GalilCommunicationError_);
 

@@ -40,6 +40,8 @@ using namespace std; //cout ostringstream vector string
 
 static void pollServicesThreadC(void *pPvt);
 
+static const char* lookupStopCode(int sc);
+
 // These are the GalilAxis methods
 
 /** Creates a new GalilAxis object.
@@ -839,6 +841,29 @@ asynStatus GalilAxis::setPosition(double position)
   return asynSuccess;
 }
 
+bool GalilAxis::checkEncoderMotorSync()
+{
+    double posdiff_tol = 0.0;
+	pC_->getDoubleParam(axisNo_, pC_->GalilMotorEncoderSyncTol_, &posdiff_tol);
+	if (!ueip_ || posdiff_tol <= 0.0)
+	{
+		return true;
+	}
+    double mres = 0.0, eres = 0.0;				// MotorRecord mres, and eres
+	pC_->getDoubleParam(axisNo_, pC_->GalilEncoderResolution_, &eres);
+	pC_->getDoubleParam(axisNo_, pC_->motorResolution_, &mres);
+	double posdiff_egu = motor_position_ * mres - encoder_position_ * eres;
+	if (fabs(posdiff_egu) < posdiff_tol)
+	{
+		return true;
+	}
+	else
+	{
+		std::cerr << "Motor and Encoder registers are out of sync by " << posdiff_egu << " > " << posdiff_tol << " egu" << std::endl;
+		return false;		
+	}
+}
+
 /** Set the current position of the encoder.
   * \param[in] position The new absolute encoder position that should be set in the hardware. Units=steps.*/
 asynStatus GalilAxis::setEncoderPosition(double position)
@@ -1139,15 +1164,9 @@ void GalilAxis::checkEncoder(void)
          if (pestall_time >= estall_time && !stopSent_)
             {
 			// get last stop code
-	        sprintf(pC_->cmd_, "MG _SC%c\n", axisName_);
-            pC_->writeReadController(functionName);
-            double sc_code = atof(pC_->resp_);
-
+            double sc_code = getGalilAxisVal("_SC");
 	        // get axis moving state
-	        sprintf(pC_->cmd_, "MG _BG%c\n", axisName_);
-            pC_->writeReadController(functionName);
-            double bg_code = atof(pC_->resp_);
-
+            double bg_code = getGalilAxisVal("_BG");
             //Pass stall status to higher layers
             setIntegerParam(pC_->motorStatusSlip_, 1);
             setIntegerParam(pC_->GalilEStall_, 1);
@@ -1546,7 +1565,10 @@ asynStatus GalilAxis::beginMotion(const char *caller)
    pC_->getDoubleParam(axisNo_, pC_->GalilEStallTime_, &estall_time);
    double begin_timeout = (BEGIN_TIMEOUT < estall_time ? estall_time : BEGIN_TIMEOUT);
 
-
+   if (!checkEncoderMotorSync())
+   {
+        pC_->setCtrlError("Encoder and motor registers out of sync - you may need to rehome");
+   }
    //Begin the move
    //Get time when attempt motor begin
    epicsTimeGetCurrent(&begin_begint_);
@@ -1561,20 +1583,21 @@ asynStatus GalilAxis::beginMotion(const char *caller)
          begin_time = epicsTimeDiffInSeconds(&begin_nowt_, &begin_begint_);
          if (begin_time > begin_timeout)
             {
-		    // get last stop code
-	        sprintf(pC_->cmd_, "MG _SC%c\n", axisName_);
-            pC_->writeReadController(functionName);
-            double sc_code = atof(pC_->resp_);
-            // get axis moving state
-	        sprintf(pC_->cmd_, "MG _BG%c\n", axisName_);
-            pC_->writeReadController(functionName);
-            double bg_code = atof(pC_->resp_);
-            sprintf(mesg, "%s begin failure axis %c after %f seconds: _BG%c=%f _SC%c=%f", caller, axisName_, begin_time, axisName_, bg_code, axisName_, sc_code);
+			// get last stop code
+            double sc_code = getGalilAxisVal("_SC");
+	        // get axis moving state
+            double bg_code = getGalilAxisVal("_BG");
+            double bl = getGalilAxisVal("_BL"); // low limit
+            double fl = getGalilAxisVal("_FL"); // high limit
+            double tp = getGalilAxisVal("_TP"); // current position (from encoder if present)
+            double td = getGalilAxisVal("_TD"); // current position (motor steps)
+            double rp = getGalilAxisVal("_RP"); // commanded position (motor steps)
+            sprintf(mesg, "%s begin failure axis %c after %f seconds: _BG%c=%f _SC%c=%f [%s] _BL%c=%f _FL%c=%f _TP%c=%f _TD%c=%f _RP%c=%f", caller, axisName_, begin_time, axisName_, bg_code, axisName_, sc_code, lookupStopCode((int)sc_code), axisName_, bl, axisName_, fl, axisName_, tp, axisName_, td, axisName_, rp);
 			// getting these a lot, it it moving to somewhere very near current position?
 			// comment out sending to errlog for now
             //Set controller error mesg monitor
-//            pC_->setCtrlError(mesg);
-			std::cerr << mesg << std::endl;
+            pC_->setCtrlError(mesg);
+//			std::cerr << mesg << std::endl;
             return asynError;
             }
          }
@@ -1585,6 +1608,14 @@ asynStatus GalilAxis::beginMotion(const char *caller)
    //Success
    return asynSuccess;
 }
+
+  double GalilAxis::getGalilAxisVal(const char* name)
+  {
+      static const char *functionName = "GalilAxis::beginMotion";
+	  sprintf(pC_->cmd_, "MG %s%c\n", name, axisName_);
+      pC_->writeReadController(functionName);
+	  return atof(pC_->resp_);
+  }
 
 /** Polls the axis.
   * This function reads the controller position, encoder position, the limit status, the moving status, 
@@ -1916,3 +1947,49 @@ asynStatus GalilAxis::set_ssi(void)
 	return status;
 }
 
+struct StopCode
+{
+	int sc;
+	const char* mess;
+};
+
+static const StopCode stopCodes[] = { 
+    { 0, "Motors are running, independent mode" }, 
+    { 1, "Motors decelerating or stopped at commanded independent position" }, 
+	{ 2, "Decelerating or stopped by FWD limit switch or soft limit FL" }, 
+	{ 3, "Decelerating or stopped by REV limit switch or soft limit BL" }, 
+	{ 4, "Decelerating or stopped by Stop Command (ST)" }, 
+	{ 6, "Stopped by Abort input" }, 
+	{ 7, "Stopped by Abort command (AB)" }, 
+	{ 8, "Decelerating or stopped by Off on Error (OE1)" }, 
+	{ 9, "Stopped after finding edge (FE)" }, 
+	{ 10, "Stopped after homing (HM) or Find Index (FI)" }, 
+	{ 11, "Stopped by selective abort input" }, 
+	{ 12, "Decelerating or stopped by encoder failure (OA1)" }, //  (For controllers supporting OA/OV/OT)
+	{ 15, "Amplifier Fault" }, // (For controllers with internal drives)
+	{ 16, "Stepper position maintenance error" }, 
+	{ 30, "Running in PVT mode" }, 
+	{ 31, "PVT mode completed normally" }, 
+	{ 32, "PVT mode exited because buffer is empty" }, 
+	{ 50, "Contour Running" }, 
+	{ 51, "Contour Stopped" }, 
+	{ 60, "ECAM Running" }, 
+	{ 61, "ECAM Stopped" }, 
+	{ 70, "Stopped due to EtherCAT communication failure" }, 
+	{ 71, "Stopped due to EtherCAT drive fault" }, 
+	{ 99, "MC timeout" },
+	{ 100, "Vector Sequence running" },
+	{ 101, "Vector Sequence stopped" }
+};
+
+static const char* lookupStopCode(int sc)
+{
+	for(int i = 0; i < sizeof(stopCodes) / sizeof(StopCode); ++i)
+	{
+	    if (sc == stopCodes[i].sc)
+		{
+			return stopCodes[i].mess;
+		}			
+	}
+	return "UNKNOWN";
+}
