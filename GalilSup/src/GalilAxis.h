@@ -129,7 +129,7 @@ public:
 
 private:
   double getGalilAxisVal(const char* name);
-  bool checkEncoderMotorSync();
+  bool checkEncoderMotorSync(bool correct_motor);
 
   GalilController *pC_;      		/**< Pointer to the asynMotorController to which this axis belongs.
                                 	*   Abbreviated because it is used very frequently */

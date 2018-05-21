@@ -718,6 +718,12 @@ asynStatus GalilAxis::beginCheck(const char *functionName, double maxVelocity)
 	pC_->setCtrlError(mesg);
 	return asynError;  //Nothing to do 
 	}
+	
+   if (!checkEncoderMotorSync(true))
+   {
+        pC_->setCtrlError("Encoder and motor registers out of sync - you may need to rehome");
+	    // return asynError;  // should we stop move attempts? 
+   }
 
   //Everything ok so far
   return asynSuccess;
@@ -829,9 +835,9 @@ asynStatus GalilAxis::setPosition(double position)
   //output motor position (step count) to aux encoder register on controller
   //DP and DE command function is different depending on motor type
   if (abs(motor) == 1)
-	sprintf(pC_->cmd_, "DE%c=%.0lf", axisName_, position);  //Servo motor, use aux register for step count
+	sprintf(pC_->cmd_, "DE%c=%.0f", axisName_, position);  //Servo motor, use aux register for step count
   else
-	sprintf(pC_->cmd_, "DP%c=%.0lf", axisName_, position);  //Stepper motor, aux register for step count
+	sprintf(pC_->cmd_, "DP%c=%.0f", axisName_, position);  //Stepper motor, aux register for step count
   pC_->writeReadController(functionName);
   
   //Set encoder position
@@ -841,8 +847,10 @@ asynStatus GalilAxis::setPosition(double position)
   return asynSuccess;
 }
 
-bool GalilAxis::checkEncoderMotorSync()
+// return true if in sync
+bool GalilAxis::checkEncoderMotorSync(bool correct_motor)
 {
+    const char *functionName = "GalilAxis::checkEncoderMotorSync";
     double posdiff_tol = 0.0;
 	pC_->getDoubleParam(axisNo_, pC_->GalilMotorEncoderSyncTol_, &posdiff_tol);
 	if (!ueip_ || posdiff_tol <= 0.0)
@@ -852,6 +860,9 @@ bool GalilAxis::checkEncoderMotorSync()
     double mres = 0.0, eres = 0.0;				// MotorRecord mres, and eres
 	pC_->getDoubleParam(axisNo_, pC_->GalilEncoderResolution_, &eres);
 	pC_->getDoubleParam(axisNo_, pC_->motorResolution_, &mres);
+    sprintf(pC_->cmd_, "MT%c=?", axisName_);
+    pC_->writeReadController(functionName);
+    int motor = atoi(pC_->resp_);
 	double posdiff_egu = motor_position_ * mres - encoder_position_ * eres;
 	if (fabs(posdiff_egu) < posdiff_tol)
 	{
@@ -860,8 +871,23 @@ bool GalilAxis::checkEncoderMotorSync()
 	else
 	{
 		std::cerr << "Motor and Encoder registers are out of sync by " << posdiff_egu << " > " << posdiff_tol << " egu" << std::endl;
-		return false;		
 	}
+	if (!correct_motor)
+	{
+		return false;
+	}
+	double new_motor_pos = encoder_position_ * eres / mres;		
+	std::cerr << "Raw motor position corrected from " << motor_position_ << " to " << new_motor_pos << " using encoder" << std::endl;
+	if (abs(motor) == 1)
+	{
+		sprintf(pC_->cmd_, "DE%c=%.0f", axisName_, new_motor_pos);  //Servo motor, use aux register for step count
+	}
+	else
+	{
+		sprintf(pC_->cmd_, "DP%c=%.0f", axisName_, new_motor_pos);  //Stepper motor, aux register for step count
+	}
+	pC_->writeReadController(functionName);
+	return true;		
 }
 
 /** Set the current position of the encoder.
@@ -880,9 +906,9 @@ asynStatus GalilAxis::setEncoderPosition(double position)
   //output encoder counts to main encoder register on controller
   //DP and DE command function is different depending on motor type
   if (abs(motor) == 1)
-  	sprintf(pC_->cmd_, "DP%c=%.0lf", axisName_, position);   //Servo motor, encoder is main register
+  	sprintf(pC_->cmd_, "DP%c=%.0f", axisName_, position);   //Servo motor, encoder is main register
   else
-	sprintf(pC_->cmd_, "DE%c=%.0lf", axisName_, position);   //Stepper motor, encoder is main register
+	sprintf(pC_->cmd_, "DE%c=%.0f", axisName_, position);   //Stepper motor, encoder is main register
 
   status = pC_->writeReadController(functionName);
 
@@ -1565,10 +1591,6 @@ asynStatus GalilAxis::beginMotion(const char *caller)
    pC_->getDoubleParam(axisNo_, pC_->GalilEStallTime_, &estall_time);
    double begin_timeout = (BEGIN_TIMEOUT < estall_time ? estall_time : BEGIN_TIMEOUT);
 
-   if (!checkEncoderMotorSync())
-   {
-        pC_->setCtrlError("Encoder and motor registers out of sync - you may need to rehome");
-   }
    //Begin the move
    //Get time when attempt motor begin
    epicsTimeGetCurrent(&begin_begint_);
@@ -1594,7 +1616,7 @@ asynStatus GalilAxis::beginMotion(const char *caller)
             double rp = getGalilAxisVal("_RP"); // commanded position (motor steps)
             sprintf(mesg, "%s begin failure axis %c after %f seconds: _BG%c=%f _SC%c=%f [%s] _BL%c=%f _FL%c=%f _TP%c=%f _TD%c=%f _RP%c=%f", caller, axisName_, begin_time, axisName_, bg_code, axisName_, sc_code, lookupStopCode((int)sc_code), axisName_, bl, axisName_, fl, axisName_, tp, axisName_, td, axisName_, rp);
 			// getting these a lot, it it moving to somewhere very near current position?
-			// comment out sending to errlog for now
+			// comment out sending to errlog for now and send to cerr instead
             //Set controller error mesg monitor
             pC_->setCtrlError(mesg);
 //			std::cerr << mesg << std::endl;
@@ -1611,7 +1633,7 @@ asynStatus GalilAxis::beginMotion(const char *caller)
 
   double GalilAxis::getGalilAxisVal(const char* name)
   {
-      static const char *functionName = "GalilAxis::beginMotion";
+      static const char *functionName = "GalilAxis::getGalilAxisVal";
 	  sprintf(pC_->cmd_, "MG %s%c\n", name, axisName_);
       pC_->writeReadController(functionName);
 	  return atof(pC_->resp_);
