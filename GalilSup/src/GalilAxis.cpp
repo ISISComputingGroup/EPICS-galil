@@ -454,7 +454,7 @@ asynStatus GalilAxis::move(double position, int relative, double minVelocity, do
   double readback = motor_position_;		//For step motors controller uses motor_position_ for positioning
   char move_command[128]; // at least enough to take a stringout record, but extra in case of a waveform
   
-  //Check velocity and wlp protection
+    //Check velocity and wlp protection
   if (beginCheck(functionName, maxVelocity))
      return asynSuccess;  //Nothing to do
 
@@ -462,6 +462,8 @@ asynStatus GalilAxis::move(double position, int relative, double minVelocity, do
   if (ueip_ && (motorType_ == 0 || motorType_ == 1))
      readback = encoder_position_;
   
+  std::cerr << "MOVE: axis " << axisName_ << " to " << position << (relative != 0 ? " (relative) " : " (absolute)") << " readback " << readback << std::endl;
+
   //Ensure home flag is 0
   sprintf(pC_->cmd_, "home%c=0", axisName_);
   pC_->writeReadController(functionName);
@@ -514,7 +516,7 @@ asynStatus GalilAxis::move(double position, int relative, double minVelocity, do
 				{
 				pos_ok = true;
 				//Set the relative move
-				sprintf(pC_->cmd_, "PR%c=%.0lf", axisName_, position);
+				sprintf(pC_->cmd_, "PR%c=%.0f", axisName_, position);
 				pC_->writeReadController(functionName);
 				}
 			}
@@ -525,7 +527,7 @@ asynStatus GalilAxis::move(double position, int relative, double minVelocity, do
 				{
 				pos_ok = true;
 				//Set the absolute move
-				sprintf(pC_->cmd_, "PA%c=%.0lf", axisName_, position);
+				sprintf(pC_->cmd_, "PA%c=%.0f", axisName_, position);
 				pC_->writeReadController(functionName);
 				}
 			}
@@ -534,7 +536,8 @@ asynStatus GalilAxis::move(double position, int relative, double minVelocity, do
 		if (!pos_ok)
 			{
 			//Dont start if wlp is on, and its been activated
-			sprintf(mesg, "%s failed, bad position request axis %c", functionName, axisName_);
+			sprintf(mesg, "%s failed, bad %s position %.0f requested for axis %c with readback %.0f", 
+			        functionName, (relative != 0 ? "relative" : "absolute"), position, axisName_, readback);
 			//Set controller error mesg monitor
 			pC_->setCtrlError(mesg);
 			return asynSuccess;  //Nothing to do 
@@ -848,24 +851,26 @@ asynStatus GalilAxis::setPosition(double position)
 }
 
 // return true if in sync
+// only needed for stepper motors
 bool GalilAxis::checkEncoderMotorSync(bool correct_motor)
 {
     const char *functionName = "GalilAxis::checkEncoderMotorSync";
     double posdiff_tol = 0.0;
-	pC_->getDoubleParam(axisNo_, pC_->GalilMotorEncoderSyncTol_, &posdiff_tol);
-	if (!ueip_ || posdiff_tol <= 0.0)
+	asynStatus status = pC_->getDoubleParam(axisNo_, pC_->GalilMotorEncoderSyncTol_, &posdiff_tol);
+    sprintf(pC_->cmd_, "MT%c=?", axisName_);
+    pC_->writeReadController(functionName);
+    int motor = atoi(pC_->resp_); // servo is -1.5, -1, 1, or 1.5 so abs(int(motor)) is 1 
+	if ( status != asynSuccess || abs(motor) == 1 || !ueip_ || posdiff_tol <= 0.0 )
 	{
 		return true;
 	}
     double mres = 0.0, eres = 0.0;				// MotorRecord mres, and eres
 	pC_->getDoubleParam(axisNo_, pC_->GalilEncoderResolution_, &eres);
 	pC_->getDoubleParam(axisNo_, pC_->motorResolution_, &mres);
-    sprintf(pC_->cmd_, "MT%c=?", axisName_);
-    pC_->writeReadController(functionName);
-    int motor = atoi(pC_->resp_);
 	double posdiff_egu = motor_position_ * mres - encoder_position_ * eres;
 	if (fabs(posdiff_egu) < posdiff_tol)
 	{
+		std::cerr << "Motor and Encoder are in sync by " << posdiff_egu << " < " << posdiff_tol << " egu" << std::endl;
 		return true;
 	}
 	else
@@ -884,7 +889,7 @@ bool GalilAxis::checkEncoderMotorSync(bool correct_motor)
 	}
 	else
 	{
-		sprintf(pC_->cmd_, "DP%c=%.0f", axisName_, new_motor_pos);  //Stepper motor, aux register for step count
+		sprintf(pC_->cmd_, "DP%c=%.0f", axisName_, new_motor_pos);  //Stepper motor, main register for step count
 	}
 	pC_->writeReadController(functionName);
 	return true;		
