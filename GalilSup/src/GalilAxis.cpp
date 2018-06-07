@@ -108,7 +108,7 @@ GalilAxis::GalilAxis(class GalilController *pC, //Pointer to controller instance
                     (EPICSTHREADFUNC)pollServicesThreadC, (void *)this);
   
   // We assume motor with encoder
-  setIntegerParam(pC->motorStatusGainSupport_, 0);
+  setIntegerParam(pC->motorStatusGainSupport_, 1);
   setIntegerParam(pC->motorStatusHasEncoder_, 1);
   //Wrong limit protection not actively stopping motor right now
   setIntegerParam(pC->GalilWrongLimitProtectionActive_, 0);
