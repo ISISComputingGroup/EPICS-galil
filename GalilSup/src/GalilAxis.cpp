@@ -855,7 +855,7 @@ asynStatus GalilAxis::setPosition(double position)
 bool GalilAxis::checkEncoderMotorSync(bool correct_motor)
 {
     const char *functionName = "GalilAxis::checkEncoderMotorSync";
-    double posdiff_tol = 0.0;
+    double posdiff_tol = 0.0;  // in physical egu
 	asynStatus status = pC_->getDoubleParam(axisNo_, pC_->GalilMotorEncoderSyncTol_, &posdiff_tol);
     sprintf(pC_->cmd_, "MT%c=?", axisName_);
     pC_->writeReadController(functionName);
@@ -883,7 +883,7 @@ bool GalilAxis::checkEncoderMotorSync(bool correct_motor)
 	}
 	double new_motor_pos = encoder_position_ * eres / mres;		
 	std::cerr << "Raw motor position corrected from " << motor_position_ << " to " << new_motor_pos << " using encoder" << std::endl;
-	if (abs(motor) == 1)
+	if (abs(motor) == 1) // currently servo branch should never get executed
 	{
 		sprintf(pC_->cmd_, "DE%c=%.0f", axisName_, new_motor_pos);  //Servo motor, use aux register for step count
 	}
