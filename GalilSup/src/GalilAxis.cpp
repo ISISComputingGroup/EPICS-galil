@@ -452,7 +452,9 @@ asynStatus GalilAxis::move(double position, int relative, double minVelocity, do
   char mesg[MAX_MESSAGE_LEN];			//Error mesg
   bool pos_ok = false;				//Is the requested position ok
   double readback = motor_position_;		//For step motors controller uses motor_position_ for positioning
+  double mres;
   char move_command[128]; // at least enough to take a stringout record, but extra in case of a waveform
+  bool used_move_command = false;
   
     //Check velocity and wlp protection
   if (beginCheck(functionName, maxVelocity))
@@ -503,9 +505,11 @@ asynStatus GalilAxis::move(double position, int relative, double minVelocity, do
         if ( (pC_->getStringParam(axisNo_, pC_->GalilMoveCommand_, sizeof(move_command), move_command) == asynSuccess) && (move_command[0] != '\0' && move_command[0] != ' ') )
 		{
 		    move_command[sizeof(move_command)-1] = '\0';
-			if (epicsSnprintf(pC_->cmd_, sizeof(pC_->cmd_), move_command, position) > 0)
+			pC_->getDoubleParam(axisNo_, pC_->motorResolution_, &mres);
+			if (epicsSnprintf(pC_->cmd_, sizeof(pC_->cmd_), move_command, position * mres) > 0)
 			{
 			    pos_ok = true;
+				used_move_command = true;
 			    pC_->writeReadController(functionName);
 			}
 		}
@@ -550,7 +554,9 @@ asynStatus GalilAxis::move(double position, int relative, double minVelocity, do
 		executePrem();
 
 		//Begin the move
-		beginMotion(functionName);
+		if (!used_move_command) {
+		    beginMotion(functionName);
+		}
 		}
 	}
 
