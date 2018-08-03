@@ -18,6 +18,7 @@ galil_Home_ForwLimit+FIneg.gmc   | Find forward limit switch, find encoder index
 galil_Home_Home.gmc              | Find home datum switch                                            | no
 galil_Home_Home+FIneg.gmc        | Find home datum switch, find encoder index in negative direction  | yes
 galil_Home_Home+FIpos.gmc        | Find home datum switch, find encoder index in positive direction  | yes
+galil_Home_No_Home.gmc           | Do not move, do not zero                                          | no
 galil_Home_Pin_Hole_Selector.gmc | IMAT homing for pin hole selector                                 | N/A
 galil_Home_RevLimit.gmc          | Find reverse limit switch                                         | no
 galil_Home_RevLimit_Home.gmc     | Find reverse limit switch, find home datum switch                 | no
