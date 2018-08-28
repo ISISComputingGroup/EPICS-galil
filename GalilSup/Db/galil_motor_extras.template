@@ -92,6 +92,16 @@ record(ao,"$(P):$(M)_ERES_SP") {
     field(PREC, "$(PREC)")
 }
 
+record(ao,"$(P):$(M)_MOT_ENC_SYNC_TOL_SP") {
+    field(DESC, "Motor encoder sync tol")
+    field(DTYP, "asynFloat64")
+    field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_ENC_TOL")
+    field(PREC, "$(PREC)")
+	field(EGU, "$(EGU)")
+	field(VAL, "0")
+	field(PINI, "YES")
+}
+
 record(bo,"$(P):$(M)_DIR_SP") {
     field(DESC, "Motor record DIR")
     field(DOL,  "$(P):$(M).DIR CP MS")

@@ -128,6 +128,9 @@ public:
   asynStatus setClosedLoop(bool closedLoop);
 
 private:
+  double getGalilAxisVal(const char* name);
+  bool checkEncoderMotorSync(bool correct_motor);
+
   GalilController *pC_;      		/**< Pointer to the asynMotorController to which this axis belongs.
                                 	*   Abbreviated because it is used very frequently */
   char axisName_;			//The axis letter A-H
