@@ -240,6 +240,7 @@ GalilController::GalilController(const char *portName, const char *address, doub
 
 //Add new parameters here
   createParam(GalilMoveCommandString, asynParamOctet, &GalilMoveCommand_);
+  createParam(GalilMotorEncoderSyncTolString, asynParamFloat64, &GalilMotorEncoderSyncTol_);
 
   createParam(GalilCommunicationErrorString, asynParamInt32, &GalilCommunicationError_);
 
@@ -422,6 +423,12 @@ void GalilController::connect(void)
 	   libverPrinted = true;
 	   }
 		
+	if (strncmp(address_, "COM", 3) == 0)
+	{
+	gco_ = new Galil(address_);
+	}
+	else
+	{
 	
 	Galil* tgco = new Galil(std::string(address_) + " -s"); // -s is silent connect, just get tcp handle
 	// clean up handles on Galil
@@ -442,7 +449,8 @@ void GalilController::connect(void)
 	// second tcp handle just for unsolicited messages, by default they are sent udp and may get lost
 	gco_um_ = new Galil(std::string(address_) + " -s");  // -s means connect silently, just make tcp connection
 	gco_um_->command("CFI");  // take unsolicited messages
-
+        }
+	
 	//Success, continue
 	//No timeouts have occurred
 	consecutive_acquire_timeouts_ = 0;
@@ -466,7 +474,7 @@ void GalilController::connect(void)
      }
 
   //if connected
-  if (gco_ != NULL && gco_um_ != NULL)
+  if (gco_ != NULL)
 	 {
 	 //Read controller model, firmware, stop all motors and threads
   	 connected();
@@ -499,6 +507,7 @@ void GalilController::setParamDefaults(void)
   {
 	setIntegerParam(i, GalilMotorStopGo_, 3);
     setStringParam(i, GalilMoveCommand_, "");
+	setDoubleParam(i, GalilMotorEncoderSyncTol_, 0.0);
   }
   //Output compare is off
   for (i = 0; i < 2; i++)
@@ -2338,7 +2347,7 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
 		getDoubleParam(pAxis->axisNo_, GalilEncoderResolution_, &eres);
 		getDoubleParam(pAxis->axisNo_, motorResolution_, &mres);
 		//Calculate step count from existing encoder_position, construct mesg to controller_
-		sprintf(cmd_, "DP%c=%.0lf", pAxis->axisName_, pAxis->encoder_position_ * (eres/mres));
+		sprintf(cmd_, "DP%c=%.0f", pAxis->axisName_, pAxis->encoder_position_ * (eres/mres));
 		//Write setting to controller
 		status = writeReadController(functionName);
 		}
@@ -2348,7 +2357,7 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
 	if (fabs(oldmotor) > 1.0 && value < 2)
 		{
 		//Calculate step count from existing encoder_position, construct mesg to controller_
-		sprintf(cmd_, "DP%c=%.0lf", pAxis->axisName_, pAxis->encoder_position_);
+		sprintf(cmd_, "DP%c=%.0f", pAxis->axisName_, pAxis->encoder_position_);
 		//Write setting to controller
 		status = writeReadController(functionName);
 		}
@@ -2593,7 +2602,14 @@ void GalilController::processUnsolicitedMesgs(void)
    char *tokSave = NULL;	//Remaining tokens
 
    //Collect unsolicted message(s)   
-   strncpy(rawbuf, gco_um_->message(0).c_str(), sizeof(rawbuf));
+   if (gco_um_ != NULL)
+   {
+       strncpy(rawbuf, gco_um_->message(0).c_str(), sizeof(rawbuf));
+   }
+   else
+   {
+       strncpy(rawbuf, gco_->message(0).c_str(), sizeof(rawbuf));
+   }
    rawbuf[sizeof(rawbuf)-1] = '\0';
 
    //Break message into tokens: name value name value    etc.
