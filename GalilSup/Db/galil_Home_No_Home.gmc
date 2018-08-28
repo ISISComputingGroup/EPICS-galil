@@ -1,0 +1,18 @@
+NO*****************AXIS ${AXIS}********************
+NO**************HOME - No Home***************
+#HOME${AXIS}
+IF ((home${AXIS}=1))
+    inhome${AXIS}=1
+    hjog${AXIS}=0;home${AXIS}=0;homed${AXIS}=0
+    MG "home${AXIS}", home${AXIS};MG "homed${AXIS}", homed${AXIS}
+    MG "Home_Configured_as_NO_HOME_${AXIS}",0
+    MG "Home_Axis_remains_unchanged_${AXIS}",0
+ELSE
+  hjog${AXIS}=0
+ENDIF
+IF ((home${AXIS}=0) & (inhome${AXIS}=1))
+  inhome${AXIS}=0
+ENDIF
+IF (mlock=1)
+  II ,,dpon,dvalues
+ENDIF

@@ -1629,8 +1629,8 @@ asynStatus GalilAxis::beginMotion(const char *caller)
 			// getting these a lot, it it moving to somewhere very near current position?
 			// comment out sending to errlog for now and send to cerr instead
             //Set controller error mesg monitor
-            pC_->setCtrlError(mesg);
-//			std::cerr << mesg << std::endl;
+//            pC_->setCtrlError(mesg);
+			std::cerr << mesg << std::endl;
             return asynError;
             }
          }
