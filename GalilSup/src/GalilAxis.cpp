@@ -464,7 +464,7 @@ asynStatus GalilAxis::move(double position, int relative, double minVelocity, do
   if (ueip_ && (motorType_ == 0 || motorType_ == 1))
      readback = encoder_position_;
   
-  std::cerr << "MOVE: axis " << axisName_ << " to " << position << (relative != 0 ? " (relative) " : " (absolute)") << " readback " << readback << std::endl;
+  std::cerr << "MOVE: axis " << axisName_ << " to " << position << (relative != 0 ? " (relative) " : " (absolute)") << " current readback " << readback << std::endl;
 
   //Ensure home flag is 0
   sprintf(pC_->cmd_, "home%c=0", axisName_);
@@ -540,7 +540,7 @@ asynStatus GalilAxis::move(double position, int relative, double minVelocity, do
 		if (!pos_ok)
 			{
 			//Dont start if wlp is on, and its been activated
-			sprintf(mesg, "%s failed, bad %s position %.0f requested for axis %c with readback %.0f", 
+			epicsSnprintf(mesg, sizeof(mesg), "%s failed, bad %s position %.0f requested for axis %c with readback %.0f", 
 			        functionName, (relative != 0 ? "relative" : "absolute"), position, axisName_, readback);
 			//Set controller error mesg monitor
 			pC_->setCtrlError(mesg);
@@ -1625,7 +1625,7 @@ asynStatus GalilAxis::beginMotion(const char *caller)
             double tp = getGalilAxisVal("_TP"); // current position (from encoder if present)
             double td = getGalilAxisVal("_TD"); // current position (motor steps)
             double rp = getGalilAxisVal("_RP"); // commanded position (motor steps)
-            sprintf(mesg, "%s begin failure axis %c after %f seconds: _BG%c=%f _SC%c=%f [%s] _BL%c=%f _FL%c=%f _TP%c=%f _TD%c=%f _RP%c=%f", caller, axisName_, begin_time, axisName_, bg_code, axisName_, sc_code, lookupStopCode((int)sc_code), axisName_, bl, axisName_, fl, axisName_, tp, axisName_, td, axisName_, rp);
+            epicsSnprintf(mesg, sizeof(mesg), "%s begin failure axis %c after %f seconds: _BG%c=%f _SC%c=%f [%s] _BL%c=%f _FL%c=%f _TP%c=%f _TD%c=%f _RP%c=%f", caller, axisName_, begin_time, axisName_, bg_code, axisName_, sc_code, lookupStopCode((int)sc_code), axisName_, bl, axisName_, fl, axisName_, tp, axisName_, td, axisName_, rp);
 			// getting these a lot, it it moving to somewhere very near current position?
 			// comment out sending to errlog for now and send to cerr instead
             //Set controller error mesg monitor
