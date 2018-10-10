@@ -34,7 +34,7 @@ File                             | What                                         
 galil_Default_Footer.gmc         | Deal with command errors, tcp errors and limit switches           | N/A
 galil_Default_Header.gmc         | Setup variables,  run homeA command in thread 1 and runs forever  | N/A
 galil_Muon_Slits.gmc             | Drive to analogue value for muon instrument slits                 | N/A
-
+galil_Oscillating_Collimator_Merlin.gmc | Code to run the oscillating collimator on MERLIN           | no
 
 ## Notes
 
