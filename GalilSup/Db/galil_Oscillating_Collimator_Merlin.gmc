@@ -9,7 +9,7 @@ count=0
 MT~a=2
 DC~a=1024;AC~a=1024;SH~a
 JP #HOME, @IN[6]=1
-JG~a=250
+SP~a=250;PR~a=2600
 mode=1
 BG~a
 #INI
@@ -21,7 +21,7 @@ AM~a
 #HOME
 '*******STEP 2 - Find Gigital Home*******
 mode=1
-AC~a=67107840;DC~a=1024;JG~a=-250
+AC~a=67107840;DC~a=1024;SP~a=250;PR~a=-2600
 SH~a;BG~a
 #HEO
 JP #HEO, @IN[6]=1
@@ -29,7 +29,7 @@ ST~a
 AM~a
 WT100
 '
-AC~a=1024;DC~a= 67107840;JG~a= 20
+AC~a=1024;DC~a= 67107840;SP~a= 20;PR~a=2600
 SH~a;BG~a
 #HR
 JP #HR, @IN[6]<>1
