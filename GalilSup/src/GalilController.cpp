@@ -2660,7 +2660,7 @@ void GalilController::processUnsolicitedMesgs(void)
             //Homed is not part of Galil data record, we support it using Galil code and unsolicited messages over tcp instead
             //We must use asynMotorAxis version of setIntegerParam to set MSTA bits for this MotorAxis
             pAxis->setIntegerParam(motorStatusHomed_, value);
-            callParamCallbacks();
+            pAxis->callParamCallbacks();
             }
 
          //Motor homing status message
@@ -2759,6 +2759,7 @@ void GalilController::getStatus(void)
 					setIntegerParam(0, profileCurrentPoint_, (int)gco_->sourceValue(recdata_, src));
 					}
 				}
+			callParamCallbacks();
 			}
 		}
 	catch (string e) 
