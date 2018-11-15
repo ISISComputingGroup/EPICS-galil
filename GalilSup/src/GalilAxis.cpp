@@ -2648,6 +2648,7 @@ asynStatus GalilAxis::jogAfterHome(void) {
 
       if (!status) {
          //If all settings OK, do the move
+         errlogSevPrintf(errlogInfo, "jogging %c after home to raw position %.0f\n", axisName_, position);
          if (!moveThruMotorRecord(position, true)) {
             //Requested move equal or larger than 1 motor step, move success
             //Retrieve AutoOn delay from ParamList
