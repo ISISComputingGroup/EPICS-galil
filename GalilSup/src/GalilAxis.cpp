@@ -590,6 +590,11 @@ asynStatus GalilAxis::home(double minVelocity, double maxVelocity, double accele
   if (ssiinput)
      return asynSuccess;  //Nothing to do
 
+  if (homing_)
+  {
+      errlogSevPrintf(errlogInfo, "Axis %c already homing - request ignored.\n", axisName_);
+      return asynSuccess;  //Nothing to do
+  }
   // check homing thread is available
   if ( !pC_->checkGalilThreads() )
   {
@@ -1215,7 +1220,7 @@ void GalilAxis::checkEncoder(void)
             sprintf(message, "Encoder stall stop motor %c", axisName_);
             //Set controller error mesg monitor
 			pC_->setCtrlError(message);
-			std::cerr << "STALL: pestall_time=" << pestall_time << " (>" << estall_time << ") encoderMove_=" << encoderMove_ << " encDirOk_=" << encDirOk_ << " _SC" << axisName_ << "=" << sc_code << " _BG" << axisName_ << "=" << bg_code << std::endl;
+			std::cerr << "STALL: pestall_time=" << pestall_time << " (>" << estall_time << ") encoderMove_=" << encoderMove_ << " encDirOk_=" << encDirOk_ << " _SC" << axisName_ << "=" << sc_code << " [" << lookupStopCode((int)sc_code) << "] _BG" << axisName_ << "=" << bg_code << std::endl;
             }
          }
       }
@@ -1329,7 +1334,7 @@ void GalilAxis::checkHoming(void)
         pC_->writeReadController(functionName);
         double bg_code = atof(pC_->resp_);
 
-	  sprintf(message, "Homing timed out after %f: BG%c=%f SC%c=%f ", homing_timeout, axisName_, bg_code, axisName_, sc_code);
+	  epicsSnprintf(message, sizeof(message), "Homing timed out after %f: BG%c=%f SC%c=%f [%s]", homing_timeout, axisName_, bg_code, axisName_, sc_code, lookupStopCode((int)sc_code));
 	  pC_->setCtrlError(message);
 	  
       //Cancel home
