@@ -1493,7 +1493,7 @@ void GalilAxis::pollServices(void)
 
                          //Do jog after home move
                          if (!status && jah)
-                            {
+                         {
                             //Calculate position, velocity (velo not hvel) and acceleration
                             velocity = velo/mres;
                             acceleration = velocity/accl;
@@ -1504,8 +1504,11 @@ void GalilAxis::pollServices(void)
                                readback = encoder_position_;
                             //Do the move
                             if (position != readback)
+							{
+						        errlogSevPrintf(errlogInfo, "Poll services: jogging %c after home to raw position %.0f\n", axisName_, position);
                             	move(position, 0, 0, velocity, acceleration);
-                            }
+							}
+                         }
 
                          //Homed pollService completed
                          homedExecuted_ = true;
