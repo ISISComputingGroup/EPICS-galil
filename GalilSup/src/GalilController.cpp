@@ -116,7 +116,7 @@
 //                  Consolidation and tidy up
 //                  Further minor adjustments to Qt and MEDM screens
 //                  Minor adjustments to begin motion methods
-// 28/02/10 M.Clift 
+// 28/02/16 M.Clift 
 //                  Fixed problem in vector calculations
 //                  Fixed problem with motor interlock function
 // 08/03/16 M.Clift
@@ -298,6 +298,28 @@
 //                  Add disable wrong limit protection when an axis limit is disabled
 // 27/11/17 M.Clift
 //                  Alter how BISS, and SSI capability detected again
+// 16/12/17 M.Clift
+//                  Add support for EtherCat axis
+// 16/01/18 M.Clift & R. Sluiter
+//                  Fix motor velocity issue in profile motion when using custom time base
+// 18/02/18 M.Clift & M. Pearson
+//                  Alter soft limits.  Dial high = Dial low = 0 now disables axis soft limits
+// 22/05/18 M.Clift & M. Pearson
+//                  Fix DVAL set zero at autosave restore when controller not connected
+// 05/06/18 M.Clift
+//                  Fix issue detecting gray code SSI encoder connect/disconnect status
+// 04/12/18 M.Clift & M. Pearson
+//                  Alter home routine now takes limit disable setting into account
+// 19/12/18 M.Clift & M. Pearson
+//                  Add iocShell function GalilAddCode - Adds custom code to generated code
+// 20/12/18 M.Clift
+//                  Fix issue initialising galil variables for rio plc's
+// 06/01/19 M.Clift
+//                  Alter homing check to cater for disabled soft limits
+//                  Fix issue with generated home routine on 4000 series controllers and above
+// 30/01/19 M.Clift
+//                  Fix jog after home going the wrong way with DIR set to 1 (neg)
+//                  Alter output compare start and increment/delta now specified in user coordinates
 
 #include <stdio.h>
 #include <math.h>
@@ -310,6 +332,7 @@
 #include <unistd.h>
 #endif /* _WIN32 */
 #include <iostream>  //cout
+#include <fstream>   //ifstream
 #include <sstream>   //ostringstream istringstream
 #include <typeinfo>  //std::bad_typeid
 #include <sstream> //format source keys, string stream
@@ -347,7 +370,7 @@ static void GalilArrayUploadThreadC(void *pPvt);
 //This change in behaviour is anticipated by the asyn record device layer and causes no error mesgs
 static bool dbInitialized = false;
 
-//Static count of Musst controllers.  Used to derive communications port name L(controller num)
+//Static count of Galil controllers.  Used to derive communications port name L(controller num)
 static int controller_num = 0;
 
 //Convenience functions
@@ -480,6 +503,13 @@ GalilController::GalilController(const char *portName, const char *address, doub
   createParam(GalilStepSmoothString, asynParamFloat64, &GalilStepSmooth_);
   createParam(GalilMotorTypeString, asynParamInt32, &GalilMotorType_);
 
+  createParam(GalilEtherCatCapableString, asynParamInt32, &GalilEtherCatCapable_);
+  createParam(GalilEtherCatNetworkString, asynParamInt32, &GalilEtherCatNetwork_);
+  createParam(GalilCtrlEtherCatFaultString, asynParamInt32, &GalilCtrlEtherCatFault_);
+  createParam(GalilEtherCatAddressString, asynParamInt32, &GalilEtherCatAddress_);
+  createParam(GalilEtherCatFaultString, asynParamInt32, &GalilEtherCatFault_);
+  createParam(GalilEtherCatFaultResetString, asynParamInt32, &GalilEtherCatFaultReset_);
+
   createParam(GalilMotorConnectedString, asynParamInt32, &GalilMotorConnected_);
 
   createParam(GalilAfterLimitString, asynParamFloat64, &GalilAfterLimit_);
@@ -604,19 +634,20 @@ GalilController::GalilController(const char *portName, const char *address, doub
      setCtrlError(mesg);
      updatePeriod_ = MAX_UPDATE_PERIOD;
      }
-  //Code generator has not been initialized
-  codegen_init_ = false;	
+  //Digital in code generator has not been initialized
   digitalinput_init_ = false;
   //Motor enables defaults
   digports_ = 0;
   digvalues_ = 0;
+  //Time multiplier default
+  timeMultiplier_ = 1.00;
   //Deferred moves off at start-up
   movesDeferred_ = false;
   //Store the controller number for later use
   controller_number_ = controller_num;
-  //Allocate memory for code buffers.  
+  //Allocate memory for code buffers.
   //We put all code for this controller in these buffers.
-  thread_code_ = (char *)calloc(MAX_GALIL_AXES * (THREAD_CODE_LEN),sizeof(char));	
+  thread_code_ = (char *)calloc(MAX_GALIL_AXES * (THREAD_CODE_LEN),sizeof(char));
   limit_code_ = (char *)calloc(MAX_GALIL_AXES * (LIMIT_CODE_LEN),sizeof(char));
   digital_code_ = (char *)calloc(MAX_GALIL_AXES * (INP_CODE_LEN),sizeof(char));
   card_code_ = (char *)calloc(MAX_GALIL_AXES * (THREAD_CODE_LEN+LIMIT_CODE_LEN+INP_CODE_LEN),sizeof(char));
@@ -626,7 +657,7 @@ GalilController::GalilController(const char *portName, const char *address, doub
   strcpy(limit_code_, "");
   strcpy(digital_code_, "");
   strcpy(card_code_, "");
- 
+
   //Set defaults in Paramlist before connect
   setParamDefaults();
 
@@ -677,6 +708,9 @@ GalilController::GalilController(const char *portName, const char *address, doub
 
   //Establish the initial connection to controller
   connect();
+
+  //Add code headers to generated galil code
+  gen_code_headers();
 
   //Static count of controllers.  Used to derive communications port names
   controller_num++;
@@ -1040,6 +1074,12 @@ void GalilController::connected(void)
         setIntegerParam(GalilBISSCapable_, 0);
    }
 
+  //Determine if controller is Ethercat capable
+  if (model_[3] == '5')
+     setIntegerParam(GalilEtherCatCapable_, 1);
+  else
+     setIntegerParam(GalilEtherCatCapable_, 0);
+
   //Determine if controller is PVT capable
   if (model_[3] == '5' || model_[3] == '4' || model_[3] == '3')
      setIntegerParam(GalilPVTCapable_, 1);
@@ -1059,7 +1099,7 @@ void GalilController::connected(void)
   numThreads_ = 8;
   //Check for controllers that support < 8 threads
   //RIO
-  numThreads_ = (rio_)? 4 : numThreads_;
+  numThreads_ = (rio_) ? 4 : numThreads_;
   //DMC3 range
   if ((model_[0] == 'D' && model_[3] == '3'))
      numThreads_ = 6;
@@ -1359,6 +1399,8 @@ asynStatus GalilController::setOutputCompare(int oc)
   int start, end;			//Looping
   double ocstart;			//Output compare start position from paramList
   double ocincr;			//Output compare incremental distance for repeat pulses from paramList
+  int dir, dirm = 1;			//Motor record dir, and dirm direction multiplier based on motor record DIR field
+  double off;				//Motor record offset
   double eres;	        		//mr eres
   int mainencoder, auxencoder;		//Main and aux encoder setting
   int encoder_setting;			//Overall encoder setting value
@@ -1402,9 +1444,14 @@ asynStatus GalilController::setOutputCompare(int oc)
 		paramstatus |= getDoubleParam(oc, GalilOutputCompareIncr_, &ocincr);
 		//Retrieve the axis encoder resolution
 		paramstatus |= getDoubleParam(axis, GalilEncoderResolution_, &eres);
+                //Retrieve axis offset, and dir
+                paramstatus |= getIntegerParam(axis, GalilDirection_, &dir);
+                paramstatus |= getDoubleParam(axis, GalilUserOffset_, &off);
+                //Calculate direction multiplier
+                dirm = (dir == 0) ? 1 : -1;
 		//Convert start and increment to steps
-		ocstart = ocstart / eres;
-		ocincr = ocincr / eres;
+                ocstart = ((ocstart - off)/eres) * dirm;
+                ocincr = ((ocincr - off)/eres) * dirm;
 		//Check start, and increment values
 		if (rint(ocincr) >= -65536 && rint(ocincr) <= 65535 &&
 		    rint(ocstart) >= -2147483648 && rint(ocstart) <= 2147483647 && !paramstatus)
@@ -1812,7 +1859,7 @@ asynStatus GalilController::buildProfileFile()
 				{
 				//Calculate linear mode velocity
 				//Add this motors' contribution to segment vector velocity
-				vectorVelocity += pow(velocity[j], 2);
+				vectorVelocity += pow(velocity[j]/timeMultiplier_, 2);
 				}
 			//Store motor incremental move distance for this segment
 			sprintf(moves, "%s%.0lf", moves, rint(incmove));
@@ -1823,7 +1870,7 @@ asynStatus GalilController::buildProfileFile()
 		else
 			{
 			//PVT mode
-			sprintf(moves, "%s%lf %.0lf,%.0lf,%.0lf\n", moves, profileTimes_[i], rint(incmove), velocity[j], rint(profileTimes_[i]*1000.0));
+			sprintf(moves, "%s%lf %.0lf,%.0lf,%.0lf\n", moves, profileTimes_[i], rint(incmove), velocity[j], rint(profileTimes_[i]*1000.0*timeMultiplier_));
 			//Check timebase is multiple of 2ms
 			temp_time = profileTimes_[i] * 1000.0;
 			//PVT has 2 sample minimum
@@ -3301,9 +3348,11 @@ asynStatus GalilController::get_integer(int function, epicsInt32 *value, int axi
   * \param[out] value Address of the value to read. */
 asynStatus GalilController::readInt32(asynUser *pasynUser, epicsInt32 *value)
 {
-    int function = pasynUser->reason;		 //function requested
-    asynStatus status;				 //Used to work out communication_error_ status.  asynSuccess always returned
-    GalilAxis *pAxis = getAxis(pasynUser);	 //Retrieve the axis instance
+    int function = pasynUser->reason;		//function requested
+    asynStatus status;				//Used to work out communication_error_ status.  asynSuccess always returned
+    GalilAxis *pAxis = getAxis(pasynUser);	//Retrieve the axis instance
+    int ecatcapable;				//EtherCat capable status
+    unsigned i;					//Looping
 
     //If provided addr does not return an GalilAxis instance, then return asynError
     if (!pAxis) return asynError;
@@ -3385,6 +3434,12 @@ asynStatus GalilController::readInt32(asynUser *pasynUser, epicsInt32 *value)
 				   break;
 			case -15:  *value = 7;
 				   break;
+			case 100:  *value = 8;
+				   break;
+			case 110:  *value = 9;
+				   break;
+			case -110: *value = 10;
+				   break;
 			default:   break;
 			}
 		}
@@ -3449,7 +3504,39 @@ asynStatus GalilController::readInt32(asynUser *pasynUser, epicsInt32 *value)
 	sprintf(cmd_, "MG _LD%c", pAxis->axisName_);
 	status = get_integer(GalilLimitDisable_, value);
 	}
-  else 
+  else if (function == GalilCtrlEtherCatFault_)
+        {
+        //Retrieve required params
+        getIntegerParam(GalilEtherCatCapable_, &ecatcapable);
+        if (ecatcapable)
+           {
+           //Controller is EtherCat capable
+           //Determine EtherCat fault code
+           strcpy(cmd_, "MG _EU1");
+           status = get_integer(GalilCtrlEtherCatFault_, value);
+           //Set axis EtherCat fault status PV's
+           for (i = 0; i < MAX_GALIL_AXES; i++)
+              {
+              if (*value & (1 << i))
+                 setIntegerParam(i, GalilEtherCatFault_, 1);
+              else
+                 setIntegerParam(i, GalilEtherCatFault_, 0);
+              }
+           }
+        }
+  else if (function == GalilEtherCatNetwork_)
+        {
+        //Retrieve required params
+        getIntegerParam(GalilEtherCatCapable_, &ecatcapable);
+        if (ecatcapable)
+           {
+           //Controller is EtherCat capable
+           //Determine if EtherCat network up
+           sprintf(cmd_, "MG _EU0");
+           status = get_integer(GalilEtherCatNetwork_, value);
+           }
+        }
+  else
 	status = asynPortDriver::readInt32(pasynUser, value);
 
    //Always return success. Dont need more error mesgs
@@ -3718,6 +3805,12 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
 			break;
 		case 7: newmtr = -1.5;
 			break;
+		case 8: newmtr = 10;
+			break;
+		case 9: newmtr = 11;
+			break;
+		case 10: newmtr = -11;
+			break;
 		default: newmtr = 1.0;
 			break;
 		}
@@ -3749,7 +3842,7 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
 
 	//IF motor was stepper, and now servo
 	//Set reference position equal to main encoder, which sets initial error to 0
-	if (fabs(oldmotor) > 1.5 && (value < 2 || value > 5))
+	if (fabs(oldmotor) > 1.5 && (value < 2 || (value > 5 && value < 8)))
 		{
 		//Calculate step count from existing encoder_position, construct mesg to controller_
 		sprintf(cmd_, "DP%c=%.0lf", pAxis->axisName_, pAxis->encoder_position_);
@@ -3763,7 +3856,8 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
 	if (((oldmtr_abs == newmtr_abs) && ((oldmotor > 0 && newmtr < 0) || (oldmotor < 0 && newmtr > 0))) ||
 		((oldmtr_abs == 2.0 && newmtr_abs == 2.5) || (oldmtr_abs == 2.5 && newmtr_abs == 2.0)) ||
 		((oldmotor == 1.0 && newmtr == -1.5) || (oldmtr_abs == -1.5 && newmtr_abs == 1.0)) ||
-		((oldmotor == -1.0 && newmtr == 1.5) || (oldmtr_abs == 1.5 && newmtr_abs == -1.0)))
+		((oldmotor == -1.0 && newmtr == 1.5) || (oldmtr_abs == 1.5 && newmtr_abs == -1.0)) ||
+		((oldmotor == -11 && newmtr == 11) || (oldmotor == 11 && newmtr == -11)))
 		{
 		if (pAxis->limitsDirState_ != unknown)
 			pAxis->limitsDirState_ = (pAxis->limitsDirState_ == not_consistent) ? consistent : not_consistent;
@@ -3940,7 +4034,26 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
 		setCtrlError(mesg);
 		}
 	}
-  else 
+  else if (function == GalilEtherCatNetwork_)
+        {
+        enableEtherCatNetwork(value);
+        }
+  else if (function == GalilEtherCatFaultReset_)
+        {
+        pAxis->clearEtherCatFault();
+        }
+  else if (function == GalilEtherCatAddress_)
+        {
+        int ecatcapable;
+        getIntegerParam(GalilEtherCatCapable_, &ecatcapable);
+        if (ecatcapable)
+           {
+           //Controller is EtherCat capable, set axis drive address
+           sprintf(cmd_, "EX%c=%d", pAxis->axisName_, value); 
+           sync_writeReadController();
+           }
+        }
+  else
 	{
 	/* Call base class method */
 	status = asynMotorController::writeInt32(pasynUser, value);
@@ -4124,6 +4237,14 @@ asynStatus GalilController::writeOctet(asynUser *pasynUser, const char*  value, 
         //ai monitor
         aivalue = atof(resp_);
         setDoubleParam(0, GalilUserOctetVal_, aivalue);
+        //Determine if custom command had potential to alter controller time base
+        if (value_s.find("TM ") != string::npos)
+           {
+           //Retrieve controller time base
+           sprintf(cmd_, "MG _TM");
+           if (sync_writeReadController() == asynSuccess)
+              timeMultiplier_ = DEFAULT_TIME / atof(resp_);
+           }
         }
      else
         {
@@ -4166,6 +4287,93 @@ asynStatus GalilController::writeOctet(asynUser *pasynUser, const char*  value, 
 
   //Always return success. Dont need more error mesgs
   return asynSuccess;
+}
+
+/*Enable/Disable EtherCat network
+  * \param[in] Enable, or disable ethercat network
+*/
+void GalilController::enableEtherCatNetwork(int value)
+{
+   char mesg[MAX_GALIL_STRING_SIZE];	//Message to user
+   GalilAxis *pAxis;			//GalilAxis
+   unsigned i;				//Looping
+   int status;				//Asyn paramlist return success
+   int ecatcapable;			//Controller ethercat capable
+   int ecaterror;			//EtherCat error during attempt to bring up network
+   bool ecatenabled = false;		//EtherCat network status
+   int motorType;			//Motor type of individual axis
+
+   //Is controller ethercat capable ?
+   getIntegerParam(GalilEtherCatCapable_, &ecatcapable);
+   if (ecatcapable)
+      {
+      //Controller is ethercat capable
+      //Determine if EtherCat network up
+      sprintf(cmd_, "MG _EU0");
+      if (sync_writeReadController() == asynSuccess)
+         ecatenabled = (bool)atoi(resp_);
+
+      //Enable EtherCat
+      if (value && !ecatenabled)
+         {
+         //Refresh controller knowledge of available drive addresses
+         sprintf(cmd_, "EH");
+         sync_writeReadController();
+         //EtherCat timeout of 5000 ms
+         sprintf(cmd_, "EU1<5000");
+         if (sync_writeReadController() != asynSuccess)
+            {
+            //Something went wrong, determine error code
+            sprintf(cmd_, "MG _TC");
+            //Determine error string
+            if (sync_writeReadController() != asynSuccess)
+               {
+               ecaterror = atoi(resp_);
+               switch (ecaterror)
+                  {
+                  case ECAT_DUPLICATEID:strcpy(mesg, "EtherCat: Error duplicate EtherCat address on network");
+                                        break;
+                  case ECAT_TIMEOUT:strcpy(mesg, "EtherCat: Error timeout");
+                                        break;
+                  case ECAT_DRIVENOTFOUND:strcpy(mesg, "EtherCat: Error a drive address specified was not found");
+                                        break;
+                  case ECAT_NODRIVECONFIGURED:strcpy(mesg, "EtherCat: Error EtherCat axis not configured");
+                                        break;
+                  default: break;
+                  }
+               }
+            }
+         else
+            strcpy(mesg, "EtherCat: Network enable successful");
+         
+         //Set the message
+         setCtrlError(mesg);
+         }
+
+      //Disable EtherCat
+      if (!value && ecatenabled)
+         {
+         //Turn off all ethercat motors
+         for (i = 0; i < numAxesMax_; i++)
+            {
+            pAxis = NULL;
+            status = getIntegerParam(i, GalilMotorType_, &motorType);
+            if (!status)
+               {
+               if (motorType == 8 || motorType == 9 || motorType == 10)
+                  {
+                  //Motor is EtherCat type
+                  pAxis = getAxis(i);
+                  if (!pAxis) continue;
+                  pAxis->setClosedLoop(false);
+                  }
+               }
+            }
+         //Disable ethercat network
+         sprintf(cmd_, "EU0");
+         sync_writeReadController();
+         }
+      }//EtherCat capable
 }
 
 //Process unsolicited message from the controller
@@ -4845,7 +5053,7 @@ asynStatus GalilController::async_writeReadController(void)
   return (asynStatus)status;
 }
 
-/** Writes a string to the Musst controller and reads a response.
+/** Writes a string to the Galil controller and reads a response.
   * \param[in] output Pointer to the output string.
   * \param[out] input Pointer to the input string location.
   * \param[in] maxChars Size of the input buffer.
@@ -5065,9 +5273,6 @@ int GalilController::GalilInitializeVariables(bool burn_variables)
    unsigned i;			//General purpose looping
    GalilAxis *pAxis;		//GalilAxis
 
-   if (rio_) //This is a no-op for RIO
-      return asynSuccess;
-
    //Controller wide variables
    //Set tcperr counter to 0
    sprintf(cmd_, "tcperr=0");
@@ -5078,17 +5283,19 @@ int GalilController::GalilInitializeVariables(bool burn_variables)
    status |= sync_writeReadController();
 
    //Activate input interrupts for motor interlock function
-   if (digitalinput_init_ && digports_)
-      sprintf(cmd_, "dpon=%d;dvalues=%d;mlock=1", digports_, digvalues_);
-   else
-      sprintf(cmd_, "dpon=%d;dvalues=%d;mlock=0", digports_, digvalues_);
-   sync_writeReadController();
+   if (!rio_) {
+      if (digitalinput_init_ && digports_)
+         sprintf(cmd_, "dpon=%d;dvalues=%d;mlock=1", digports_, digvalues_);
+      else
+         sprintf(cmd_, "dpon=%d;dvalues=%d;mlock=0", digports_, digvalues_);
+      sync_writeReadController();
+   }
 
    //Before burning variables backup the commutation initialized, and homed status flags
    //Then set status flags to 0 ready for burn to eeprom
    //Done so commutation initialized and homed status is always 0 at controller power on
    //Finally set axis variables
-   if (numAxes_ > 0 && !status)
+   if (numAxes_ > 0 && !status && !rio_)
       {
       for (i = 0;i < numAxes_;i++)
          {
@@ -5149,6 +5356,9 @@ int GalilController::GalilInitializeVariables(bool burn_variables)
          //Initialize home switch inactive value
          sprintf(cmd_, "hswiact%c=1", axisList_[i]);
          status |= sync_writeReadController();
+         //Initialize home jog speed
+         sprintf(cmd_, "hjs%c=2048", axisList_[i]);
+         status |= sync_writeReadController();
          //Initialise home jogoff variable
          sprintf(cmd_, "hjog%c=0", axisList_[i]);
          status |= sync_writeReadController();
@@ -5175,7 +5385,7 @@ int GalilController::GalilInitializeVariables(bool burn_variables)
       }
 
    //Restore previous homed, and commutation initialized status
-   if (numAxes_ > 0)
+   if (numAxes_ > 0 && !rio_)
       {
       for (i = 0;i < numAxes_;i++)
          {
@@ -5193,6 +5403,74 @@ int GalilController::GalilInitializeVariables(bool burn_variables)
 
    //Return status
    return status;
+}
+
+/** \param[in] string file - code file specified by user
+  * \param[in] section     - code section to put user code
+                           0 = Card code
+                           1 = Thread code
+                           2 = Limits code
+                           3 = Digital code
+                           */
+void GalilController::GalilAddCode(int section, string filename) {
+   char *code;			   		//Pointer to desired code section
+   char js[MAX_GALIL_STRING_SIZE];		//Thread code jump statement
+   bool jsfound = false;			//Flag indicating if jump statement found in thread code
+   string line;					//Read the file line by line
+   string mesg;					//Error messages
+   ifstream file(filename);			//Input file stream
+   int index;
+
+   if (section == 3 && !digitalinput_init_) {
+      mesg = "Cannot add custom code to digital section, as digital code section is not defined";
+      setCtrlError(mesg.c_str());
+      return;
+   }
+
+   // Point toward specified code section
+   switch (section) {
+      case 0 : code = card_code_;
+               break;
+      case 1 : //Check for jump statement in existing thread_code_
+               index = strlen(thread_code_) - 12;
+               strcpy(js, &thread_code_[index]);
+               if (!strncmp(js, "JP #THREAD", 10)) {
+                  // Jump statement found.  Set flag, remove jump statement from thread_code
+                  // We will put jump statement back in thread code again at end
+                  jsfound = true;
+                  if (index > 0)
+                     thread_code_[index] = '\0';
+               }
+               code = thread_code_;
+               break;
+      case 2 : code = limit_code_;
+               break;
+      case 3 : code = digital_code_;
+               break;
+      default : code = thread_code_;
+                break;
+   }
+
+  if (file.is_open()) {
+     // Read provided file, add to specified code buffer
+     while (getline(file, line)) {
+        if (line.compare("\n") != 0) {
+           // Put the new line character back
+           line = line + '\n';
+           strcat(code, line.c_str());
+        }
+     }
+     // Put jump statement back into thread code
+     if (jsfound)
+        strcat(thread_code_, js);
+     // Done reading, close the file
+     file.close();
+  }
+  else {
+     // Can't open provided file
+     mesg = "Cannot open " + filename;
+     setCtrlError(mesg.c_str());
+  }
 }
 
 /*--------------------------------------------------------------*/
@@ -5451,6 +5729,18 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
       }
 }
 
+/* Generate code headers that are always required for a dmc
+   Required headers are for card, and limit code
+   We dont add header for digital code (ie #ININT) as we dont know if it's required yet
+   */
+void GalilController::gen_code_headers(void)
+{
+   //setup #AUTO label
+   strcpy(card_code_, "#AUTO\n");	
+   //setup #LIMSWI label	 
+   strcpy(limit_code_, "#LIMSWI\n");
+}
+
 /*--------------------------------------------------------------------------------*/
 /* Generate code end, and controller wide code eg. error recovery*/
 
@@ -5491,7 +5781,7 @@ void GalilController::gen_card_codeend(void)
          }
       else  //Limit code has been written, and we are done with LIMSWI and its prog end
          strcat(limit_code_, "RE 1\nEN\n");
-					
+
       //Add command error handler
       sprintf(thread_code_, "%s#CMDERR\nerrstr=_ED;errcde=_TC;cmderr=cmderr+1\nEN\n", thread_code_);
 
@@ -5526,7 +5816,7 @@ void GalilController::gen_motor_enables_code(void)
 		if (strlen(motor_enables->motors) > 0)
 			{
 			any = true;
-			sprintf(digital_code_,"%sIF (@IN[%d]=%d)\n", digital_code_, (i + 1), (int)motor_enables->disablestates[0]);
+			sprintf(digital_code_,"%sIF(@IN[%d]=%d)\n", digital_code_, (i + 1), (int)motor_enables->disablestates[0]);
 			//Scan through all motors associated with the port
 			for (j=0;j<(int)strlen(motor_enables->motors);j++)
 				{
@@ -6691,6 +6981,37 @@ extern "C" asynStatus GalilCreateCSAxes(const char *portName)
   return asynSuccess;
 }
 
+/** Add custom code to generated code
+  * Configuration command, called directly or from iocsh
+  * \param[in] portName          The name of the asyn port that has already been created for this driver
+  * \param[in] code_file      	 Code file to add to generated code
+  * \param[in] section      	 Where to add custom code
+  */
+extern "C" asynStatus GalilAddCode(const char *portName,        	//specify which controller by port name
+					int section,
+					const char *code_file)
+{
+  GalilController *pC;
+  static const char *functionName = "GalilAddCode";
+
+  //Convert provided code file into string
+  string filename(code_file);
+
+  //Retrieve the asynPort specified
+  pC = (GalilController*) findAsynPortDriver(portName);
+
+  if (!pC) {
+    printf("%s:%s: Error port %s not found\n",
+           driverName, functionName, portName);
+    return asynError;
+  }
+  pC->lock();
+  //Call GalilController::GalilAddCode to do the work
+  pC->GalilAddCode(section, filename);
+  pC->unlock();
+  return asynSuccess;
+}
+
 /** Starts a GalilController hardware.  Delivers dmc code, and starts it.
   * Configuration command, called directly or from iocsh
   * \param[in] portName          The name of the asyn port that has already been created for this driver
@@ -6801,6 +7122,21 @@ static void GalilCreateProfileCallFunc(const iocshArgBuf *args)
   GalilCreateProfile(args[0].sval, args[1].ival);
 }
 
+//GalilAddCode iocsh function
+static const iocshArg GalilAddCodeArg0 = {"Controller Port name", iocshArgString};
+static const iocshArg GalilAddCodeArg1 = {"Section", iocshArgInt};
+static const iocshArg GalilAddCodeArg2 = {"Code file", iocshArgString};
+static const iocshArg * const GalilAddCodeArgs[] = {&GalilAddCodeArg0,
+                                                    &GalilAddCodeArg1,
+                                                    &GalilAddCodeArg2};
+                                                             
+static const iocshFuncDef GalilAddCodeDef = {"GalilAddCode", 3, GalilAddCodeArgs};
+
+static void GalilAddCodeCallFunc(const iocshArgBuf *args)
+{
+  GalilAddCode(args[0].sval, args[1].ival, args[2].sval);
+}
+
 //GalilStartController iocsh function
 static const iocshArg GalilStartControllerArg0 = {"Controller Port name", iocshArgString};
 static const iocshArg GalilStartControllerArg1 = {"Code file", iocshArgString};
@@ -6825,6 +7161,7 @@ static void GalilSupportRegister(void)
   iocshRegister(&GalilCreateAxisDef, GalilCreateAxisCallFunc);
   iocshRegister(&GalilCreateCSAxesDef, GalilCreateCSAxesCallFunc);
   iocshRegister(&GalilCreateProfileDef, GalilCreateProfileCallFunc);
+  iocshRegister(&GalilAddCodeDef, GalilAddCodeCallFunc);
   iocshRegister(&GalilStartControllerDef, GalilStartControllerCallFunc);
 }
 

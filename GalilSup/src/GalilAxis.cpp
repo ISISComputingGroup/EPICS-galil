@@ -94,7 +94,7 @@ GalilAxis::GalilAxis(class GalilController *pC, //Pointer to controller instance
   /* insert motor interlock code into thread A */
   if (axisName_ == 'A')
 	{
-	sprintf(axis_thread_code,"%sIF (mlock=1)\n",axis_thread_code);
+	sprintf(axis_thread_code,"%sIF(mlock=1)\n",axis_thread_code);
 	sprintf(axis_thread_code,"%sII ,,dpon,dvalues\nENDIF\n",axis_thread_code);
 	}
 
@@ -301,24 +301,11 @@ void GalilAxis::initialize_codegen(char axis_thread_code[],
 	//Program label for digital input interrupt program
 	char axis_digital_label[10]="#ININT\n";
 	
-	//Does codegen need initialization for this controller ?
-	if (pC_->codegen_init_ == false)	
-		{
-		//setup #AUTO label
-		strcpy(pC_->card_code_,"#AUTO\n");
-		
-		//setup #LIMSWI label	 
-		strcpy(pC_->limit_code_,"#LIMSWI\n");
-
-		//Code generator has now been initialized
-		pC_->codegen_init_ = true;
-		}
-	
 	/*Empty code buffers for this axis*/
 	strcpy(axis_thread_code, "");
 	strcpy(axis_limit_code, "");
 		
-	//Insert code to start motor thread that will be constucted
+	//Insert code to start motor thread that will be constructed
 	//thread 0 (motor A) is auto starting
 	if (axisName_ != 'A')
 		sprintf(pC_->card_code_,"%sXQ #THREAD%c,%d\n",pC_->card_code_, axisName_, axisNo_);
@@ -352,90 +339,101 @@ void GalilAxis::gen_limitcode(char c,			 //GalilAxis::axisName_ used very often
 	//Use user desired deceleration, stop motor, then put deceleration back to that for normal moves
 	if (!limit_as_home_)	//Hitting limit when homing to home switch is a fail, cancel home process
 		{
-		sprintf(axis_limit_code,"%sIF (((_SC%c=2) | (_SC%c=3)) & (_BG%c=1))\nDC%c=limdc%c;VDS=limdc%c;VDT=limdc%c\n",axis_limit_code,c,c,c,c,c,c,c);
+		sprintf(axis_limit_code,"%sIF(((_SC%c=2)|(_SC%c=3))&(_BG%c=1))\nDC%c=limdc%c;VDS=limdc%c;VDT=limdc%c\n",axis_limit_code,c,c,c,c,c,c,c);
 		sprintf(axis_limit_code,"%shome%c=0;MG \"home%c\",home%c;ENDIF\n",axis_limit_code,c,c,c);
 		}
 	else    //Hitting limit when homing to limit switch is normal
-		sprintf(axis_limit_code,"%sIF (((_SC%c=2) | (_SC%c=3)) & (_BG%c=1))\nDC%c=limdc%c;VDS=limdc%c;VDT=limdc%c;ENDIF\n",axis_limit_code,c,c,c,c,c,c,c);
+		sprintf(axis_limit_code,"%sIF(((_SC%c=2)|(_SC%c=3))&(_BG%c=1))\nDC%c=limdc%c;VDS=limdc%c;VDT=limdc%c;ENDIF\n",axis_limit_code,c,c,c,c,c,c,c);
+}
+
+/*--------------------------------------------------------------------------------*/
+/* Generate galil code that checks if possible to move in direction specified by home
+   jog speed (hjs)*/
+/*--------------------------------------------------------------------------------*/
+
+void GalilAxis::gen_EnsureOkToMove(char c,			//GalilAxis::axisName_ used very often
+			     char axis_thread_code[])
+{
+   if (pC_->model_[3] == '2')// Model 21x3 does not have LD (limit disable) command
+      sprintf(axis_thread_code,"%sIF(((_LR%c=1)&(hjs%c<0))|((_LF%c=1)&(hjs%c>0)))\n", axis_thread_code,c,c,c,c);
+   else// All other models have LD (limit disable) command
+      sprintf(axis_thread_code,"%sIF((((_LR%c=1)|(_LD%c>1))&(hjs%c<0))|(((_LF%c=1)|(_LD%c=1)|(_LD%c=3))&(hjs%c>0)))\n", axis_thread_code,c,c,c,c,c,c,c);
 }
 
 /*--------------------------------------------------------------------------------*/
 /* Generate home code.*/
+/*--------------------------------------------------------------------------------*/
 
 void GalilAxis::gen_homecode(char c,			//GalilAxis::axisName_ used very often
 			     char axis_thread_code[])
 {
-	sprintf(axis_thread_code,"%sIF (home%c=1)\n",axis_thread_code,c);
+   sprintf(axis_thread_code,"%sIF(home%c=1)\n",axis_thread_code,c);
 	
-	//Setup home code
-	if (limit_as_home_)
-		{
-		/*hjog%c=1 we have found limit switch outer edge*/
-		/*hjog%c=2 we have found limit switch inner edge*/
-		/*hjog%c=3 we have found our final home pos*/
-		//Code to jog off limit
+   //Setup home code
+   if (limit_as_home_) {
+      //hjog%c=1 we have found limit switch outer edge
+      //hjog%c=2 we have found limit switch inner edge
+      //hjog%c=3 we have found our final home pos
+      //Code to jog off limit
 		
-		//Ensure correct limit active
-		sprintf(axis_thread_code,"%sIF ((((_LR%c=0)&(hjgsp%c>0))|((_LF%c=0)&(hjgsp%c<0)))&(hjog%c=0))\n", axis_thread_code,c,c,c,c,c);
-		//Ensure ok to move in desired direction
-		sprintf(axis_thread_code,"%sIF ((((_LR%c=1)&(hjgsp%c<0))|((_LF%c=1)&(hjgsp%c>0)))&(_MO%c=0)&(_BG%c=0))\n", axis_thread_code,c,c,c,c,c,c);
-		//Jog off limit
-		sprintf(axis_thread_code,"%sJG%c=hjgsp%c;WT10;BG%c;hjog%c=1;ENDIF;ENDIF\n",axis_thread_code,c,c,c,c);
-		//Stop motor once off limit
-		sprintf(axis_thread_code,"%sIF ((_LR%c=1)&(_LF%c=1)&(hjog%c=1)&(_BG%c=1));ST%c;ENDIF\n",axis_thread_code,c,c,c,c,c);
-		//Find encoder index 
-		sprintf(axis_thread_code,"%sIF ((hjog%c=1)&(_BG%c=0))\n",axis_thread_code,c,c);
-		//Ensure ok to move in desired direction
-		sprintf(axis_thread_code,"%sIF ((((_LR%c=1)&(hjgsp%c<0))|((_LF%c=1)&(hjgsp%c>0))))\n",axis_thread_code,c,c,c,c);
-		//Start index search
-		sprintf(axis_thread_code,"%sIF ((_MO%c=0)&(ueip%c=1)&(ui%c=1))\nJG%c=hjgsp%c;FI%c;WT10;BG%c;hjog%c=2\nELSE\n",axis_thread_code,c,c,c,c,c,c,c,c);
-		}	
-	else
-		{
-		//Stop motor once home activated
-		sprintf(axis_thread_code,"%sIF ((_HM%c=hswact%c)&(hjog%c=0)&(_BG%c=1))\nST%c;DC%c=limdc%c;ENDIF\n",axis_thread_code,c,c,c,c,c,c,c);
-		//Code to jog off home
-		sprintf(axis_thread_code,"%sIF ((_HM%c=hswact%c)&(hjog%c=0))\n",axis_thread_code,c,c,c);
-		//Ensure ok to move in desired direction
-		sprintf(axis_thread_code,"%sIF ((((_LR%c=1)&(hjgsp%c<0))|((_LF%c=1)&(hjgsp%c>0)))&(_BG%c=0)&(_MO%c=0))\n",axis_thread_code,c,c,c,c,c,c);
-		//Start jog off home
-		sprintf(axis_thread_code,"%sJG%c=hjgsp%c;WT10;BG%c;hjog%c=1;ENDIF;ENDIF\n",axis_thread_code,c,c,c,c);
-		//Stop motor once off home
-		sprintf(axis_thread_code,"%sIF ((_HM%c=hswiact%c)&(hjog%c=1)&(_BG%c=1));ST%c;ENDIF\n",axis_thread_code,c,c,c,c,c);
-		//Find encoder index
-		sprintf(axis_thread_code,"%sIF ((hjog%c=1)&(_BG%c=0))\n",axis_thread_code,c,c);
-		//Ensure ok to move in desired direction
-		sprintf(axis_thread_code,"%sIF ((((_LR%c=1)&(hjgsp%c<0))|((_LF%c=1)&(hjgsp%c>0))))\n",axis_thread_code,c,c,c,c);
-		//Start index search
-		sprintf(axis_thread_code,"%sIF ((_MO%c=0)&(ueip%c=1)&(ui%c=1))\nJG%c=hjgsp%c;FI%c;WT10;BG%c;hjog%c=2\nELSE\n",axis_thread_code,c,c,c,c,c,c,c,c);
-		}
+      //Ensure correct limit active
+      sprintf(axis_thread_code,"%sIF((((_LR%c=0)&(hjs%c>0))|((_LF%c=0)&(hjs%c<0)))&(hjog%c=0))\n", axis_thread_code,c,c,c,c,c);
+      //Ensure ok to move in desired direction
+      gen_EnsureOkToMove(c, axis_thread_code);
+      //Jog off limit
+      sprintf(axis_thread_code,"%sIF((_MO%c=0)&(_BG%c=0));JG%c=hjs%c;WT10;BG%c;hjog%c=1;ENDIF;ENDIF;ENDIF\n",axis_thread_code,c,c,c,c,c,c);
+      //Stop motor once off limit
+      sprintf(axis_thread_code,"%sIF((((_LR%c=1)&(hjs%c>0))|((_LF%c=1)&(hjs%c<0)))&(hjog%c=1)&(_BG%c=1));ST%c;ENDIF\n", axis_thread_code,c,c,c,c,c,c,c);
+      //Find encoder index 
+      sprintf(axis_thread_code,"%sIF((hjog%c=1)&(_BG%c=0))\n",axis_thread_code,c,c);
+      //Ensure ok to move in desired direction
+      gen_EnsureOkToMove(c, axis_thread_code);
+      //Start index search
+      sprintf(axis_thread_code,"%sIF((_MO%c=0)&(ueip%c=1)&(ui%c=1));JG%c=hjs%c;FI%c;WT10;BG%c;hjog%c=2\nELSE\n",axis_thread_code,c,c,c,c,c,c,c,c);
+      }
+   else
+      {
+      //Stop motor once home activated
+      sprintf(axis_thread_code,"%sIF((_HM%c=hswact%c)&(hjog%c=0)&(_BG%c=1));ST%c;DC%c=limdc%c;ENDIF\n",axis_thread_code,c,c,c,c,c,c,c);
+      //Code to jog off home
+      sprintf(axis_thread_code,"%sIF((_HM%c=hswact%c)&(hjog%c=0))\n",axis_thread_code,c,c,c);
+      //Ensure ok to move in desired direction
+      gen_EnsureOkToMove(c, axis_thread_code);
+      //Start jog off home
+      sprintf(axis_thread_code,"%sIF((_BG%c=0)&(_MO%c=0));JG%c=hjs%c;WT10;BG%c;hjog%c=1;ENDIF;ENDIF;ENDIF\n",axis_thread_code,c,c,c,c,c,c);
+      //Stop motor once off home
+      sprintf(axis_thread_code,"%sIF((_HM%c=hswiact%c)&(hjog%c=1)&(_BG%c=1));ST%c;ENDIF\n",axis_thread_code,c,c,c,c,c);
+      //Find encoder index
+      sprintf(axis_thread_code,"%sIF((hjog%c=1)&(_BG%c=0))\n",axis_thread_code,c,c);
+      //Ensure ok to move in desired direction
+      gen_EnsureOkToMove(c, axis_thread_code);
+      //Start index search
+      sprintf(axis_thread_code,"%sIF((_MO%c=0)&(ueip%c=1)&(ui%c=1));JG%c=hjs%c;FI%c;WT10;BG%c;hjog%c=2\nELSE\n",axis_thread_code,c,c,c,c,c,c,c,c);
+      }
 
-	//Common homing code regardless of homing to limit or home switch
-	//If no encoder we are home already
-	sprintf(axis_thread_code,"%sIF (_MO%c=0)\nhjog%c=3;ENDIF;ENDIF;ENDIF;ENDIF\n",axis_thread_code,c,c);
-	//If encoder index complete we are home
-	sprintf(axis_thread_code,"%sIF ((hjog%c=2)&(_BG%c=0))\nhjog%c=3;ENDIF\n",axis_thread_code,c,c,c);
-	//Unset home flag
-	if (limit_as_home_)
-		sprintf(axis_thread_code,"%sIF ((_LR%c=1)&(_LF%c=1)&(hjog%c=3)&(_BG%c=0))\n",axis_thread_code,c,c,c,c);
-	else
-		sprintf(axis_thread_code,"%sIF ((_LR%c=1)&(_LF%c=1)&(hjog%c=3)&(_BG%c=0))\n",axis_thread_code,c,c,c,c);
-	//Common homing code regardless of homing to limit or home switch
-	//Flag homing complete
-	sprintf(axis_thread_code,"%sWT10;hjog%c=0;home%c=0;homed%c=1\n", axis_thread_code,c,c,c);
-	//Send unsolicited messages to epics informing of homed status
-	sprintf(axis_thread_code,"%sMG \"homed%c\",homed%c;ENDIF;ENDIF\n", axis_thread_code,c,c);
+   //Common homing code regardless of homing to limit or home switch
+   //If no encoder we are home already
+   sprintf(axis_thread_code,"%sIF(_MO%c=0);hjog%c=3;ENDIF;ENDIF;ENDIF;ENDIF\n",axis_thread_code,c,c);
+   //If encoder index complete we are home
+   sprintf(axis_thread_code,"%sIF((hjog%c=2)&(_BG%c=0));hjog%c=3;ENDIF\n",axis_thread_code,c,c,c);
+   //Unset home flag
+   if (pC_->model_[3] == '2')// Model 21x3 does not have LD (limit disable) command
+      sprintf(axis_thread_code,"%sIF((_LR%c=1)&(_LF%c=1)&(hjog%c=3)&(_BG%c=0))\n",axis_thread_code,c,c,c,c);
+   else
+      sprintf(axis_thread_code,"%sIF((((_LR%c=1)|(_LD%c>1))|((_LF%c=1)|(_LD%c=1)|(_LD%c=3)))&(hjog%c=3)&(_BG%c=0))\n", axis_thread_code,c,c,c,c,c,c,c);
+   //Flag homing complete, and send unsolicited messages to epics informing of homed status
+   sprintf(axis_thread_code,"%sWT10;hjog%c=0;home%c=0;homed%c=1;MG \"homed%c\",homed%c;ENDIF;ENDIF\n", axis_thread_code,c,c,c,c,c);
+  
+   /*
+   //Add code that counts cpu cycles through thread 0
+     if (axisName_ == 'A')
+        {
+        sprintf(axis_thread_code,"%scounter=counter+1\n",axis_thread_code);
 	
-	/*
-	//Add code that counts cpu cycles through thread 0
-	if (axisName_ == 'A')
-		{
-		sprintf(axis_thread_code,"%scounter=counter+1\n",axis_thread_code);
-		
-		//initialise counter variable
-		sprintf(pC_->cmd_, "counter=0");
-		pC_->sync_writeReadController();
-		}*/
+        //initialise counter variable
+        sprintf(pC_->cmd_, "counter=0");
+        pC_->sync_writeReadController();
+        }*/
 }
 
 /*  Sets acceleration and velocity for this axis
@@ -672,7 +670,7 @@ asynStatus GalilAxis::move(double position, int relative, double minVelocity, do
 asynStatus GalilAxis::setupHome(double maxVelocity, int forwards)
 {
    int home_direction;		//Muliplier to change direction of the jog off home switch
-   double hjgsp;		//home jog speed
+   double hjs;			//home jog speed
    double hvel;			//Home velocity
    int useSwitch;		//Jog toward switch
    int useIndex;		//Find encoder index
@@ -687,8 +685,8 @@ asynStatus GalilAxis::setupHome(double maxVelocity, int forwards)
    home_direction = (useSwitch) ? home_direction : home_direction * -1;
 
    //Calculate home jog speed, direction that controller home program will use
-   hjgsp = maxVelocity * home_direction;
-   sprintf(pC_->cmd_, "hjgsp%c=%.0lf\n", axisName_, hjgsp);
+   hjs = maxVelocity * home_direction;
+   sprintf(pC_->cmd_, "hjs%c=%.0lf\n", axisName_, hjs);
    pC_->sync_writeReadController();
 
    //Set Homed status to false
@@ -750,6 +748,7 @@ asynStatus GalilAxis::home(double minVelocity, double maxVelocity, double accele
   int bissInput;		//BISS input register
   int bissCapable;		//BISS capable
   int useSwitch;		//Use switch when homing
+  int limitDisable;		//Limit disable setting
   char mesg[MAX_GALIL_STRING_SIZE]; //Message to user
   asynStatus status = asynError;
 
@@ -761,6 +760,7 @@ asynStatus GalilAxis::home(double minVelocity, double maxVelocity, double accele
   pC_->getIntegerParam(axisNo_, pC_->GalilUseSwitch_, &useSwitch);
   pC_->getIntegerParam(axisNo_, pC_->GalilBISSInput_, &bissInput);
   pC_->getIntegerParam(pC_->GalilBISSCapable_, &bissCapable);
+  pC_->getIntegerParam(axisNo_, pC_->GalilLimitDisable_, &limitDisable);
 
   //Check if requested home type is allowed
   strcpy(mesg, "");
@@ -770,6 +770,15 @@ asynStatus GalilAxis::home(double minVelocity, double maxVelocity, double accele
      sprintf(mesg, "%c motor extra settings do not allow forward home", axisName_);
   if (homeAllowed == HOME_FWD && !forwards)
      sprintf(mesg, "%c motor extra settings do not allow reverse home", axisName_);
+  //Check if requested home type valid given limit disable setting
+  if (limit_as_home_ && pC_->model_[3] != '2' && strcmp(mesg, "") == 0)
+     {
+     if (useSwitch && forwards && (limitDisable == 1 || limitDisable ==3))
+        sprintf(mesg, "%c axis can't home to fwd limit as fwd limit is disabled", axisName_);
+     if (useSwitch && !forwards && limitDisable > 1)
+        sprintf(mesg, "%c axis can't home to rev limit as rev limit is disabled", axisName_);
+     }
+
   //If problem with settings, do nothing
   if (strcmp(mesg, "") != 0)
      {
@@ -1053,18 +1062,15 @@ asynStatus GalilAxis::setPosition(double position)
 	sprintf(pC_->cmd_, "DE%c=%.0lf", axisName_, position);  //Servo motor, use aux register for step count
   else
 	sprintf(pC_->cmd_, "DP%c=%.0lf", axisName_, position);  //Stepper motor, aux register for step count
+  //Set step count/aux encoder position on controller
   pC_->sync_writeReadController();
+  //Set step count/aux encoder position in GalilAxis
+  motor_position_ = position;
+  //Pass step count/aux encoder value to motorRecord
+  setDoubleParam(pC_->motorPosition_, motor_position_);
   
   //Set encoder position
   setEncoderPosition(enc_pos);
-
-  //To compensate for a problem in devMotorAsyn.c upto motorR6-9
-  //Give poller time to update motor record with new readback data
-  //This allows motor record to set correct val for restored position at startup
-  //Release lock so synchronous poller is not blocked
-  pC_->unlock();
-  epicsThreadSleep(pC_->updatePeriod_*2.0/1000.0);
-  pC_->lock();
 
   //Always return success. Dont need more error mesgs
   return asynSuccess;
@@ -1088,8 +1094,12 @@ asynStatus GalilAxis::setEncoderPosition(double position)
   	sprintf(pC_->cmd_, "DP%c=%.0lf", axisName_, position);   //Servo motor, encoder is main register
   else
 	sprintf(pC_->cmd_, "DE%c=%.0lf", axisName_, position);   //Stepper motor, encoder is main register
-
+  //Set encoder count on controller
   status = pC_->sync_writeReadController();
+  //Set encoder counts in GalilAxis
+  encoder_position_ = position;
+  //Pass encoder value to motorRecord
+  setDoubleParam(pC_->motorEncoderPosition_, encoder_position_);
 
   return status;
 }
@@ -1101,7 +1111,7 @@ asynStatus GalilAxis::setEncoderRatio(double ratio)
   //setEncoder is called during IocInit/Autosave for position restore, and when user changes 
   //eres, mres, ueip or position is changed
   //Store the ratio in GalilAxis instance
-  //Motor settings must be autsave/restored in pass 0, to ensure ratio is set properly by devMotorAsyn.c init_controller
+  //Motor settings must be autosave/restored in pass 0, to ensure ratio is set properly by devMotorAsyn.c init_controller
   encmratio_ = ratio;
   encmratioset_ = true;
 
@@ -1112,10 +1122,43 @@ asynStatus GalilAxis::setEncoderRatio(double ratio)
   * \param[in] highLimit The new high limit position that should be set in the hardware. Units=steps.*/
 asynStatus GalilAxis::setHighLimit(double highLimit)
 {
+  char mesg[MAX_GALIL_STRING_SIZE];	//Controller mesg
+
   //this gets called at init for every mR
+  if (highLimit < -2147483648.0)
+     {
+     //Specified high limit too low
+     highLimit = -2147483648.0;
+     sprintf(mesg, "%c limiting high soft limit to min of -2147483648 cts", axisName_);
+     pC_->setCtrlError(mesg);
+     }
+  if (highLimit > 2147483646.0)
+     {
+     //Specified high limit too large
+     highLimit = 2147483646.0;
+     sprintf(mesg, "%c limiting high soft limit to max of 2147483646 cts", axisName_);
+     pC_->setCtrlError(mesg);
+     }
+
   //Assemble Galil Set High Limit, forward limit in Galil language
-  highLimit_ = (highLimit > 2147483647.0) ? 2147483647.0 : highLimit; 
-  sprintf(pC_->cmd_, "FL%c=%lf", axisName_, highLimit_);
+  highLimit_ = highLimit;
+  if (highLimit_ == 0.0 && lowLimit_ == 0.0)
+     {
+     //Construct command, and mesg
+     sprintf(pC_->cmd_, "FL%c=%lf;BL%c=%lf", axisName_, 2147483647.0, axisName_, -2147483648.0);
+     sprintf(mesg, "%c soft limits disabled", axisName_);
+     }
+  else
+     {
+     //Construct command, and mesg
+     sprintf(pC_->cmd_, "FL%c=%lf;BL%c=%lf", axisName_, highLimit_, axisName_, lowLimit_);
+     strcpy(mesg, "");
+     }
+
+  //Write mesg
+  pC_->setCtrlError(mesg);
+
+  //Write command to controller
   pC_->sync_writeReadController();
 
   //Always return success. Dont need more error mesgs
@@ -1126,10 +1169,44 @@ asynStatus GalilAxis::setHighLimit(double highLimit)
   * \param[in] lowLimit The new low limit position that should be set in the hardware. Units=steps.*/
 asynStatus GalilAxis::setLowLimit(double lowLimit)
 {
+  char mesg[MAX_GALIL_STRING_SIZE];	//Controller mesg
+
   //this gets called at init for every mR
-  //Assemble Galil Set High Limit, forward limit in Galil language
-  lowLimit_ = (lowLimit < -2147483648.0) ? -2147483648.0 : lowLimit;
-  sprintf(pC_->cmd_, "BL%c=%lf", axisName_, lowLimit_);
+  if (lowLimit > 2147483647.0)
+     {
+     //Specified low limit too high
+     lowLimit = 2147483647.0;
+     sprintf(mesg, "%c limiting low soft limit to max of 2147483647 cts", axisName_);
+     pC_->setCtrlError(mesg);
+     }
+  if (lowLimit < -2147483647.0)
+     {
+     //Specified low limit too low
+     lowLimit = -2147483647.0;
+     sprintf(mesg, "%c limiting low soft limit to min of -2147483647 cts", axisName_);
+     pC_->setCtrlError(mesg);
+     }
+
+  //Assemble Galil Set low Limit, reverse limit in Galil language
+  lowLimit_ = lowLimit;
+  if (highLimit_ == 0.0 && lowLimit_ == 0.0)
+     {
+     //Disable soft limits
+     //Construct command, and mesg
+     sprintf(pC_->cmd_, "FL%c=%lf;BL%c=%lf", axisName_, 2147483647.0, axisName_, -2147483648.0);
+     sprintf(mesg, "%c soft limits disabled", axisName_);
+     }
+  else
+     {
+     //Construct command, and mesg
+     sprintf(pC_->cmd_, "FL%c=%lf;BL%c=%lf", axisName_, highLimit_, axisName_, lowLimit_);
+     strcpy(mesg, "");
+     }
+
+  //Write mesg
+  pC_->setCtrlError(mesg);
+
+  //Write command to controller
   pC_->sync_writeReadController();
 
   //Always return success. Dont need more error mesgs
@@ -1203,6 +1280,30 @@ asynStatus GalilAxis::setClosedLoop(bool closedLoop)
   status = pC_->sync_writeReadController();
 
   return status;
+}
+
+//Clear axis ethercat faults
+asynStatus GalilAxis::clearEtherCatFault()
+{
+   int status;			//Return status
+   int ecatcapable;		//Controller EtherCat capable
+   int ecatup;			//EtherCat network status
+   int ecatfault;		//EtherCat drive fault status
+
+   //Retrieve required parameters
+   status = pC_->getIntegerParam(pC_->GalilEtherCatCapable_, &ecatcapable);
+   status |= pC_->getIntegerParam(pC_->GalilEtherCatNetwork_, &ecatup);
+   status |= pC_->getIntegerParam(axisNo_, pC_->GalilEtherCatFault_, &ecatfault);
+
+   if (ecatcapable && ecatup && ecatfault && !status)
+      {
+      //Controller is ethercat capable, network is up, and this axis has a fault
+      //Clear fault for this axis
+      sprintf(pC_->cmd_, "EK %d", (1 << axisNo_));
+      status |= pC_->sync_writeReadController();
+      }
+
+   return (asynStatus)status;
 }
 
 /* These are the functions for profile moves */
@@ -1695,12 +1796,17 @@ void GalilAxis::setStopTime(void)
 //Cancel home if either true
 void GalilAxis::checkHoming(void)
 {
+   bool softlimits;
    char message[MAX_GALIL_STRING_SIZE];
+
+   //Determine if soft limits are active
+   softlimits = (bool)(lowLimit_ == highLimit_ && lowLimit_ == 0.0) ? false : true;
+
    //Is controller using main or auxillary encoder register for positioning
    double readback = (ctrlUseMain_) ? encoder_position_ : motor_position_;
 
    if ((homing_ && (stoppedTime_ >= HOMING_TIMEOUT) && !cancelHomeSent_) ||
-       ((readback > highLimit_ || readback < lowLimit_) && homing_ && !cancelHomeSent_ && done_))
+       (((readback > highLimit_ && softlimits) || (readback < lowLimit_ && softlimits)) && homing_ && !cancelHomeSent_ && done_))
       {
       //Cancel home
       pollRequest_.send((void*)&MOTOR_CANCEL_HOME, sizeof(int));
@@ -1803,6 +1909,8 @@ void GalilAxis::pollServices(void)
                          //Program home registers
                          if (!status)
                             {
+                            //Slight delay before setting position registers
+                            epicsThreadSleep(.1);
                             //Position registers always set to 0 in dial coordinates
                             //Use OFF to give correct user position
                             //Program motor position register
@@ -1836,6 +1944,8 @@ void GalilAxis::pollServices(void)
                                pC_->getIntegerParam(axisNo_, pC_->motorStatusMoving_, &moving);
                                }
                             pC_->lock();
+                            //Calculate direction multiplier
+                            dirm = (dir == 0) ? 1 : -1;
                             //Calculate position in steps from jog after home value in user coordinates
                             position = (double)((jahv - off)/mres) * dirm;
                             //Check motor record settings before move
@@ -2376,6 +2486,7 @@ void GalilAxis::set_ssi_connectflag(void)
     int ssitotalbits, ssierrbits;	//SSI parameters
     int ssidataform;
     int i;
+    bool even;						//Total number of bits odd or even
 
     //Retrieve SSI parameters required
     pC_->getIntegerParam(pC_->GalilSSICapable_, &ssicapable);
@@ -2390,10 +2501,23 @@ void GalilAxis::set_ssi_connectflag(void)
        if (ssidataform == 1)
           {
           //First we do gray code encoders
+          //Determine whether total number of bits is odd or even
+          even = (ssitotalbits % 2) ? false : true;
+          //Calculate disconnect value for gray code encoders
           for (i = 0; i < (ssitotalbits - ssierrbits); i++)
              {
-             if (i % 2)
-                disconnect_valtmp |= (long) 1 << i;
+             if (even)
+                {
+                //Even number of total bits
+                if ((i % 2))
+                   disconnect_valtmp |= (long) 1 << i;
+                }
+             else
+                {
+                //Odd number of total bits
+                if (!(i % 2))
+                   disconnect_valtmp |= (long) 1 << i;
+                }
              }
           if (!(invert_ssi_))
              disconnect_val = (double)disconnect_valtmp;
