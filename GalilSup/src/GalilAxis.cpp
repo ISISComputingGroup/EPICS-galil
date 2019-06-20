@@ -465,6 +465,7 @@ asynStatus GalilAxis::move(double position, int relative, double minVelocity, do
      readback = encoder_position_;
   
   std::cerr << "MOVE: axis " << axisName_ << " to " << position << (relative != 0 ? " (relative) " : " (absolute)") << " current readback " << readback << std::endl;
+  std::cerr << "MOVE: axis " << axisName_ << " minVelocity " << minVelocity << " maxVelocity " << maxVelocity <<  " acceleration " << acceleration << std::endl;
 
   //Ensure home flag is 0
   sprintf(pC_->cmd_, "home%c=0", axisName_);
@@ -1601,6 +1602,9 @@ asynStatus GalilAxis::beginMotion(const char *caller)
    double estall_time;
    pC_->getDoubleParam(axisNo_, pC_->GalilEStallTime_, &estall_time);
    double begin_timeout = (BEGIN_TIMEOUT < estall_time ? estall_time : BEGIN_TIMEOUT);
+
+   double speed = getGalilAxisVal("_SP");
+   std::cerr << "BEGIN MOTION: Speed=" << speed << std::endl;
 
    //Begin the move
    //Get time when attempt motor begin
