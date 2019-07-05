@@ -635,6 +635,8 @@ GalilController::GalilController(const char *portName, const char *address, doub
   createParam(GalilStatusPollDelayString, asynParamFloat64, &GalilStatusPollDelay_);
 
 //Add new parameters here
+  createParam(GalilMoveCommandString, asynParamOctet, &GalilMoveCommand_);
+  createParam(GalilMotorEncoderSyncTolString, asynParamFloat64, &GalilMotorEncoderSyncTol_);
 
   createParam(GalilCommunicationErrorString, asynParamInt32, &GalilCommunicationError_);
   createParam(GalilMoveCommandString, asynParamOctet, &GalilMoveCommand_);
@@ -648,7 +650,8 @@ GalilController::GalilController(const char *portName, const char *address, doub
   //Code for the controller has not been assembled yet
   code_assembled_ = false;
   //We have not recieved a timeout yet
-  consecutive_timeouts_ = 0;
+  consecutive_acquire_timeouts_ = 0;
+  consecutive_read_timeouts_ = 0;
   //Assume sync tcp mode will be used for now
   async_records_ = false;
   //Determine if we should even try async udp before going to synchronous tcp mode 
@@ -690,6 +693,15 @@ GalilController::GalilController(const char *portName, const char *address, doub
   // Store startup mode
   quiet_start_ = quietStart;
  
+// temporarily commented out as per IBEX ticket #4351
+// we will always use QR
+//  if (updatePeriod < 0) {
+//      try_async_ = false;
+//  } else {
+//      try_async_ = true;
+//  }
+  try_async_ = false;
+
   //Set defaults in Paramlist before connect
   setParamDefaults();
 
@@ -935,7 +947,11 @@ void GalilController::shutdownController()
       if (async_records_)
          {
          //Close all udp async connections
-         strcpy(cmd_, "IHT=>-1");
+         strcpy(cmd_, "DR0");// stop udp data record
+         sync_writeReadController();
+         strcpy(cmd_, "IHT=>-1"); // udp handles
+         sync_writeReadController();
+         strcpy(cmd_, "IHT=>-2"); // tcp handles
          sync_writeReadController();
          }
 
@@ -989,6 +1005,7 @@ void GalilController::setParamDefaults(void)
   {
 	setIntegerParam(i, GalilMotorStopGo_, 3);
     setStringParam(i, GalilMoveCommand_, "");
+	setDoubleParam(i, GalilMotorEncoderSyncTol_, 0.0);
   }
   //Output compare is off
   for (i = 0; i < 2; i++)
@@ -3892,7 +3909,7 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
 	if (fabs(oldmotor) > 1.5 && (value < 2 || (value > 5 && value < 8)))
 		{
 		//Calculate step count from existing encoder_position, construct mesg to controller_
-		sprintf(cmd_, "DP%c=%.0lf", pAxis->axisName_, pAxis->encoder_position_);
+		sprintf(cmd_, "DP%c=%.0f", pAxis->axisName_, pAxis->encoder_position_);
 		//Write setting to controller
 		status = sync_writeReadController();
 		}
@@ -4576,7 +4593,7 @@ void GalilController::processUnsolicitedMesgs(void)
          //Retrieve next mesg
          charstr = epicsStrtok_r(NULL, " \r\n", &tokSave);
          }//while
-      }
+	  }//if
 }
 
 //Extract controller data from GalilController data record
@@ -4926,17 +4943,17 @@ void GalilController::acquireDataRecord(void)
 
   //Track timeouts
   if (recstatus_ != asynSuccess)
-     consecutive_timeouts_++;
+     consecutive_acquire_timeouts_++;
 
   //Force disconnect if any errors
-  if (consecutive_timeouts_ > ALLOWED_TIMEOUTS)
+  if (consecutive_acquire_timeouts_ > ALLOWED_TIMEOUTS)
      disconnect();
 
   //If no errors, copy the data
   if (!recstatus_ && connected_)
      {
      //No errors
-     consecutive_timeouts_ = 0;
+     consecutive_acquire_timeouts_ = 0;
      //Copy the returned data record into GalilController
      if (!async_records_)
         recdata_.assign(resp_, resp_ + datarecsize_);

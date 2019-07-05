@@ -14,13 +14,11 @@ IF ((home${AXIS}=1))
 		ST${AXIS};ENDIF
 	IF ((hjog${AXIS}=1) & (_BG${AXIS}=0) & (home${AXIS}=1))
 		oldecel${AXIS}=_DC${AXIS};speed${AXIS}=_SP${AXIS}
-		AC${AXIS}=(@ABS[hjgdc${AXIS}])
 		DC${AXIS}=(@ABS[hjgdc${AXIS}])*2
 		SP${AXIS}=(@ABS[hjgsp${AXIS}])
 		FE${AXIS};SH${AXIS};WT100;BG${AXIS};hjog${AXIS}=2
 	ENDIF
 	IF ((hjog${AXIS}=2) & (_BG${AXIS}=0) & (home${AXIS}=1) & (_SC${AXIS}=9))
-		AC${AXIS}=(@ABS[hjgdc${AXIS}])
 		DC${AXIS}=(@ABS[hjgdc${AXIS}])*2
 		SP${AXIS}=(@ABS[hjgsp${AXIS}])/20
 		FE${AXIS};SH${AXIS};WT100;BG${AXIS};hjog${AXIS}=3

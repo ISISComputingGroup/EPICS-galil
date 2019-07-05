@@ -10,6 +10,28 @@ CALC=$(SUPPORT)/calc/master
 MOTOR=$(SUPPORT)/motor/master
 SSCAN=$(SUPPORT)/sscan/master
 GALIL=$(SUPPORT)/galil/master
+#ASYN=$(SUPPORT)/asyn/master
+#ASUBFUNCTIONS=$(SUPPORT)/asubFunctions/master
+#AUTOSAVE=$(SUPPORT)/autosave/master
+#BUSY=$(SUPPORT)/busy/master
+#MOTOR=$(SUPPORT)/motor/master
+#CALC=$(SUPPORT)/calc/master
+#CAPUTLOG=$(SUPPORT)/caPutLog/master
+#DEVIOCSTATS=$(SUPPORT)/devIocStats/master
+#ICPCONFIG=$(SUPPORT)/icpconfig/master
+#GALIL=$(SUPPORT)/galil/master
+#MYSQL=$(SUPPORT)/MySQL/master
+#ONCRPC=$(SUPPORT)/oncrpc/master
+#PCRE=$(SUPPORT)/pcre/master
+#PUGIXML=$(SUPPORT)/pugixml/master
+#PVCOMPLETE=$(SUPPORT)/pvcomplete/master
+#PVDUMP=$(SUPPORT)/pvdump/master
+#SQLITE=$(SUPPORT)/sqlite/master
+#SNCSEQ=$(SUPPORT)/seq/master
+#SSCAN=$(SUPPORT)/sscan/master
+#STD=$(SUPPORT)/std/master
+#TEMPLATE_TOP=$(EPICS_BASE)/templates/makeBaseApp/top
+#UTILITIES=$(SUPPORT)/utilities/master
 
 # optional extra local definitions here
 -include $(TOP)/configure/RELEASE.private

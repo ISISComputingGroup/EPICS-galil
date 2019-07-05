@@ -226,6 +226,7 @@
 #define GalilEthAddrString	  	"CONTROLLER_ETHADDR"
 #define GalilSerialNumString	  	"CONTROLLER_SERIALNUM"
 #define GalilMoveCommandString	"MOVE_COMMAND"
+#define GalilMotorEncoderSyncTolString	"MOTOR_ENC_TOL"
 
 #define GalilStatusPollDelayString	"MOTOR_STATUS_POLL_DELAY"
 
@@ -524,6 +525,7 @@ protected:
   int GalilStatusPollDelay_;
 //Add new parameters here
   int GalilMoveCommand_;
+  int GalilMotorEncoderSyncTol_;
   
   int GalilCommunicationError_;
   #define LAST_GALIL_PARAM GalilCommunicationError_
@@ -551,7 +553,9 @@ private:
 
   int burn_program_;			//Burn program options that user gave to GalilStartController
 					
-  int consecutive_timeouts_;		//Used for connection management
+  bool connect_fail_reported_;		//Has initial connection failure been reported to iocShell
+  int consecutive_acquire_timeouts_;		//Used for connection management
+  int consecutive_read_timeouts_;		//Used for connection management
   bool code_assembled_;			//Has code for the GalilController hardware been assembled (ie. is card_code_ all set to send)
   double updatePeriod_;			//Period between data records in ms
   bool async_records_;			//Are the data records obtained async(DR), or sync (QR)

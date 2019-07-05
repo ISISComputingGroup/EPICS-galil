@@ -220,6 +220,8 @@ public:
 private:
 
   void axisStatusShutdown(void);        //Function to shutdown axis status thread.
+  double getGalilAxisVal(const char* name);
+  bool checkEncoderMotorSync(bool correct_motor);
 
   GalilController *pC_;      		/**< Pointer to the asynMotorController to which this axis belongs.
                                 	*   Abbreviated because it is used very frequently */
