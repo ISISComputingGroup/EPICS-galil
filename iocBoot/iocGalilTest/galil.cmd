@@ -2,7 +2,10 @@
 #epicsEnvSet("GALIL_DEBUG_FILE", "galil_debug.txt")
 
 #Load motor records for real and coordinate system (CS) motors
-dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_motors.substitutions")
+#Motor record version 6-9 and below
+#dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_motors-v6-9down.substitutions")
+#Motor record version 6-10 and up
+dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_motors-v6-10up.substitutions")
 
 #Load DMC controller features (eg.  Limit switch type, home switch type, output compare, message consoles)
 dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_dmc_ctrl.substitutions")
@@ -12,6 +15,9 @@ dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_rio_ctrl.substitutions")
 
 #Load extra features for real axis/motors (eg. Motor type, encoder type)
 dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_motor_extras.substitutions")
+
+#Load extra features for CS axis/motors (eg. Setpoint monitor)
+dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_csmotor_extras.substitutions")
 
 #Load kinematics for CS axis/motors (eg. Forward and reverse kinematics, kinematic variables)
 dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_csmotor_kinematics.substitutions")
@@ -44,10 +50,10 @@ dbLoadTemplate("$(TOP)/GalilTestApp/Db/galil_profileMoveAxis.substitutions")
 #                       	- Specify negative updatePeriod < 0 to force synchronous tcp poll period.  Otherwise will try async udp mode first
 
 # Create a Galil controller
-GalilCreateController("Galil", "192.168.0.45", 8)
+GalilCreateController("Galil", "192.168.0.67", 8)
 
 # Create a Galil controller
-GalilCreateController("RIO", "192.168.0.5", 2)
+GalilCreateController("RIO", "192.168.0.101", 2)
 
 # GalilCreateAxis command parameters are:
 #
@@ -68,11 +74,18 @@ GalilCreateAxis("Galil","G",1,"",1)
 GalilCreateAxis("Galil","H",1,"",1)
 
 # GalilAddCode command parameters are:
-#
+# Add custom code to generated code
 # 1. char *portName Asyn port for controller
 # 2. int section = code section to add custom code into 0 = card code, 1 = thread code, 2 = limits code, 3 = digital code
-# 3. char *code_file
-#GalilAddCode("Galil", 1, "custom.dmc")
+# 3. char *code_file custom code file
+#GalilAddCode("Galil", 1, "customcode.dmc")
+
+# GalilReplaceHomeCode command parameters are:
+# Replace generated axis home code with custom code
+# 1. char *portName Asyn port for controller
+# 2. char *Axis A-H
+# 3. char *code_file custom code file
+#GalilReplaceHomeCode("Galil", "C", "customhoming.dmc")
 
 # GalilCreateCSAxes command parameters are:
 #

@@ -77,6 +77,7 @@
 #include <vector>
 
 // drvInfo strings for extra parameters that the Galil controller supports
+#define GalilDriverString		"CONTROLLER_DRIVER"
 #define GalilAddressString		"CONTROLLER_ADDRESS"
 #define GalilModelString		"CONTROLLER_MODEL"
 #define GalilHomeTypeString		"CONTROLLER_HOMETYPE"
@@ -111,6 +112,8 @@
 #define GalilOutputCompare1StartString	"OUTPUT_COMPARE_START"
 #define GalilOutputCompare1IncrString	"OUTPUT_COMPARE_INCR"
 #define GalilOutputCompareMessageString	"OUTPUT_COMPARE_MESSAGE"
+
+#define GalilCSMotorSetPointString	"CSMOTOR_SETPOINT"
 
 #define GalilCSMotorForwardString	"CSMOTOR_FORWARD_TRANSFORM"
 #define GalilCSMotorReverseAString	"CSMOTOR_REVERSEA_TRANSFORM"
@@ -316,6 +319,7 @@ public:
   /* These are the methods that are new to this class */
   asynStatus poller(void);
   int GalilInitializeVariables(bool burn_variables);
+  void GalilReplaceHomeCode(char *axis, string filename);
   void GalilAddCode(int section, string filename);
   void GalilStartController(char *code_file, int eeprom_write, int thread_mask);
   void connect(void);
@@ -370,10 +374,11 @@ public:
   asynStatus prepSyncStartOnlyMoves(void);
 
   void shutdownController();
-  ~GalilController();
+  virtual ~GalilController();
 
 protected:
-  #define FIRST_GALIL_PARAM GalilAddress_
+  #define FIRST_GALIL_PARAM GalilDriver_
+  int GalilDriver_;
   int GalilAddress_;
   int GalilModel_;
   int GalilHomeType_;
@@ -407,6 +412,7 @@ protected:
   int GalilOutputCompareIncr_;
   int GalilOutputCompareMessage_;
 
+  int GalilCSMotorSetPoint_;
   int GalilCSMotorForward_;
   int GalilCSMotorReverseA_;
   int GalilCSMotorReverseB_;
@@ -528,10 +534,13 @@ private:
   GalilPoller *poller_;			//GalilPoller to acquire a datarecord
   GalilConnector *connector_;		//GalilConnector to manage connection status flags
 
+  bool shuttingDown_;			//IOC exit in progress
+
   double timeMultiplier_;		//Controller time base divided by default time base
 
   int digports_;			//Digital ports used in motor enable/disable
   int digvalues_;			//Digital port interrupt values
+  bool digInitialUpdate_;		//Digital port initial update
 
   bool rio_;				//Is controller a RIO
   char code_file_[MAX_FILENAME_LEN];	//Code file(s) that user gave to GalilStartController

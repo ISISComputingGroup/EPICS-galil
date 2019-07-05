@@ -277,6 +277,7 @@ private:
   int done_;				//Motor done status passed to motor record
   int last_done_;			//Backup of done status at end of each poll.  Used to detect stop
   bool homing_;				//Is motor homing now
+  bool customHome_;			//Has a custom home routine been supplied for this axis
   bool jogAfterHome_;			//Is motor doing jah
   bool stop_axis_;			//Used to prevent retries after stop
   int stop_reason_;			//Reason axis stop requested
@@ -310,7 +311,8 @@ private:
 
   bool axisStatusShutdown_;		//Flag to shutdown axis status thread
   bool axisStatusRunning_;		//Flag to indicate if axis status thread is running
-  epicsEventId axisStatusShutdownId_;	//Shutdown signal for axis status thread
+  epicsEventId axisStatusShutdownId_;	//Signal indicating axis status thread has shutdown
+  epicsEventId axisStatusShutRequestId_;//Request axisStatus thread shutdown
 
 friend class GalilController;
 friend class GalilCSAxis;
