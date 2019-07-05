@@ -76,6 +76,29 @@ record(ao,"$(P)$(M)_ESTALLTIME_SP")
 	field(FLNK,"$(P)$(M)_ESTALLTIME_MON")
 }
 
+#Motor homing status, including JAH
+record(bi,"$(P)$(M)_HOMING_STATUS")
+{
+	field(DESC, "Homing status")
+	field(DTYP, "asynInt32")
+	field(SCAN, "I/O Intr")
+	field(ZNAM, "No")
+   	field(ZSV,  "NO_ALARM")
+  	field(ONAM, "Yes")
+   	field(ZSV,  "NO_ALARM")
+   	field(INP,  "@asyn($(PORT),$(ADDR))MOTOR_HOMING")
+}
+
+#Overall/final homing status
+record(calcout,"$(P)$(M)_HOMING_MONITOR")
+{
+	field(DESC, "Homing status")
+	field(INPA, "$(P)$(M).HOMR CP MS")
+	field(INPB, "$(P)$(M).HOMF CP MS")
+	field(INPC, "$(P)$(M)_HOMING_STATUS CP MS")
+	field(CALC, "A || B || C")
+}
+
 record(ai,"$(P)$(M)_STEPSMOOTH_MON")
 {
 	field(DESC,"Step smoothing")
@@ -404,6 +427,53 @@ record(bo,"$(P)$(M)_SSIINVERT_CMD")
 	field(VAL,  "0")
    	field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_SSIINVERT")
 #	field(FLNK, "$(P)$(M)_SSIINVERT_STATUS")
+}
+
+########################
+# EtherCat support
+
+record(ao,"$(P)$(M)_ECATADDR_SP")
+{
+	field(DESC,"EtherCat Address")
+	field(DTYP,"asynInt32")
+	field(PINI,"YES")
+	field(VAL, "1")
+	field(PREC,"1")
+	field(DRVH,"255")
+	field(DRVL,"-255")
+	field(EGU, "")
+	field(OUT, "@asyn($(PORT),$(ADDR))MOTOR_ECAT_ADDR")
+	field(FLNK,"$(P)$(M)_ECATADDR_MON")
+}
+
+record(ai,"$(P)$(M)_ECATADDR_MON")
+{
+	field(DESC,"EtherCat Address")
+	field(DTYP,"asynInt32")
+	field(INP, "@asyn($(PORT),$(ADDR))MOTOR_ECAT_ADDR")
+	field(PREC, "1")
+	field(EGU, "")
+}
+
+record(bi,"$(P)$(M)_ECATFLT_STATUS")
+{
+	field(DESC,"EtherCat Fault")
+	field(PINI,"YES")
+	field(DTYP,"asynInt32")
+	field(SCAN,"I/O Intr")
+	field(ZNAM, "Ok")
+	field(ONAM, "Fault")
+	field(OSV, "MAJOR")
+	field(INP, "@asyn($(PORT),$(ADDR))MOTOR_ECAT_FAULT")
+}
+
+record(bo,"$(P)$(M)_ECATFLTRST_CMD")
+{
+        field(DESC,"Fault reset")
+        field(DTYP,"asynInt32")
+        field(ZNAM,"Reset")
+        field(ONAM,"Reset")
+        field(OUT, "@asyn($(PORT),$(ADDR))MOTOR_ECAT_FAULTRESET")
 }
 
 ########################
@@ -934,6 +1004,9 @@ record(mbbo,"$(P)$(M)_MTRTYPE_CMD")
 	field(FVST, "Rev LA Stepper")
 	field(SXST, "PWM servo")
 	field(SVST, "PWM rev servo")
+	field(EIST, "EtherCat Position")
+	field(NIST, "EtherCat Torque")
+	field(TEST, "EtherCat Rev Torque")
 	field(ZRVL, "0")
 	field(ONVL, "1")
 	field(TWVL, "2")
@@ -942,6 +1015,9 @@ record(mbbo,"$(P)$(M)_MTRTYPE_CMD")
 	field(FVVL, "5")
 	field(SXVL, "6")
 	field(SVVL, "7")
+	field(EIVL, "8")
+	field(NIVL, "9")
+	field(TEVL, "10")
 	field(VAL,  "$(MTRTYPE)")
 	field(PINI, "YES")
 	field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_TYPE")
@@ -970,6 +1046,9 @@ record(mbbi,"$(P)$(M)_MTRTYPE_STATUS")
 	field(FVST, "Rev LA Stepper")
 	field(SXST, "PWM servo")
 	field(SVST, "PWM rev servo")
+	field(EIST, "EtherCat Position")
+	field(NIST, "EtherCat Torque")
+	field(TEST, "EtherCat Rev Torque")
 	field(ZRVL, "0")
 	field(ONVL, "1")
 	field(TWVL, "2")
@@ -978,6 +1057,9 @@ record(mbbi,"$(P)$(M)_MTRTYPE_STATUS")
 	field(FVVL, "5")
 	field(SXVL, "6")
 	field(SVVL, "7")
+	field(EIVL, "8")
+	field(NIVL, "9")
+	field(TEVL, "10")
 	field(INP,  "@asyn($(PORT),$(ADDR))MOTOR_TYPE")
 }
 

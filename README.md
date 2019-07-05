@@ -1,7 +1,10 @@
-EPICS-galil
-===========
-The EPICS galil driver 3-0 from from https://github.com/motorapp/Galil-3-0
-with some local modifications
-  
+Galil-3-6
+=========
 
- 
+ASYN based EPICS driver for Galil products
+
+Notes
+=====
+
+If using RS232 communication on Microsoft Windows, need XON/XOFF flow control enabled via switches on Galil controller or else uploading
+a program to the controller times out and fails. However, all other read/write communication works fine without flow control enabled.

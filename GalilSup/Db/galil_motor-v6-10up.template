@@ -56,14 +56,7 @@ grecord(motor,"$(P)$(M)")
 	field(PCOF,"$(PCOF)")
 	field(ICOF,"$(ICOF)")
 	field(DCOF,"$(DCOF)")
-	field(HLSV,"MINOR")
-	info(archive,"0.02 VAL RBV DVAL OFF MSTA DIR CNEN MOVN DMOV MISS RCNT")
-	info(alarm,"Motors")
 }
-
-alias("$(P)$(M)", "$(P)$(M):SP")
-
-alias("$(P)$(M)", "$(P)$(M):SP:RBV")
 
 record(transform,"$(P)$(M)_ableput") {
 	field(CLCB,"a")
@@ -81,24 +74,56 @@ record(bo,"$(P)$(M)_able") {
 	field(ONAM,"Disable")
 }
 
-record(transform,"$(P)$(M)_lockput") {
-  field(CLCB, "a = 0 ? 3 : 0")
-  field(CMTB, "SPMG value")
-  field(CMTA, "locked value")
-  field(CLCC,"b")
-  field(CLCD,"a")
-  field(CLCE,"b")
-  field(OUTC,"$(P)$(M).SPMG NPP NMS")
-  field(OUTD,"$(P)$(M).DISP NPP NMS")
-  field(OUTE,"$(P)$(M).SPMG NPP NMS")
+record(calcout, "$(P)$(M)_vCh") {
+  field(DESC, "change velocity")
+  field(CALC, "min(max(a*b,c),d)")
+  field(INPB, "$(P)$(M).S")
+  field(INPC, "$(P)$(M).SBAS")
+  field(INPD, "$(P)$(M).SMAX")
+  field(OUT, "$(P)$(M).S")
 }
 
-record(bo,"$(P)$(M)_lock") {
-  field(DESC,"Motor lock")
-#  field(PINI,"YES")
-  field(OUT,"$(P)$(M)_lockput.A PP MS")
-  field(ZNAM,"Unlocked")
-  field(ONAM,"Locked")
+record(calcout, "$(P)$(M)_twCh") {
+  field(DESC, "change TWV")
+  field(CALC, "min(max(a*b,c),d-e)")
+  field(INPB, "$(P)$(M).TWV")
+  field(INPC, "$(P)$(M).MRES")
+  field(INPD, "$(P)$(M).HLM")
+  field(INPE, "$(P)$(M).LLM")
+  field(OUT, "$(P)$(M).TWV")
+}
+
+#Required for motor record 6-10 and up
+#Below records are used to extract data from MR
+#and pass to driver
+# Motor direction for this axis
+record(longout,"$(P)$(M)Direction") {
+    field(DESC, "$(M) direction")
+    field(DOL,  "$(P)$(M).DIR CP MS")
+    field(OMSL, "closed_loop")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_REC_DIRECTION")
+}
+
+
+# Motor offset for this axis
+record(ao,"$(P)$(M)Offset") {
+    field(DESC, "$(M) offset")
+    field(DOL,  "$(P)$(M).OFF CP MS")
+    field(OMSL, "closed_loop")
+    field(DTYP, "asynFloat64")
+    field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_REC_OFFSET")
+    field(PREC, "$(PREC)")
+}
+
+# Motor resolution for this axis
+record(ao,"$(P)$(M)Resolution") {
+    field(DESC, "$(M) resolution")
+    field(DOL,  "$(P)$(M).MRES CP MS")
+    field(OMSL, "closed_loop")
+    field(DTYP, "asynFloat64")
+    field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_REC_RESOLUTION")
+    field(PREC, "$(PREC)")
 }
 
 #Below records are used to extract data from MR
@@ -271,39 +296,14 @@ record(stringout,"$(P)$(M)_POST_CMD")
 	field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_POST")
 }
 
-#Motor homing status, including JAH
-record(bi,"$(P)$(M)_HOMING_STATUS")
-{
-	field(DESC, "Homing status")
-	field(DTYP, "asynInt32")
-	field(SCAN, "I/O Intr")
-	field(ZNAM, "No")
-   	field(ZSV,  "NO_ALARM")
-  	field(ONAM, "Yes")
-   	field(ZSV,  "NO_ALARM")
-   	field(INP,  "@asyn($(PORT),$(ADDR))MOTOR_HOMING")
-}
-
-#Overall/final homing status
-record(calcout,"$(P)$(M)_HOMING_MONITOR")
-{
-	field(DESC, "Homing status")
-	field(INPA, "$(P)$(M).HOMR CP MS")
-	field(INPB, "$(P)$(M).HOMF CP MS")
-	field(INPC, "$(P)$(M)_HOMING_STATUS CP MS")
-	field(CALC, "A || B || C")
-}
-
 #driver to mr SPMG field
 #motors in coordsys
-#set initial value of 3 so if running with motor simulator we don't get all motors in STOP 
 record(ai,"$(P)$(M)_STOPGO_MON")
 {
 	field(DESC, "stop/go")
 	field(DTYP, "asynInt32")
 	field(SCAN, "I/O Intr")
 	field(INP,  "@asyn($(PORT),$(ADDR))MOTOR_STOPGO")
-	field(VAL, 3)
 }
 
 record(ao, "$(P)$(M)_STOPGO_CMD")
@@ -342,90 +342,6 @@ record(ao, "$(P)$(M)_VALOUT_SP")
 	field(SDIS, "$(P)$(M)_MRSETVAL_ENABLE CP MS")
 	field(OUT,  "$(P)$(M).VAL PP")
 	field(FLNK, "$(P)$(M)")
-}
-
-# monitor the motor status and update a string field with results
-record(aSub, "$(P)$(M):_MSTACALC")
-{
-    field(SNAM, "displayMotorMSTA")
-	field(INPA, "$(P)$(M).MSTA CP")
-	field(FTA, "ULONG")
-	field(OUTA, "$(P)$(M)_MSTA_STR PP")
-	field(FTVA, "CHAR")
-	field(NOVA, "512")	
-}
-
-record(waveform, "$(P)$(M)_MSTA_STR")
-{
-	field(NELM, "512")
-	field(FTVL, "CHAR")
-	field(DESC, "Text version of motor MSTA")
-}
-
-record(aSub, "$(P)$(M):_STATUSCALC")
-{
-    field(SNAM, "displayMotorMSTASimple")
-	field(INPA, "$(P)$(M).MSTA CP")
-	field(FTA, "ULONG")
-	field(OUTA, "$(P)$(M)_STATUS PP")
-	field(FTVA, "STRING")
-	field(NOVA, "1")	
-}
-
-record(stringin, "$(P)$(M)_STATUS")
-{
-	field(DESC, "Simple Text version of motor MSTA")
-}
-
-record(stringin, "$(P)$(M)_MTR")
-{
-    field(VAL, "$(M)")
-}
-
-record(aSub,"$(P)$(M)_ERRCALC")
-{
-    field(SNAM,"checkMotorError")
-    field(SCAN,"Passive")
-    field(INPA,"$(P)$(M).MSTA CP")
-	field(FTA, "ULONG")
-    field(INPB,"$(P)$(M).LVIO CP")
-	field(FTB, "SHORT")
-    field(INPC,"$(P)$(M).HLS CP")
-	field(FTC, "SHORT")
-    field(INPD,"$(P)$(M).LLS CP")
-	field(FTD, "SHORT")
-    field(INPE,"$(P)$(M).STAT CP")
-	field(FTE, "USHORT")
-    field(INPF,"$(P)$(M).SEVR CP")
-	field(FTF, "USHORT")
-    field(INPG,"$(P)$(M)_MTR")
-	field(FTG, "STRING")
-	field(FTVA, "STRING")
-	field(FTVB, "ULONG")
-	# we want to process _ERRCALC_FAN only if the error message changes, so use OUTA not FLNK
-	# but strings outputs cannot be used to write to .PROC fields, so need to use intermediate string record 
-	field(OUTA, "$(P)$(M)_ERRCALC_MESS PP")
-}
-
-record(stringout, "$(P)$(M)_ERRCALC_MESS")
-{
-}
-
-record(stringout, "$(P)$(M)_PERROR")
-{
-    field(OMSL, "closed_loop")
-    field(DOL, "$(P)$(M)_ERRCALC_MESS CP")
-    field(DTYP, "stdio")
-    field(OUT, "@errlog")
-}
-
-# Expose the DMOV field as a PV record, so it can be access from a block
-record(ai,"$(P)$(M):DMOV")
-{
-	field(DESC, "Done move?")
-    field(SCAN, "Passive")
-    field(DTYP, "Soft Channel")
-    field(INP, "$(P)$(M).DMOV CP")
 }
 
 # end
