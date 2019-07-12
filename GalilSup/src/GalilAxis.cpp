@@ -606,13 +606,12 @@ asynStatus GalilAxis::moveThruMotorRecord(double position)
 asynStatus GalilAxis::move(double position, int relative, double minVelocity, double maxVelocity, double acceleration)
 {
   static const char *functionName = "move";
-  char mesg[MAX_MESSAGE_LEN];			//Error mesg
   char move_command[128]; // at least enough to take a stringout record, but extra in case of a waveform
   bool used_move_command = false;
   int deferredMode;				//Deferred move mode
   //Is controller using main or auxillary encoder register for positioning
   double readback = (ctrlUseMain_) ? encoder_position_ : motor_position_;
-  char move_command[128]; // at least enough to take a stringout record, but extra in case of a waveform
+  double mres;
   asynStatus status = asynError;
 
   //If this axis is being driven by a CSAxis
@@ -681,7 +680,6 @@ asynStatus GalilAxis::move(double position, int relative, double minVelocity, do
 			{
 			    pC_->sync_writeReadController();
 			}
-			    pos_ok = true;
 				used_move_command = true;
 		}
            //Set absolute or relative move
@@ -1162,7 +1160,7 @@ bool GalilAxis::checkEncoderMotorSync(bool correct_motor)
     double posdiff_tol = 0.0;  // in physical egu
 	asynStatus status = pC_->getDoubleParam(axisNo_, pC_->GalilMotorEncoderSyncTol_, &posdiff_tol);
     sprintf(pC_->cmd_, "MT%c=?", axisName_);
-    pC_->writeReadController(functionName);
+    pC_->sync_writeReadController();
     int motor = atoi(pC_->resp_); // servo is -1.5, -1, 1, or 1.5 so abs(int(motor)) is 1 
 	if ( status != asynSuccess || abs(motor) == 1 || !ueip_ || posdiff_tol <= 0.0 )
 	{
@@ -1195,7 +1193,7 @@ bool GalilAxis::checkEncoderMotorSync(bool correct_motor)
 	{
 		sprintf(pC_->cmd_, "DP%c=%.0f", axisName_, new_motor_pos);  //Stepper motor, main register for step count
 	}
-	pC_->writeReadController(functionName);
+	pC_->sync_writeReadController();
 	return true;		
 }
 

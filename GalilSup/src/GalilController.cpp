@@ -1196,7 +1196,8 @@ void GalilController::connected(void)
   InitializeDataRecord();
 
   //No timeout errors
-  consecutive_timeouts_ = 0;
+  consecutive_acquire_timeouts_ = 0;
+  consecutive_read_timeouts_ = 0;
 
   //Has code for the GalilController been assembled
   if (code_assembled_)
