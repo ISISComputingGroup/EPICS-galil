@@ -34,7 +34,7 @@ record(bi,"$(P)$(M)_HOMING_STATUS")
 	field(ZNAM, "No")
    	field(ZSV,  "NO_ALARM")
   	field(ONAM, "Yes")
-   	field(ZSV,  "NO_ALARM")
+   	field(OSV,  "NO_ALARM")
    	field(INP,  "@asyn($(PORT),$(ADDR))MOTOR_HOMING")
 }
 
