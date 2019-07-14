@@ -40,7 +40,7 @@ record(ai, "$(P)$(R)_MON") {
 
 record(ao, "$(P)$(R)Deadb_SP") {
 	field(PREC, "$(PREC)")
-	field(EGU,  "Volts")
+	field(EGU,  "V")
 	field(PINI, "YES")
 	field(VAL,  "0.002")
 	field(DTYP, "asynFloat64")
