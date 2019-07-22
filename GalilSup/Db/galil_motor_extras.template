@@ -36,6 +36,39 @@ record(scalcout, "$(P):$(M):MANAGERMODE")
     field(OOPT, "Every Time")
 }
 
+#Required for motor record 6-10 and up
+#Below records are used to extract data from MR
+#and pass to driver
+# Motor direction for this axis
+record(longout,"$(P):$(M)Direction") {
+    field(DESC, "$(M) direction")
+    field(DOL,  "$(P):$(M).DIR CP MS")
+    field(OMSL, "closed_loop")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_REC_DIRECTION")
+}
+
+
+# Motor offset for this axis
+record(ao,"$(P):$(M)Offset") {
+    field(DESC, "$(M) offset")
+    field(DOL,  "$(P):$(M).OFF CP MS")
+    field(OMSL, "closed_loop")
+    field(DTYP, "asynFloat64")
+    field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_REC_OFFSET")
+    field(PREC, "$(PREC)")
+}
+
+# Motor resolution for this axis
+record(ao,"$(P):$(M)Resolution") {
+    field(DESC, "$(M) resolution")
+    field(DOL,  "$(P):$(M).MRES CP MS")
+    field(OMSL, "closed_loop")
+    field(DTYP, "asynFloat64")
+    field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_REC_RESOLUTION")
+    field(PREC, "$(PREC)")
+}
+
 #Below records are used to extract data from MR
 #and pass to driver
 record(ao,"$(P):$(M)_ACCL_SP") {
