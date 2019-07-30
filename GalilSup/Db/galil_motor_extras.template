@@ -1016,4 +1016,37 @@ record(stringout,"$(P):$(M)_MOVE_CMD")
 	field(OUT,  "@asyn($(PORT),$(ADDR))MOVE_COMMAND")
 }
 
+##
+## calculate the live difference between motor and encoder position
+## only calculate if UEIP is true and an encoder is actually
+## present (as per relevant MSTA bit)
+##
+record(calcout,"$(P):$(M)_MTRENC_DIFF")
+{
+	field(DESC, "Encoder motor difference")
+	field(INPA, "$(P):$(M).RMP CP")
+	field(INPB, "$(P):$(M).MRES CP")
+	field(INPC, "$(P):$(M).REP CP")
+	field(INPD, "$(P):$(M).ERES CP")
+	field(INPE, "$(P):$(M).UEIP CP")
+	field(INPF, "$(P):$(M).MSTA CP")
+	field(CALC, "(E&&(F&256))?(ABS(A*B)-ABS(C*D)):0")
+}
+
+##
+## calculate the difference between motor and encoder position
+## when not in motion
+##
+record(calcout,"$(P):$(M)_MTRENC_DRIFT")
+{
+	field(DESC, "Encoder motor drift")
+	field(INPA, "$(P):$(M)_MTRENC_DIFF CP")
+	field(INPB, "$(P):$(M).DMOV CP")
+	field(CALC, "B")
+	field(OOPT, "When Non-zero")
+	field(DOPT, "Use OCAL")
+	field(OCAL, "A")
+	info(archive, "VAL")
+}
+
 #end
