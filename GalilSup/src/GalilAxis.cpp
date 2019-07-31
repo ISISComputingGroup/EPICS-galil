@@ -2291,7 +2291,7 @@ void GalilAxis::executePost(void)
 //Called by poll thread without lock
 void GalilAxis::executeAutoOff(void)
 {
-  int autoonoff;	//Motor auto power on/off setting
+  int autoonoff = 0;	//Motor auto power on/off setting
   int homing;		//Homing status that includes JAH
   double offdelay;	//Motor auto off delay in seconds
 
@@ -2299,12 +2299,14 @@ void GalilAxis::executeAutoOff(void)
   if ((pC_->getIntegerParam(axisNo_, pC_->GalilAutoOnOff_, &autoonoff) == asynSuccess) &&
       (pC_->getDoubleParam(axisNo_, pC_->GalilAutoOffDelay_, &offdelay) == asynSuccess) &&
       (pC_->getIntegerParam(axisNo_, pC_->GalilHoming_, &homing) == asynSuccess))
+  {
      if (autoonoff && autooffAllowed_ && !homing_ && !homing && !homedSent_ && !autooffSent_ && stoppedTime_ >= offdelay)
-        {
+       {
         //Send the motor off command
         pollRequest_.send((void*)&MOTOR_OFF, sizeof(int));
         autooffSent_ = true;
-        }
+       }
+  }
 }
 
 
