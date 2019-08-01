@@ -1037,15 +1037,24 @@ record(calcout,"$(P):$(M)_MTRENC_DIFF")
 ## calculate the difference between motor and encoder position
 ## when not in motion
 ##
-record(calcout,"$(P):$(M)_MTRENC_DRIFT")
+record(calcout,"$(P):$(M)_MTRENC_DRIFT_")
 {
-	field(DESC, "Encoder motor drift")
+	field(DESC, "Encoder motor drift calc")
 	field(INPA, "$(P):$(M)_MTRENC_DIFF CP")
 	field(INPB, "$(P):$(M).DMOV CP")
 	field(CALC, "B")
 	field(OOPT, "When Non-zero")
 	field(DOPT, "Use OCAL")
 	field(OCAL, "A")
+	field(OUT, "$(P):$(M)_MTRENC_DRIFT PP")
+}
+
+##
+## difference between motor and encoder position when not in motion
+##
+record(ai,"$(P):$(M)_MTRENC_DRIFT")
+{
+	field(DESC, "Encoder motor drift")
 	info(archive, "VAL")
 }
 
