@@ -32,6 +32,7 @@ using namespace std; //cout ostringstream vector string
 #include <iocsh.h>
 #include <epicsThread.h>
 #include <errlog.h>
+#include <initHooks.h>
 
 #include <asynOctetSyncIO.h>
 
@@ -757,6 +758,8 @@ asynStatus GalilAxis::moveVelocity(double minVelocity, double maxVelocity, doubl
   if (beginCheck(functionName, maxVelocity))
      return asynSuccess;  //Nothing to do
 
+  std::cerr << "MOVEVELOCITY: axis " << axisName_ << " minVelocity " << minVelocity << " maxVelocity " << maxVelocity << " acceleration " << acceleration << std::endl;
+
   //Check interlock status before allowing move
   if (motor_enabled())
   	{
@@ -829,6 +832,11 @@ asynStatus GalilAxis::setPosition(double position)
   double enc_pos;				//Calculated encoder position
   int motor;
 
+
+  if (pC_->init_state_ < initHookAfterIocRunning)
+  {
+      std::cerr << functionName << ": Request to redefine motor position to " << position << " on axis " << axisName_ << " before ioc is running" << std::endl;
+  }
   //Retrieve motor setting direct from controller rather than ParamList as IocInit may be in progress
   sprintf(pC_->cmd_, "MT%c=?", axisName_);
   pC_->writeReadController(functionName);
@@ -854,7 +862,7 @@ asynStatus GalilAxis::setPosition(double position)
   else
 	sprintf(pC_->cmd_, "DP%c=%.0f", axisName_, position);  //Stepper motor, aux register for step count
   pC_->writeReadController(functionName);
-  
+  std::cerr << functionName << ": Redefining motor position to " << position << " on axis " << axisName_ << std::endl;
   //Set encoder position
   setEncoderPosition(enc_pos);
 
@@ -894,7 +902,7 @@ bool GalilAxis::checkEncoderMotorSync(bool correct_motor)
 		return false;
 	}
 	double new_motor_pos = encoder_position_ * eres / mres;		
-	std::cerr << "Raw motor position corrected from " << motor_position_ << " to " << new_motor_pos << " using encoder" << std::endl;
+	std::cerr << "Raw motor position corrected from " << motor_position_ << " to " << new_motor_pos << " using encoder for axis " << axisName_ << std::endl;
 	if (abs(motor) == 1) // currently servo branch should never get executed
 	{
 		sprintf(pC_->cmd_, "DE%c=%.0f", axisName_, new_motor_pos);  //Servo motor, use aux register for step count
@@ -915,11 +923,14 @@ asynStatus GalilAxis::setEncoderPosition(double position)
   asynStatus status;
   int motor;
 
+  if (pC_->init_state_ < initHookAfterIocRunning)
+  {
+      std::cerr << functionName << ": request to redefine encoder position to " << position << " on axis " << axisName_ << " before ioc running" << std::endl;
+  }
   //Retrieve motor setting direct from controller rather than ParamList as IocInit may be in progress
   sprintf(pC_->cmd_, "MT%c=?", axisName_);
   pC_->writeReadController(functionName);
   motor = atoi(pC_->resp_);
-
   //output encoder counts to main encoder register on controller
   //DP and DE command function is different depending on motor type
   if (abs(motor) == 1)
@@ -928,6 +939,7 @@ asynStatus GalilAxis::setEncoderPosition(double position)
 	sprintf(pC_->cmd_, "DE%c=%.0f", axisName_, position);   //Stepper motor, encoder is main register
 
   status = pC_->writeReadController(functionName);
+  std::cerr << functionName << ": Redefining encoder position to " << position << " on axis " << axisName_ << std::endl;
 
   //Always return success. Dont need more error mesgs
   return asynSuccess;
