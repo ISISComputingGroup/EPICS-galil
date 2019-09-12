@@ -101,4 +101,57 @@ record(bo,"$(P):$(M)_lock") {
   field(ONAM,"Locked")
 }
 
+# Allow the motor position to be set in the controller from a single pv
+record(ai, "$(P):$(M)_SET_POSITION_IN_CONTROLLER") {
+  field(ASG, "MANAGER")
+  field(DESC, "Set user position by pushing it to the motor")  
+  field(FLNK, "$(P):$(M)_SET_POSITION_IN_CONTROLLER_SEQ")
+  field(PREC, 3)
+  field(EGU, "")
+  info(archive, "VAL")
+}
+
+record(mbbi, "$(P):$(M)_FOFF_STORE")
+{
+   field(DESC, "Store original value for frozen")
+   field(ZRST, "Variable")
+   field(ONST, "Frozen")
+}
+
+record(sseq, "$(P):$(M)_SET_POSITION_IN_CONTROLLER_SEQ") {
+  field(ASG, "MANAGER")
+  field(DESC, "User position sequence")
+  field(SELM, "All")
+
+  # Store frozen value
+  field(DOL1, "$(P):$(M).FOFF PP")
+  field(LNK1, "$(P):$(M)_FOFF_STORE")
+  field(WAIT1, "Wait")
+ 
+  # Make offset frozen so that value is set in motor
+  field(DO2, "1") 
+  field(LNK2, "$(P):$(M).FOFF PP")
+  field(WAIT2, "Wait")
+ 
+  # Set the set to set
+  field(DO3, "1")
+  field(LNK3, "$(P):$(M).SET PP")
+  field(WAIT3, "Wait")
+  
+  # Set the value
+  field(DOL4, "$(P):$(M)_SET_POSITION_IN_CONTROLLER")
+  field(LNK4, "$(P):$(M) PP")
+  field(WAIT4, "Wait")
+ 
+  # Set the set value back to use
+  field(DO5, "0")
+  field(LNK5, "$(P):$(M).SET PP")
+  field(WAIT5, "Wait")
+
+  # Make frozen offset as it was originally
+  field(DOL6, "$(P):$(M)_FOFF_STORE") 
+  field(LNK6, "$(P):$(M).FOFF PP")
+  field(WAIT6, "Wait")
+}}
+
 # end
