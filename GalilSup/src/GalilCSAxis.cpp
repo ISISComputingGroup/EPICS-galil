@@ -379,6 +379,7 @@ asynStatus GalilCSAxis::doCalc(const char *expr, double args[], double *result) 
     /* Evaluate expression, return result */
     unsigned char rpn[512];	//Expression is converted to reverse polish notation 
     short err;
+    int precision = 12;         //Hard code precision for now
     
     *result = 0.0;
 
@@ -387,7 +388,7 @@ asynStatus GalilCSAxis::doCalc(const char *expr, double args[], double *result) 
 	printf("sCalcPostfix error in expression %s \n", expr);
 	return asynError;
     } else 
-	if (sCalcPerform(args, SCALCARGS, NULL, 0, result, NULL, 0, rpn) && finite(*result)) {
+	if (sCalcPerform(args, SCALCARGS, NULL, 0, result, NULL, 0, rpn, precision) && finite(*result)) {
 	    printf("calcPerform: error evaluating '%s'", expr);
 	    return asynError;
     }
