@@ -432,6 +432,7 @@ record(bi,"$(P):$(M)_UINDEX_STATUS")
 	field(INP,  "@asyn($(PORT),$(ADDR))MOTOR_USEINDEX")
 }
 
+# we are PINI and used by driver to indicate axis ready
 record(bo,"$(P):$(M)_UINDEX_CMD")
 {
 	field(DESC,"use index")
