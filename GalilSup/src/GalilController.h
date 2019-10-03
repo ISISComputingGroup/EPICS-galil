@@ -225,6 +225,8 @@ public:
   void shutdownController();
   ~GalilController();
 
+  static int init_state_;
+
 protected:
   #define FIRST_GALIL_PARAM GalilAddress_
   int GalilAddress_;
@@ -368,7 +370,6 @@ private:
   void stopThreads();
   void stopAxes();
   int quiet_start_;
-
 					//Stores the motor enable disable interlock digital IO setup, only first 8 digital in ports supported
   struct Galilmotor_enables motor_enables_[8];
 

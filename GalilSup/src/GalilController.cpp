@@ -117,8 +117,13 @@ static void myHookFunction(initHookState state)
 {
   //Update dbInitialized status for all GalilController instances
   if (state >= initHookAfterInitDatabase)
+  {
 	dbInitialized = true;
+  }
+  GalilController::init_state_ = state;
 }
+
+int GalilController::init_state_ = initHookAtIocBuild;
 
 /** Creates a new GalilController object.
   * \param[in] portName          The name of the asyn port that will be created for this driver
@@ -2350,7 +2355,9 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
 		getDoubleParam(pAxis->axisNo_, GalilEncoderResolution_, &eres);
 		getDoubleParam(pAxis->axisNo_, motorResolution_, &mres);
 		//Calculate step count from existing encoder_position, construct mesg to controller_
-		sprintf(cmd_, "DP%c=%.0f", pAxis->axisName_, pAxis->encoder_position_ * (eres/mres));
+		double newpos = pAxis->encoder_position_ * (eres/mres);
+		std::cerr << "Detected motor type change from servo to stepper, redefining position to " << newpos << std::endl;
+		sprintf(cmd_, "DP%c=%.0f", pAxis->axisName_, newpos);
 		//Write setting to controller
 		status = writeReadController(functionName);
 		}
@@ -2360,6 +2367,7 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
 	if (fabs(oldmotor) > 1.0 && value < 2)
 		{
 		//Calculate step count from existing encoder_position, construct mesg to controller_
+		std::cerr << "Detected motor type change from stepper to servo, redefining position to " << pAxis->encoder_position_ << std::endl;
 		sprintf(cmd_, "DP%c=%.0f", pAxis->axisName_, pAxis->encoder_position_);
 		//Write setting to controller
 		status = writeReadController(functionName);
@@ -2370,9 +2378,6 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
 	sprintf(cmd_, "ueip%c=%d", pAxis->axisName_, value);
 	//Write setting to controller
 	status = writeReadController(functionName);
-	//This is one of the last autosave restore items so flag
-	//Axis now ready for move commands
-	pAxis->axisReady_ = true;
 	}
   else if (function == GalilUseIndex_)
 	{
@@ -2380,6 +2385,9 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
         //printf("GalilUseIndex_ %s value %d\n", cmd_, value);
 	//Write setting to controller
 	status = writeReadController(functionName);
+	//we are called by PINI so all autosave should be done
+	//Axis now ready for move commands
+	pAxis->axisReady_ = true;
 	}
   else if (function == GalilJogAfterHome_)
 	{
