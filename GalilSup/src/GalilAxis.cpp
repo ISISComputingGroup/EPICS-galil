@@ -858,8 +858,8 @@ asynStatus GalilAxis::setPosition(double position)
   else
 	sprintf(pC_->cmd_, "DP%c=%.0f", axisName_, position);  //Stepper motor, aux register for step count
   pC_->writeReadController(functionName);
-#endif  
   std::cerr << functionName << ": Redefining motor position to " << position << " on axis " << axisName_ << std::endl;
+#endif  
   //Set encoder position
   setEncoderPosition(enc_pos);
 
@@ -940,8 +940,8 @@ asynStatus GalilAxis::setEncoderPosition(double position)
 	sprintf(pC_->cmd_, "DE%c=%.0f", axisName_, position);   //Stepper motor, encoder is main register
 
   status = pC_->writeReadController(functionName);
-#endif
   std::cerr << functionName << ": Redefining encoder position to " << position << " on axis " << axisName_ << std::endl;
+#endif
 
   //Always return success. Dont need more error mesgs
   return asynSuccess;
