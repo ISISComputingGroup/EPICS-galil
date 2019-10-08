@@ -2356,10 +2356,12 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
 		getDoubleParam(pAxis->axisNo_, motorResolution_, &mres);
 		//Calculate step count from existing encoder_position, construct mesg to controller_
 		double newpos = pAxis->encoder_position_ * (eres/mres);
-		std::cerr << "Detected motor type change from servo to stepper, redefining position to " << newpos << std::endl;
+		std::cerr << "Detected motor type change from servo to stepper, redefining position to " << newpos << " for axis " << pAxis->axisName_ << std::endl;
+#if 0
 		sprintf(cmd_, "DP%c=%.0f", pAxis->axisName_, newpos);
 		//Write setting to controller
 		status = writeReadController(functionName);
+#endif
 		}
 
 	//IF motor was stepper, and now servo
@@ -2367,10 +2369,12 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
 	if (fabs(oldmotor) > 1.0 && value < 2)
 		{
 		//Calculate step count from existing encoder_position, construct mesg to controller_
-		std::cerr << "Detected motor type change from stepper to servo, redefining position to " << pAxis->encoder_position_ << std::endl;
+		std::cerr << "Detected motor type change from stepper to servo, redefining position to " << pAxis->encoder_position_ << " for axis " << pAxis->axisName_ << std::endl;
+#if 0
 		sprintf(cmd_, "DP%c=%.0f", pAxis->axisName_, pAxis->encoder_position_);
 		//Write setting to controller
 		status = writeReadController(functionName);
+#endif
 		}
 	}
   else if (function == GalilUseEncoder_)
@@ -2810,10 +2814,16 @@ asynStatus GalilController::poll(void)
 
 	//Acquire a data record
 	if (async_records_)
+	{
+		// the UDP data record using the acquire period to release control 
+		if (getenv("DOLOCK") != NULL) { unlock(); }
 		acquireDataRecord("DR");  //Asynchronous, record already in ram so get a copy of it
+		if (getenv("DOLOCK") != NULL) { lock(); }
+	}
 	else
+	{
 		acquireDataRecord("QR");  //Synchronous, poll controller for record
-
+	}
 	//Extract controller data from data record, store in GalilController, and ParamList
 	getStatus();
 

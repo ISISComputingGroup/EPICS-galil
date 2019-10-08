@@ -829,7 +829,7 @@ asynStatus GalilAxis::setPosition(double position)
 
   if (pC_->init_state_ < initHookAfterIocRunning)
   {
-      std::cerr << functionName << ": incorrect ioc state, ignoring request to redefine motor position to " << position << std::endl;
+      std::cerr << functionName << ": incorrect ioc state, ignoring request to redefine motor position to " << position << " on axis " << axisName_ << std::endl;
       return asynSuccess;
   }
   //Retrieve motor setting direct from controller rather than ParamList as IocInit may be in progress
@@ -852,13 +852,14 @@ asynStatus GalilAxis::setPosition(double position)
 
   //output motor position (step count) to aux encoder register on controller
   //DP and DE command function is different depending on motor type
+#if 0
   if (abs(motor) == 1)
 	sprintf(pC_->cmd_, "DE%c=%.0f", axisName_, position);  //Servo motor, use aux register for step count
   else
 	sprintf(pC_->cmd_, "DP%c=%.0f", axisName_, position);  //Stepper motor, aux register for step count
   pC_->writeReadController(functionName);
-  
-  std::cerr << functionName << ": Redefining motor position to " << position << std::endl;
+#endif  
+  std::cerr << functionName << ": Redefining motor position to " << position << " on axis " << axisName_ << std::endl;
   //Set encoder position
   setEncoderPosition(enc_pos);
 
@@ -898,7 +899,8 @@ bool GalilAxis::checkEncoderMotorSync(bool correct_motor)
 		return false;
 	}
 	double new_motor_pos = encoder_position_ * eres / mres;		
-	std::cerr << "Raw motor position corrected from " << motor_position_ << " to " << new_motor_pos << " using encoder" << std::endl;
+	std::cerr << "Raw motor position corrected from " << motor_position_ << " to " << new_motor_pos << " using encoder for axis " << axisName_ << std::endl;
+#if 0
 	if (abs(motor) == 1) // currently servo branch should never get executed
 	{
 		sprintf(pC_->cmd_, "DE%c=%.0f", axisName_, new_motor_pos);  //Servo motor, use aux register for step count
@@ -908,6 +910,7 @@ bool GalilAxis::checkEncoderMotorSync(bool correct_motor)
 		sprintf(pC_->cmd_, "DP%c=%.0f", axisName_, new_motor_pos);  //Stepper motor, main register for step count
 	}
 	pC_->writeReadController(functionName);
+#endif
 	return true;		
 }
 
@@ -921,14 +924,14 @@ asynStatus GalilAxis::setEncoderPosition(double position)
 
   if (pC_->init_state_ < initHookAfterIocRunning)
   {
-      std::cerr << functionName << ": incorrect ioc state, ignoring request to redefine encoder position to " << position << std::endl;
+      std::cerr << functionName << ": incorrect ioc state, ignoring request to redefine encoder position to " << position << " on axis " << axisName_ << std::endl;
       return asynSuccess;
   }
   //Retrieve motor setting direct from controller rather than ParamList as IocInit may be in progress
   sprintf(pC_->cmd_, "MT%c=?", axisName_);
   pC_->writeReadController(functionName);
   motor = atoi(pC_->resp_);
-
+#if 0
   //output encoder counts to main encoder register on controller
   //DP and DE command function is different depending on motor type
   if (abs(motor) == 1)
@@ -937,7 +940,8 @@ asynStatus GalilAxis::setEncoderPosition(double position)
 	sprintf(pC_->cmd_, "DE%c=%.0f", axisName_, position);   //Stepper motor, encoder is main register
 
   status = pC_->writeReadController(functionName);
-  std::cerr << functionName << ": Redefining encoder position to " << position << std::endl;
+#endif
+  std::cerr << functionName << ": Redefining encoder position to " << position << " on axis " << axisName_ << std::endl;
 
   //Always return success. Dont need more error mesgs
   return asynSuccess;
@@ -1462,14 +1466,14 @@ void GalilAxis::pollServices(void)
                                }
                             //Program motor position register
 						    errlogSevPrintf(errlogInfo, "Poll services: applying motor %c raw home position %.0f\n", axisName_, mrhmval);
-                            sprintf(pC_->cmd_, "DP%c=%.0f\n", axisName_, mrhmval);
-                            pC_->writeReadController(functionName);
+                            ////sprintf(pC_->cmd_, "DP%c=%.0f\n", axisName_, mrhmval);
+                            ////pC_->writeReadController(functionName);
                             //Program encoder position register
                             if (ueip)
                                {
 						       errlogSevPrintf(errlogInfo, "Poll services: applying encoder %c raw home position %.0f\n", axisName_, enhmval);
-                               sprintf(pC_->cmd_, "DE%c=%.0f\n", axisName_, enhmval);
-                               pC_->writeReadController(functionName);
+                               ////sprintf(pC_->cmd_, "DE%c=%.0f\n", axisName_, enhmval);
+                               ////pC_->writeReadController(functionName);
                                }
                             //Give ample time for position register updates to complete
                             epicsThreadSleep(.2);

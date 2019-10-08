@@ -66,6 +66,7 @@ void GalilPoller::run(void)
 		//Poll only if connected
 		if (pCntrl_->gco_ != NULL)
 			{
+			if (getenv("DOLOCK") != NULL) { pCntrl_->lock(); }
 			//Get the data record, update controller related information in GalilController, and ParamList.  callBacks not called
 			pCntrl_->poll();
 			//Update the GalilAxis status, using datarecord from GalilController
@@ -98,6 +99,7 @@ void GalilPoller::run(void)
 					pAxis->poll(&moving);		//Update GalilAxis, and upper layers, using retrieved datarecord
 									//Update records with analog/binary data
 				}
+			if (getenv("DOLOCK") != NULL) { pCntrl_->unlock(); }
 			//No async, so wait updatePeriod_ rather than relying on async record delivery frequency
 			if (!pCntrl_->async_records_)
 				epicsThreadSleep(pCntrl_->updatePeriod_/1000.0);
@@ -153,8 +155,10 @@ void GalilPoller::sleepPoller(bool connected)
 		{
 		//Tell poller to sleep
 		pollerSleep_ = true;
+		if (getenv("DOLOCK") != NULL) { pCntrl_->unlock(); }
 		//Wait until GalilPoller is sleeping
 		epicsEventWait(pollerSleepEventId_);
+		if (getenv("DOLOCK") != NULL) { pCntrl_->lock(); }
 		//Tell controller to stop async record transmission
 		if (pCntrl_->async_records_ && connected)
 			pCntrl_->gco_->recordsStart(0);
