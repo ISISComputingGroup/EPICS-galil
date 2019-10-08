@@ -588,6 +588,11 @@ void GalilController::connected(void)
 	writeReadController(functionName);
 	//Store max axes controller supports
 	numAxesMax_ = atoi(resp_);
+	if (numAxesMax_ > 8)
+	{
+		std::cerr << "Galil returned " << numAxesMax_ << " axes, exiting" << std::endl;
+		epicsExit(1);
+	}
 
 	//adjust numAxesMax_ when model is RIO.
 	numAxesMax_ = (strncmp(model_, "RIO",3) == 0)? 0 : numAxesMax_;
