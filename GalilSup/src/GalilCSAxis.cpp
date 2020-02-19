@@ -1798,7 +1798,7 @@ asynStatus GalilCSAxis::doCalc(const char *expr, double args[], double *result) 
    //We use sCalcPostfix and sCalcPerform because it can handle upto 16 args
    if (sCalcPostfix(expr, rpn, &err))
       error = true;
-   else if (sCalcPerform(args, SCALCARGS, NULL, 0, result, NULL, 0, rpn/*, precision*/) && finite(*result))
+   else if (sCalcPerform(args, SCALCARGS, NULL, 0, result, NULL, 0, rpn, precision) && finite(*result))
       error = true;
 
    if (error && !kinematic_error_reported_)
