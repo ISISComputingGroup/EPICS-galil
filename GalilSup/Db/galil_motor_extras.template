@@ -1061,10 +1061,9 @@ record(ai,"$(P):$(M)_MTRENC_DRIFT")
 ## Hold threshold value
 record(ao, "$(P):$(M)_THRESHOLD")
 {
-   field(DESC, "Encoder and motor steps threshold")
+   field(DESC, "Encoder and motor threshold")
    field(EGU, $(EGU))
    field(PREC, 6)
-   
 }
 
 record(calcout, "$(P):$(M)_DEFAULT_THRESHOLD")
@@ -1075,11 +1074,13 @@ record(calcout, "$(P):$(M)_DEFAULT_THRESHOLD")
     field(CALC, "(10*(A>B?A:B))")
     field(OUT, "$(P):$(M)_THRESHOLD PP")
 }
-## check if the drift is above the threshold limit
 
-record(calcout, "$(P):$(M)_THRESHOLD_CALC")
+##
+## check if the drift is above the threshold limit
+##
+record(calcout, "$(P):$(M)_DRIFT_THRESHOLD_CHECK")
 {
-    field(DESC, "Encoder and motor drift threshold")
+    field(DESC, "Drift and threshold check")
     field(INPA, "$(P):$(M)_THRESHOLD.VAL CP")
     field(INPB, "$(P):$(M)_MTRENC_DRIFT.VAL CP")
     field(CALC, "B>A")
