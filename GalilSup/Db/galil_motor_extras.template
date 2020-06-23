@@ -1055,7 +1055,7 @@ record(calcout,"$(P):$(M)_MTRENC_DRIFT_")
 record(ai,"$(P):$(M)_MTRENC_DRIFT")
 {
     field(DESC, "Encoder motor drift")
-    field(EGU, $(EGU))
+    field(EGU, "$(EGU)")
     info(archive, "VAL")
 }
 
@@ -1063,7 +1063,7 @@ record(ai,"$(P):$(M)_MTRENC_DRIFT")
 record(ao, "$(P):$(M)_THRESHOLD")
 {
    field(DESC, "Encoder and motor threshold")
-   field(EGU, $(EGU))
+   field(EGU, "$(EGU)")
    field(PREC, 6)
    field(VAL, 0)
 }
@@ -1076,7 +1076,7 @@ record(calcout, "$(P):$(M)_DEFAULT_THRESHOLD")
     field(INPC, "$(P):$(M)_THRESHOLD")
     field(CALC, "C=0?(10*(A>B?A:B)):C")
     field(OUT, "$(P):$(M)_THRESHOLD PP")
-    field(EGU, $(EGU))
+    field(EGU, "$(EGU)")
 }
 
 ##
