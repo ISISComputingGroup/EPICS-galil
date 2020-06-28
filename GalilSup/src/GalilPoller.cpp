@@ -109,7 +109,7 @@ void GalilPoller::run(void)
             {
                 // drop polling frequency if nothing moving. We will be signalled when motion is requested on an axis
                 // and then should continue at higher poll rate until motion is completed
-                pCntrl_->motion_started_.wait( (any_moving ? pCntrl_->updatePeriod_ : NO_MOTION_POLLING_FACTOR * pCntrl_->updatePeriod_) / 1000.0 );
+                pCntrl_->motion_started_.wait( (any_moving ? 1.0 : NO_MOTION_POLLING_FACTOR) * pCntrl_->updatePeriod_ / 1000.0 );
             }
 			}
 		else	//Not connected.  Just sleep a little
