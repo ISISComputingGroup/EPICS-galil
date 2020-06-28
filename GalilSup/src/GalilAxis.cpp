@@ -557,9 +557,10 @@ asynStatus GalilAxis::move(double position, int relative, double minVelocity, do
 		if (!used_move_command) {
 		    beginMotion(functionName);
 		}
+        // signal poller we have started moving
+        pC_->motion_started_.signal();
 		}
 	}
-
   //Always return success. Dont need more error mesgs
   return asynSuccess;
 }
@@ -780,8 +781,9 @@ asynStatus GalilAxis::moveVelocity(double minVelocity, double maxVelocity, doubl
 					
 	//Begin the move
 	beginMotion(functionName);
+    // signal poller we have started moving
+    pC_->motion_started_.signal();
 	}
-   
   //Always return success. Dont need more error mesgs
   return asynSuccess;
 }
