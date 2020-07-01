@@ -687,6 +687,10 @@ asynStatus GalilAxis::home(double minVelocity, double maxVelocity, double accele
 		pC_->writeReadController(functionName);
 		std::cerr << "Home started axis " << axisName_ << std::endl;
 //		}
+
+        // signal poller we have started moving
+        pC_->motion_started_.signal();
+
 	}
 
   //Always return success. Dont need more error mesgs
