@@ -36,7 +36,10 @@ IF (home${AXIS}=1)
         IF (_SC${AXIS}=10)
             g_hmst${AXIS}=100
         ENDIF
+        sp${AXIS}=speed${AXIS}
+        DC${AXIS}=oldecel${AXIS}
         hjog${AXIS}=2
+        
     ENDIF
     
 	IF ((hjog${AXIS}=2) & (_BG${AXIS}=0) & (home${AXIS}=1) & (_SC${AXIS}=10))
