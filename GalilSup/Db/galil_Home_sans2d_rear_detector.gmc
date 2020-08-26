@@ -36,7 +36,7 @@ IF (home${AXIS}=1)
         IF (_SC${AXIS}=10)
             g_hmst${AXIS}=100
         ENDIF
-        sp${AXIS}=speed${AXIS}
+        SP${AXIS}=speed${AXIS}
         DC${AXIS}=oldecel${AXIS}
         hjog${AXIS}=2
         
