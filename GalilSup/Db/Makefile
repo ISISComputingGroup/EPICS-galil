@@ -40,6 +40,7 @@ GMC += galil_Home_Pin_Hole_Selector.gmc  galil_Home_Thread.gmc  galil_Home_Dummy
 GMC += galil_Home_FIpos.gmc galil_Home_FIneg.gmc 
 # Device specific routines
 GMC += galil_Oscillating_Collimator.gmc galil_Oscillating_Collimator_Merlin.gmc galil_Muon_Slits.gmc galil_emma_chopper_lifter.gmc
+GMC += galil_Home_sans2d_rear_detector.gmc
 # Dummy routines mainly used for testing
 GMC += galil_Home_Dummy_Do_Nothing.gmc galil_Home_Dummy_Power_Light.gmc galil_Home_No_Home.gmc
 
