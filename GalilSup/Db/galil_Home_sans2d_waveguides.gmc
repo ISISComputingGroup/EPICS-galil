@@ -1,5 +1,5 @@
 NO*****************AXIS ${AXIS}********************
-NO*********HOME - sans2d apertures ************
+NO*********HOME - sans2d waveguides************
 #HOME${AXIS}
 IF (home${AXIS}=1)
     inhome${AXIS}=1
@@ -19,33 +19,49 @@ IF (home${AXIS}=1)
     oldecel${AXIS}=_DC${AXIS};
     olacel${AXIS}=_AC${AXIS};
     
-    AC${AXIS}=4096;DC${AXIS}=4096
-    SP${AXIS}=4096
-    JG${AXIS}=4096
+    AC${AXIS}=1024
+    DC${AXIS}=1024
+    SP${AXIS}=-256
+    JG${AXIS}=-256
+    JP #Axis${AXIS}Hm2,(_LR${AXIS}=0)
+    WT1000
     SH${AXIS}
-    WT200
-    JP #Axis${AXIS}Hm2,(_LFA=0)
+    WT1000
     BG${AXIS}
     AM${AXIS}
-    WT200
     #Axis${AXIS}Hm2
-    JG${AXIS}=-4096
+    WT1000
+    SP${AXIS}=256
+    JG${AXIS}=256
+    WT2000
+    SH${AXIS}
+    WT1000
     FI${AXIS}
     BG${AXIS}
-    MC${AXIS}
-    WT200
-    PR${AXIS}=1000
+    AM${AXIS}
+    WT1000
+    SP${AXIS}=128
+    JG${AXIS}=128
+    PR${AXIS}=400
+    WT1500
+    SH${AXIS}
+    WT1500
     BG${AXIS}
-    MC${AXIS}
-    WT200
-    JG${AXIS}=-100
+    AM${AXIS}
+    WT1500
+    SP${AXIS}=-20
+    JG${AXIS}=-20
+    WT2000
+    SH${AXIS}
+    WT1000
     FI${AXIS}
     BG${AXIS}
-    MC${AXIS}
-    WT200
+    AM${AXIS}
+    WT1500
     IF (_SC${AXIS}=10)
         g_hmst${AXIS}=100
     ENDIF
+    MOA
     
     SP${AXIS}=speed${AXIS}
     DC${AXIS}=oldecel${AXIS}
