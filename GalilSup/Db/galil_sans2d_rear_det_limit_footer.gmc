@@ -1,0 +1,31 @@
+NO*************FOOTER*********************
+JP #HOMEA
+EN
+#CMDERR
+errstr=_ED;errcde=_TC;cmderr=cmderr+1
+RE 1
+EN
+#TCPERR
+errtcp=_IA4
+MG "TCP lost sync or timeout - Handle - ",errtcp
+RE 1
+EN
+#LIMSWI
+IF ((_LRA=0) | (_LFA=0))
+    olddecelA=_DCA;DCA=(_DCA*10);STA;DCA=olddecelA;ENDIF
+IF (((_SCB=2) | (_SCB=3)) & (_BGB=1))
+	oldecelB=_DCB;DCB=limdcB;WT2;STB;DCB=oldecelB;ENDIF
+IF (((_SCC=2) | (_SCC=3)) & (_BGC=1))
+	oldecelC=_DCC;DCC=limdcC;WT2;STC;DCC=oldecelC;ENDIF
+IF (((_SCD=2) | (_SCD=3)) & (_BGD=1))
+	oldecelD=_DCD;DCD=limdcD;WT2;STD;DCD=oldecelD;ENDIF
+IF (((_SCE=2) | (_SCE=3)) & (_BGE=1))
+	oldecelE=_DCE;DCE=limdcE;WT2;STE;DCE=oldecelE;ENDIF
+IF (((_SCF=2) | (_SCF=3)) & (_BGF=1))
+	oldecelF=_DCF;DCF=limdcF;WT2;STF;DCF=oldecelF;ENDIF
+IF (((_SCG=2) | (_SCG=3)) & (_BGG=1))
+	oldecelG=_DCG;DCG=limdcG;WT2;STG;DCG=oldecelG;ENDIF
+IF ((_LRH=0) | (_LFH=0))
+    olddecelH=_DCH;DCH=67107840;DCH=olddecelH;STH;ENDIF
+RE 1
+EN
