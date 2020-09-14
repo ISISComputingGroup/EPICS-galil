@@ -1450,6 +1450,10 @@ void GalilAxis::pollServices(void)
                                enhmval = 0.0;
                                mrhmval = 0.0;
                                }
+                            double tp = getGalilAxisVal("_TP");
+                            double td = getGalilAxisVal("_TD");
+                            // normally tp encoder, td motor i think; but if open loop is tp motor? And what is td?
+                            errlogSevPrintf(errlogInfo, "Poll services: current positions: _TD%c=%.0f _TP%c=%.0f\n", axisName_, td, axisName_, tp);
                             //Program motor position register
 						    errlogSevPrintf(errlogInfo, "Poll services: applying motor %c raw home position %.0f\n", axisName_, mrhmval);
                             sprintf(pC_->cmd_, "DP%c=%.0f\n", axisName_, mrhmval);
