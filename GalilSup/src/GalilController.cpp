@@ -428,7 +428,11 @@ void GalilController::connect(void)
 		
 	if (strncmp(address_, "COM", 3) == 0)
 	{
-	gco_ = new Galil(address_);
+	int timeout = (getenv("GALIL_COMM_TIMEOUT") != NULL ? atol(getenv("GALIL_COMM_TIMEOUT")) : 1000);
+	char galil_args[128];
+	epicsSnprintf(galil_args, sizeof(galil_args), "%s -t %d", address_, timeout);
+	gco_ = new Galil(galil_args);
+	gco_->timeout_ms = timeout; // this didn't seem to get set with -t above and new galil C library wrapper
 	}
 	else
 	{
