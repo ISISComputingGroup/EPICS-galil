@@ -11,8 +11,8 @@ MG "TCP lost sync or timeout - Handle - ",errtcp
 RE 1
 EN
 #LIMSWI
-IF ((_LRA=0) | (_LFA=0))
-    olddecelA=_DCA;DCA=(_DCA*10);STA;DCA=olddecelA;ENDIF
+IF (((_LRA=0) | (_LFA=0)) & (inhomeA=0) & (_BGA=1))
+    oldecelA=_DCA;DCA=(_DCA*10);STA;DCA=oldecelA;ENDIF
 IF (((_SCB=2) | (_SCB=3)) & (_BGB=1))
 	oldecelB=_DCB;DCB=limdcB;WT2;STB;DCB=oldecelB;ENDIF
 IF (((_SCC=2) | (_SCC=3)) & (_BGC=1))
@@ -26,6 +26,31 @@ IF (((_SCF=2) | (_SCF=3)) & (_BGF=1))
 IF (((_SCG=2) | (_SCG=3)) & (_BGG=1))
 	oldecelG=_DCG;DCG=limdcG;WT2;STG;DCG=oldecelG;ENDIF
 IF ((_LRH=0) | (_LFH=0))
-    olddecelH=_DCH;DCH=67107840;DCH=olddecelH;STH;ENDIF
+    oldecelH=_DCH;DCH=67107840;DCH=oldecelH;STH;ENDIF
 RE 1
+EN
+'
+#Hm_rdz
+g_hmstA=1
+WT100
+IF ((_LFA=1) & (_BGA=0))
+SHA
+JGA=2048;BGA
+AMA
+ENDIF
+IF ((_LFA=0) & (_LRA=1) & (_BGA=0))
+SHA
+SPA=2048
+PRA=-25*125
+BGA
+AMA
+SHA
+DCA=16384
+SPA=128;HMA
+BGA
+AMA
+IF (_SCA=10)
+g_hmstA=100
+ENDIF
+ENDIF
 EN
