@@ -1,4 +1,12 @@
 NO*************FOOTER*********************
+IF (fastStopFB=1)
+    oldecelC=_DCC;DCC=67107840;DCC=oldecelC;STC;
+    fastStopFB=0
+ENDIF
+IF (fastStopFD=1)
+    oldecelA=_DCA;DCA=(_DCA*10);STA;DCA=oldecelA;
+    fastStopFD=0
+ENDIF
 JP #HOMEA
 EN
 #CMDERR
