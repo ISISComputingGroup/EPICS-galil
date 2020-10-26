@@ -1,6 +1,6 @@
 NO*************FOOTER*********************
 IF (fastStopFB=1)
-    oldecelC=_DCC;DCC=67107840;DCC=oldecelC;STC;
+    oldecelC=_DCC;DCC=67107840;STC;DCC=oldecelC;
     fastStopFB=0
 ENDIF
 IF (fastStopFD=1)
@@ -24,7 +24,7 @@ IF ((_LRA=0) | (_LFA=0))
 IF (((_SCB=2) | (_SCB=3)) & (_BGB=1))
 	oldecelB=_DCB;DCB=limdcB;WT2;STB;DCB=oldecelB;ENDIF
 IF ((_LRC=0) | (_LFC=0))
-    oldecelC=_DCC;DCC=67107840;DCC=oldecelC;STC;ENDIF
+    oldecelC=_DCC;DCC=67107840;STC;DCC=oldecelC;ENDIF
 IF (((_SCD=2) | (_SCD=3)) & (_BGD=1))
 	oldecelD=_DCD;DCD=limdcD;WT2;STD;DCD=oldecelD;ENDIF
 IF (((_SCE=2) | (_SCE=3)) & (_BGE=1))

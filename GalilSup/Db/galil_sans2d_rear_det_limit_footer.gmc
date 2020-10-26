@@ -4,7 +4,7 @@ IF (fastStopRD=1)
     fastStopRD=0
 ENDIF
 IF (fastStopRB=1)
-    oldecelH=_DCH;DCH=67107840;DCH=oldecelH;STH;
+    oldecelH=_DCH;DCH=67107840;STH;DCH=oldecelH;
     fastStopRB=0
 ENDIF
 JP #HOMEA
@@ -34,7 +34,7 @@ IF (((_SCF=2) | (_SCF=3)) & (_BGF=1))
 IF (((_SCG=2) | (_SCG=3)) & (_BGG=1))
 	oldecelG=_DCG;DCG=limdcG;WT2;STG;DCG=oldecelG;ENDIF
 IF ((_LRH=0) | (_LFH=0))
-    oldecelH=_DCH;DCH=67107840;DCH=oldecelH;STH;ENDIF
+    oldecelH=_DCH;DCH=67107840;STH;DCH=oldecelH;ENDIF
 RE 1
 EN
 '
