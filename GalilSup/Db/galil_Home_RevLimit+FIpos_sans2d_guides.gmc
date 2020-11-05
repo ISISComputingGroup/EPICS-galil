@@ -19,7 +19,6 @@ IF (home${AXIS}=1)
 		AC${AXIS}=1024
         DC${AXIS}=1024
 		JG${AXIS}=-256
-        MG "Jogging to limit", hjog${AXIS}
 		WT1000;SH${AXIS};WT1000;BG${AXIS};hjog${AXIS}=2
 	ENDIF
 	IF ((hjog${AXIS}=1) & (_BG${AXIS}=0) & (home${AXIS}=1) & (_LR${AXIS}=0))
@@ -28,7 +27,6 @@ IF (home${AXIS}=1)
 	IF ((hjog${AXIS}=2) & (_BG${AXIS}=0) & (home${AXIS}=1) & (_LR${AXIS}=0))
 		WT1000
         JG${AXIS}=256
-        MG "On limit, finding index", hjog${AXIS}
 		WT2000;SH${AXIS};WT1000;
         FI${AXIS};BG${AXIS};hjog${AXIS}=3
 	ENDIF
@@ -36,13 +34,11 @@ IF (home${AXIS}=1)
         WT1000
         SP${AXIS}=128
 		PR${AXIS}=400
-        MG "PR move", hjog${AXIS}
 		WT1500;SH${AXIS};WT1500;BG${AXIS};hjog${AXIS}=4
 	ENDIF
 	IF ((hjog${AXIS}=4) & (_BG${AXIS}=0) & (home${AXIS}=1) & (_SC${AXIS}=1))
 		WT1500
         JG${AXIS}=-20
-        MG "Find index", hjog${AXIS}
 		WT2000;SH${AXIS};WT1000;FI${AXIS};BG${AXIS};hjog${AXIS}=5
 	ENDIF
 	IF ((hjog${AXIS}=5) & (_BG${AXIS}=0) & (home${AXIS}=1) & (_SC${AXIS}=10))
