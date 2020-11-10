@@ -41,8 +41,6 @@ GMC += galil_Home_FIpos.gmc galil_Home_FIneg.gmc
 # Device specific routines
 GMC += galil_Oscillating_Collimator.gmc galil_Oscillating_Collimator_Merlin.gmc galil_Muon_Slits.gmc galil_emma_chopper_lifter.gmc
 GMC += galil_Home_sans2d_rear_detector.gmc
-GMC += galil_Home_sans2d_aperture.gmc
-GMC += galil_Home_sans2d_waveguides.gmc
 GMC += galil_sans2d_front_det_limit_footer.gmc
 GMC += galil_sans2d_rear_det_limit_footer.gmc
 
