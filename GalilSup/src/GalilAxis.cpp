@@ -34,6 +34,7 @@ using namespace std; //cout ostringstream vector string
 #include <iocsh.h>
 #include <epicsThread.h>
 #include <errlog.h>
+#include <shareLib.h>
 
 #include <asynOctetSyncIO.h>
 
@@ -94,10 +95,12 @@ GalilAxis::GalilAxis(class GalilController *pC, //Pointer to controller instance
   eventMonitorStart_ = epicsEventMustCreate(epicsEventEmpty);
   //Create event monitor done event
   eventMonitorDone_ = epicsEventMustCreate(epicsEventEmpty);
+
   //store settings, and set defaults
   setDefaults(limit_as_home, enables_string, switch_type);
   //store the motor enable/disable digital IO setup
   store_motors_enable();
+
   //Generate the code for this axis based on specified settings
   //Initialize the code generator
   initialize_codegen(thread_code, limit_code, digital_code);
@@ -274,7 +277,6 @@ asynStatus GalilAxis::setDefaults(int limit_as_home, char *enables_string, int s
    autobrakeonSent_ = false;
 
    //Axis not ready until necessary motor record fields have been pushed into driver
-   //So we use "use encoder if present" UEIP field to set axisReady_ to true
    axisReady_ = false;
 
    //Have not allocated profile data backup array
@@ -301,7 +303,7 @@ asynStatus GalilAxis::setDefaults(int limit_as_home, char *enables_string, int s
 
    //Default motor record stop
    pC_->setIntegerParam(axisNo_, pC_->GalilMotorRecordStop_, 0);
-
+   
    //Default related csaxes list
    csaxesList_[0] = '\0';
 
@@ -378,6 +380,12 @@ void GalilAxis::initialize_codegen(string &thread_code,
 
   //Insert label for motor thread we are constructing	
   thread_code += "#THREAD" + string(1, axisName_) + "\n";
+
+  //Insert limit switch interrupt label, if not done so already
+  if (!pC_->rio_ && pC_->limit_code_.empty()) {
+     //setup #LIMSWI label
+     pC_->limit_code_ = "#LIMSWI\n";
+  }
 
   //Setup ININT program label for digital input interrupts.  Used for motor enable/disable.
   if (pC_->digitalinput_init_ == false && strcmp(enables_string_, "") != 0) {
@@ -596,41 +604,48 @@ asynStatus GalilAxis::moveThruMotorRecord(double position, bool signalCaller)
    status |= pC_->getDoubleParam(axisNo_, pC_->GalilUserOffset_, &off);
    status |= pC_->getIntegerParam(axisNo_, pC_->GalilDirection_, &dir);
 
-   //Calculate direction multiplier
-   dirm = (dir == 0) ? 1 : -1;
+   if (!status) {
+      //Params retrieved okay
 
-   //Calculate mr dial readback in motor steps
-   drbv = (ueip) ? encoder_position_ * eres : motor_position_ * mres;
-   drbvmpos = drbv/mres;
-   //Calculate mr readback, and new position in motor steps
-   rpos = NINT(drbvmpos);
-   npos = NINT(position);
+      //Calculate direction multiplier
+      dirm = (dir == 0) ? 1 : -1;
 
-   //Calculate difference between dial readback (in motor steps)
-   //and new position in motor steps
-   diff = labs(rpos - npos);
+      //Calculate mr dial readback in motor steps
+      drbv = (ueip) ? encoder_position_ * eres : motor_position_ * mres;
+      drbvmpos = drbv / mres;
+      //Calculate mr readback, and new position in motor steps
+      rpos = NINT(drbvmpos);
+      npos = NINT(position);
 
-   //Calculate requested position in user coordinates
-   position = (position * mres * dirm) + off;
+      //Calculate difference between dial readback (in motor steps)
+      //and new position in motor steps
+      diff = labs(rpos - npos);
 
-   //If new position differs from readback by 1 motor step or more, and
-   //No asynParam list error, then write new position
-   if (diff >= 1 && !status) {
-      //Set flag that move has been pushed to this axis motor record
-      moveThruRecord_ = true;
-      //Set signalCaller as instructed
-      signalCaller_ = signalCaller;
-      //Set requested position
-      //This will also set deferred move for this axis
-      pC_->setDoubleParam(axisNo_, pC_->GalilMotorSetVal_, position);
-      //Enable writes to motor record
-      pC_->setIntegerParam(axisNo_, pC_->GalilMotorSetValEnable_, 1);
-      //Do callbacks
-      pC_->callParamCallbacks(axisNo_);
-      //Disable writes to motor record in GalilAxis::move
+      //Calculate requested position in user coordinates
+      position = (position * mres * dirm) + off;
+
+      //If new position differs from readback by 1 motor step or more, and
+      //No asynParam list error, then write new position
+      if (diff >= 1) {
+         //Set flag that move has been pushed to this axis motor record
+         moveThruRecord_ = true;
+         //Set signalCaller as instructed
+         signalCaller_ = signalCaller;
+         //Set requested position
+         pC_->setDoubleParam(axisNo_, pC_->GalilMotorSetVal_, position);
+         //Enable writes to motor record
+         //Writes are disabled by GalilAxis::move when called by MR
+         //Writes are disabled by caller, or GalilCSAxis::startDeferredMovesThread when
+         //GalilAxis::move is not called by MR
+         //A timeout period, and moveThruRecord_ are used to detect if MR calls GalilAxis::move
+         //Eg. GalilAxis::move isn't called by MR when new position - readback < rdbd, spdb
+         pC_->setIntegerParam(axisNo_, pC_->GalilMotorSetValEnable_, 1);
+         //Do callbacks
+         pC_->callParamCallbacks(axisNo_);
       }
-   else //New position same as motor record rbv already
-      status = asynError;
+      else //New position same as motor record rbv already
+         status = asynError;
+   }
 
    return (asynStatus)status;
 }
@@ -1205,6 +1220,8 @@ asynStatus GalilAxis::stopMotorRecord(void) {
       //Stop request is from driver, not motor record
       //Send stop to this axis MR to prevent backlash, and retry attempts
       status = pC_->setIntegerParam(axisNo_, pC_->GalilMotorRecordStop_, 1);
+      //Do callbacks
+      pC_->callParamCallbacks(axisNo_);
    }
    //Return result
    return (asynStatus)status;
@@ -1507,7 +1524,7 @@ asynStatus GalilAxis::initializeProfile(size_t maxProfilePoints)
   return asynSuccess;
 }
 
-/** Set the motor brake status. 
+/** Set the motor brake
   * \param[in] enable true = brake, false = release brake. */
 asynStatus GalilAxis::setBrake(bool enable)
 {
@@ -1519,26 +1536,6 @@ asynStatus GalilAxis::setBrake(bool enable)
   if (axisReady_ && brakeport > 0 && !status)
      {
      if (!enable)
-        sprintf(pC_->cmd_, "SB %d", brakeport);
-     else
-        sprintf(pC_->cmd_, "CB %d", brakeport);
-     //Write setting to controller
-     status = pC_->sync_writeReadController();
-     }
-  return status;
-}
-
-//Restore the motor brake status after axisReady_
-asynStatus GalilAxis::restoreBrake(void)
-{
-  asynStatus status = asynSuccess;
-  int brakeport;
-  //Retrieve the digital port used to actuate this axis brake
-  status = pC_->getIntegerParam(axisNo_, pC_->GalilBrakePort_, &brakeport);
-  //Enable or disable motor brake
-  if (brakeport > 0 && !status)
-     {
-     if (!brakeInit_)
         sprintf(pC_->cmd_, "SB %d", brakeport);
      else
         sprintf(pC_->cmd_, "CB %d", brakeport);
@@ -1742,6 +1739,8 @@ asynStatus GalilAxis::getStatus(void)
             digport = (digport == mask) ? 0 : 1;
             pC_->setIntegerParam(axisNo_, pC_->GalilBrake_, digport);
          }
+         else//This axis doesn't have a brake port assigned
+            pC_->setIntegerParam(axisNo_, pC_->GalilBrake_, 0);
       }
    }
   return pC_->recstatus_;
@@ -1990,15 +1989,6 @@ void GalilAxis::checkHoming(void)
    //Is controller using main or auxillary encoder register for positioning
    double readback = (ctrlUseMain_) ? encoder_position_ : motor_position_;
 
-   //Dont show limits whilst homing otherwise mr may interrupt custom routines
-   //Also stops wrongLimitProtection function during homing
-   if (homing_) {
-      //Dont show reverse limit when homing
-      rev_ = 0;
-      //Dont show forward limit when homing
-      fwd_ = 0;
-   }
-
    if ((homing_ && (stoppedTime_ >= HOMING_TIMEOUT) && !cancelHomeSent_) ||
        (((readback > highLimit_ && softlimits) || (readback < lowLimit_ && softlimits)) && homing_ && !cancelHomeSent_ && done_))
       {
@@ -2014,6 +2004,20 @@ void GalilAxis::checkHoming(void)
       //Set controller error mesg monitor
       pC_->setCtrlError(message);
       }
+}
+
+//Called by poll thread
+//Check motor direction/limits consistency
+void GalilAxis::checkMotorLimitConsistency(void)
+{
+   //Check motor/limits consistency
+   if (!done_ && rev_ && !direction_)
+      limitsDirState_ = consistent;
+
+   if (!done_ && fwd_ && direction_)
+      limitsDirState_ = consistent;
+   //Pass motor/limits consistency to paramList
+   pC_->setIntegerParam(axisNo_, pC_->GalilLimitConsistent_, limitsDirState_);
 }
 
 /* C Function which runs the pollServices thread */ 
@@ -2457,7 +2461,7 @@ asynStatus GalilAxis::jogAfterHome(void) {
       if (!status) {
          //If all settings OK, do the move
          if (!moveThruMotorRecord(position, true)) {
-            //Requested move equal or larger than rdbd, move success
+            //Requested move equal or larger than 1 motor step, move success
             //Retrieve AutoOn delay from ParamList
             pC_->getDoubleParam(axisNo_, pC_->GalilAutoOnDelay_, &ondelay);
             //Retrieve Auto on off status from ParamList
@@ -2603,6 +2607,9 @@ asynStatus GalilAxis::poller(void)
    //Set motor stop time
    setStopTime();
 
+   //Check motor direction/limits consistency
+   checkMotorLimitConsistency();
+
    //Check homing flag
    checkHoming();
 
@@ -2625,13 +2632,6 @@ asynStatus GalilAxis::poller(void)
    //check ssi encoder connect status
    set_ssi_connectflag();
 
-   //Check limits consistent with motor direction
-   if (rev_ && !direction_)
-      limitsDirState_ = consistent;
-
-   if (fwd_ && direction_)
-      limitsDirState_ = consistent;
-
    //Enforce wrong limit protection if enabled
    wrongLimitProtection();
 
@@ -2639,11 +2639,11 @@ asynStatus GalilAxis::poller(void)
    if (home_ && !limit_as_home_)
       home = 1;
 
-   /*if Rev switch is on and we are using it as a home, set the appropriate flag*/
+   /*If Rev switch is on and we are using it as a home, set the appropriate flag*/
    if (rev_ && limit_as_home_)
       home = 1;
 
-   /*if fwd switch is on and we are using it as a home, set the appropriate flag*/
+   /*If fwd switch is on and we are using it as a home, set the appropriate flag*/
    if (fwd_ && limit_as_home_)
       home = 1;
 
@@ -2687,6 +2687,14 @@ skip:
        (stoppedTime_ < stopDelay && !status)) {
       moving = true;
       done_ = 0;
+   }
+
+   //Dont show limits whilst homing otherwise mr may interrupt custom routines
+   if (homing_) {
+      //Dont show reverse limit when homing
+      rev_ = 0;
+      //Dont show forward limit when homing
+      fwd_ = 0;
    }
 
    //Pass limit status to motorRecord
