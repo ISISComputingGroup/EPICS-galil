@@ -34,6 +34,10 @@ GalilTest_LIBS += motorSimSupport motor asyn busy calc sscan autosave
 ifeq ($(STATIC_BUILD),YES)
 GalilTest_LIBS_WIN32 += oncrpc
 endif
+ifdef SNCSEQ
+GalilTest_LIBS += seq pv
+endif
+
 GalilTest_LIBS += $(EPICS_BASE_IOC_LIBS)
 
 #===========================

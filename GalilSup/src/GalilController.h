@@ -175,6 +175,7 @@
 #define GalilUserDataString		"MOTOR_USER_DATA"
 #define GalilUserDataDeadbString	"MOTOR_USER_DATA_DEADB"
 #define GalilLimitDisableString		"MOTOR_LIMIT_DISABLE"
+#define GalilLimitConsistentString	"MOTOR_LIMIT_CONSISTENT"
 #define GalilEncoderToleranceString     "MOTOR_ENCODER_TOLERANCE"
 
 #define GalilMainEncoderString		"MOTOR_MAIN_ENCODER"
@@ -211,8 +212,8 @@
 #define GalilBISSStatTimeoutString	"MOTOR_BISSSTAT_TIMEOUT"
 #define GalilBISSStatCRCString	        "MOTOR_BISSSTAT_CRC"
 #define GalilBISSStatErrorString	"MOTOR_BISSSTAT_ERROR"
-#define GalilBISSStatWarnString	"MOTOR_BISSSTAT_WARN"
-#define GalilBISSStatPollString	"MOTOR_BISSSTAT_POLL"
+#define GalilBISSStatWarnString	        "MOTOR_BISSSTAT_WARN"
+#define GalilBISSStatPollString	        "MOTOR_BISSSTAT_POLL"
 
 #define GalilErrorLimitString		"MOTOR_ERRLIM"
 #define GalilErrorString		"MOTOR_ERR"
@@ -494,6 +495,7 @@ protected:
   int GalilUserData_;
   int GalilUserDataDeadb_;
   int GalilLimitDisable_;
+  int GalilLimitConsistent_;
   int GalilEncoderTolerance_;
 
   int GalilMainEncoder_;
