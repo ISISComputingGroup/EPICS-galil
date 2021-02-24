@@ -28,6 +28,8 @@
 
 using namespace std; //cout ostringstream vector string
 
+static const double NO_MOTION_POLLING_FACTOR = 10.0; // factor to reduce polling rate by when no motion is occurring
+
 #include "GalilController.h"
 
 GalilPoller::GalilPoller(GalilController *cntrl)
@@ -53,7 +55,7 @@ void GalilPoller::run(void)
 {
   static const char *functionName = "GalilPoller::run";
   unsigned i;
-  bool moving;
+  bool moving, any_moving;
   asynMotorAxis *pAxis;
 
   //Loop until shutdown
@@ -72,9 +74,10 @@ void GalilPoller::run(void)
 			//Do callbacks for GalilController, GalilAxis records
 			//Do all ParamLists/axis whether user called GalilCreateAxis or not
 			//because analog/binary IO data are stored/organized in ParamList just same as axis data 
+            any_moving = false;
 			for (i=0; i<MAX_GALIL_AXES + MAX_GALIL_CSAXES; i++)
 				{
-                                if (i < MAX_GALIL_AXES)
+                if (i < MAX_GALIL_AXES)
 					{
 					//Retrieve GalilAxis instance i
 					pAxis = pCntrl_->getAxis(i);
@@ -94,13 +97,20 @@ void GalilPoller::run(void)
 					if (i < MAX_GALIL_AXES)
 						pCntrl_->callParamCallbacks(i); 
 					}
-				else				
+				else
+                {
 					pAxis->poll(&moving);		//Update GalilAxis, and upper layers, using retrieved datarecord
 									//Update records with analog/binary data
+                    any_moving = (any_moving || moving);
+                }
 				}
 			//No async, so wait updatePeriod_ rather than relying on async record delivery frequency
 			if (!pCntrl_->async_records_)
-				epicsThreadSleep(pCntrl_->updatePeriod_/1000.0);
+            {
+                // drop polling frequency if nothing moving. We will be signalled when motion is requested on an axis
+                // and then should continue at higher poll rate until motion is completed
+                pCntrl_->motion_started_.wait( (any_moving ? 1.0 : NO_MOTION_POLLING_FACTOR) * pCntrl_->updatePeriod_ / 1000.0 );
+            }
 			}
 		else	//Not connected.  Just sleep a little
 			epicsThreadSleep(.1);

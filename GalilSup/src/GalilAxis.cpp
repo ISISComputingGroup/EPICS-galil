@@ -557,9 +557,10 @@ asynStatus GalilAxis::move(double position, int relative, double minVelocity, do
 		if (!used_move_command) {
 		    beginMotion(functionName);
 		}
+        // signal poller we have started moving
+        pC_->motion_started_.signal();
 		}
 	}
-
   //Always return success. Dont need more error mesgs
   return asynSuccess;
 }
@@ -686,6 +687,10 @@ asynStatus GalilAxis::home(double minVelocity, double maxVelocity, double accele
 		pC_->writeReadController(functionName);
 		std::cerr << "Home started axis " << axisName_ << std::endl;
 //		}
+
+        // signal poller we have started moving
+        pC_->motion_started_.signal();
+
 	}
 
   //Always return success. Dont need more error mesgs
@@ -780,8 +785,9 @@ asynStatus GalilAxis::moveVelocity(double minVelocity, double maxVelocity, doubl
 					
 	//Begin the move
 	beginMotion(functionName);
+    // signal poller we have started moving
+    pC_->motion_started_.signal();
 	}
-   
   //Always return success. Dont need more error mesgs
   return asynSuccess;
 }
@@ -1444,6 +1450,10 @@ void GalilAxis::pollServices(void)
                                enhmval = 0.0;
                                mrhmval = 0.0;
                                }
+                            double tp = getGalilAxisVal("_TP");
+                            double td = getGalilAxisVal("_TD");
+                            // normally tp encoder, td motor i think; but if open loop is tp motor? And what is td?
+                            errlogSevPrintf(errlogInfo, "Poll services: current positions: _TD%c=%.0f _TP%c=%.0f\n", axisName_, td, axisName_, tp);
                             //Program motor position register
 						    errlogSevPrintf(errlogInfo, "Poll services: applying motor %c raw home position %.0f\n", axisName_, mrhmval);
                             sprintf(pC_->cmd_, "DP%c=%.0f\n", axisName_, mrhmval);
