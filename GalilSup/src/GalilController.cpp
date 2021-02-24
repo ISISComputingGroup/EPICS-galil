@@ -3005,16 +3005,17 @@ asynStatus GalilController::beginSyncStartStopMove(int coordsys, const char *axe
   //Update coordinate system motor list at record layer
   setStringParam(coordsys, GalilCoordSysMotors_, axes);
 
+#if 0
   //Loop through the axes list for this coordinate system
   //Ensure all motors are enabled
   for (int index = 0; index < strlen(axes); index++)
      {
      //Retrieve axis specified in axes list
-     pAxis = getAxis(axes[index] - AASCII);
+     GalilAxis *pAxis = getAxis(axes[index] - AASCII);
      if (!pAxis->motor_enabled())
         return asynError;
      }
-
+#endif
   //Set linear interpolation mode and include motor list provided
   cmd += ";LM " + tsp(axes);
 

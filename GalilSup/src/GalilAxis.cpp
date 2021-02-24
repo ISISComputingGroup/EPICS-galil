@@ -21,7 +21,7 @@
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
-#if defined _WIN32 || _WIN64
+#if defined(_WIN32) /* _WIN32 include x64 */
 #include <windows.h>
 #endif /* _WIN32 */
 #include <iostream>  //cout
@@ -679,9 +679,11 @@ asynStatus GalilAxis::move(double position, int relative, double minVelocity, do
      acceleration = csaAcceleration_;
   }
 
+#if 0
   //Block backlash, retries if requested
   if (stop_axis_)
      return asynSuccess;
+#endif
     
 //  //Ensure home flag is 0
 //  sprintf(pC_->cmd_, "home%c=0", axisName_);
@@ -734,8 +736,8 @@ asynStatus GalilAxis::move(double position, int relative, double minVelocity, do
 			}
 				used_move_command = true;
 		}
-       //Set absolute or relative move
-	   else if (relative) {
+        //Set absolute or relative move
+        else if (relative) {
            //Set the relative move
            sprintf(pC_->cmd_, "PR%c=%.0lf", axisName_, position);
            pC_->sync_writeReadController();
@@ -752,7 +754,6 @@ asynStatus GalilAxis::move(double position, int relative, double minVelocity, do
 		if (!used_move_command) {
         status = beginMotion(functionName, position, relative, true);
 		}
-        }
      }
   }
 
@@ -1026,7 +1027,7 @@ asynStatus GalilAxis::checkLimits(const char *caller, char callaxis, double posi
    int rev, fwd;		//Motor limit status
    double readback;		//Readback in steps
 
-  //Motor on and Amp auto on/off status check
+#if 0  //Motor on and Amp auto on/off status check
   pC_->getIntegerParam(axisNo_, pC_->motorStatusPowerOn_, &motoron);
   pC_->getIntegerParam(axisNo_, pC_->GalilAutoOnOff_, &autoonoff);
   if (!motoron && !autoonoff)
@@ -1036,7 +1037,7 @@ asynStatus GalilAxis::checkLimits(const char *caller, char callaxis, double posi
      pC_->setCtrlError(mesg);
      return asynError;  //Nothing to do 
      }
-	
+#endif	
    if (!checkEncoderMotorSync(true))
    {
         pC_->setCtrlError("Encoder and motor registers out of sync - you may need to rehome");
@@ -2118,7 +2119,7 @@ void GalilAxis::checkHoming(void)
       fwd_ = 0;
    }
    // ISIS: need to confirm limits high/low limit behaviour
-   if ((homing_ && (stoppedTime_ >= HOMING_TIMEOUT) && !cancelHomeSent_) ||
+   if ((homing_ && (stoppedTime_ >= homing_timeout) && !cancelHomeSent_) ||
        (((readback > highLimit_ && softlimits) || (readback < lowLimit_ && softlimits)) && homing_ && !cancelHomeSent_ && done_))
       {
 	    // get last stop code
@@ -2205,7 +2206,7 @@ void GalilAxis::pollServices(void)
                             strcpy(pC_->cmd_, post);
                             //Write command to controller
                             pC_->sync_writeReadController();
-				            std::cerr << "Poll services: POST " << axisName_ << " " << post << std::endl;
+                            std::cerr << "Poll services: POST " << axisName_ << " " << post << std::endl;
                             }
                          //Motor post complete
                          postExecuted_ = true;
