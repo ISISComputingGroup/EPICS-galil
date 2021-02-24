@@ -361,6 +361,21 @@
 //                  Improved internal stop mechanism.  Backlash, retries now prevented as necessary
 //                  Add analog output readbacks for DMC30000 series
 //                  Altered coordinate system stop mechanism for ad-hoc deferred moves
+// 23/04/2020 M. Clift
+//                  Fix issue with limit switch interrupt routine in generated code
+// 06/05/2020 M.Clift
+//                  Fix/Add use synchronous comms if sync/tcp connects but async/udp doesn't
+// 11/07/2020 M.Clift
+//                  Removed motor extras manual brake on/off command
+//                  Minor tidy up
+// 05/11/2020 M.Clift
+//                  Add motor direction / limit consistent indicator to motor extras
+// 06/01/2021 M.Clift
+//                  Fix home process no longer disables wrong limit protection (wlp)
+// 04/02/2021 M.Clift
+//                  Add shareLib.h where required for EPICS 7 compatibility
+// 15/02/2021 M.Clift
+//                  Fix segmentation fault in GalilAddCode
 
 #include <stdio.h>
 #include <math.h>
@@ -387,6 +402,7 @@ using namespace std; //cout ostringstream vector string
 #include <epicsExit.h>
 #include <errlog.h>
 #include <initHooks.h>
+#include <shareLib.h>
 #include <drvAsynIPPort.h>
 #include <drvAsynSerialPort.h>
 
@@ -399,7 +415,7 @@ using namespace std; //cout ostringstream vector string
 #include <epicsExport.h>
 
 static const char *driverName = "GalilController";
-static const char *driverVersion = "3-6-51";
+static const char *driverVersion = "3-6-60";
 
 static void GalilProfileThreadC(void *pPvt);
 static void GalilArrayUploadThreadC(void *pPvt);
@@ -620,6 +636,7 @@ GalilController::GalilController(const char *portName, const char *address, doub
   createParam(GalilUserDataDeadbString, asynParamFloat64, &GalilUserDataDeadb_);
 
   createParam(GalilLimitDisableString, asynParamInt32, &GalilLimitDisable_);
+  createParam(GalilLimitConsistentString, asynParamInt32, &GalilLimitConsistent_);
   createParam(GalilEncoderToleranceString, asynParamInt32, &GalilEncoderTolerance_);
 
   createParam(GalilMainEncoderString, asynParamInt32, &GalilMainEncoder_);
@@ -694,6 +711,8 @@ GalilController::GalilController(const char *portName, const char *address, doub
   model_ = "Unknown";
   //Default rio
   rio_ = false;
+  //Default numAxesMax_
+  numAxesMax_ = 0;
   //IOC is not shutting down yet
   shuttingDown_ = false;
   //Code for the controller has not been assembled yet
@@ -1068,11 +1087,11 @@ std::string GalilController::extractEthAddr(const char* str)
 void GalilController::connected(void)
 {
   //static const char *functionName = "connected";
-  char RV[] = {0x12,0x16,0x0};  //Galil command string for model and firmware version query
+  char RV[] = {0x12,0x16,0x0};   //Galil command string for model and firmware version query
   int status;
-  double minUpdatePeriod;		//Min update period given model
-  string mesg = "";				//Connected mesg
-  unsigned i;
+  double minUpdatePeriod;        //Min update period given model
+  string mesg = "";              //Connected mesg
+  unsigned i;                    //Looping
 
   //Flag connected as true
   connected_ = true;
@@ -1203,14 +1222,14 @@ void GalilController::connected(void)
   numThreads_ = (model_[3] == '1')? 2 : numThreads_;
 
   //Stop all threads running on the controller
-  for (i=0;i<numThreads_;i++)
+  for (i = 0; i < numThreads_; i++)
      {
      sprintf(cmd_, "HX%d",i);
      sync_writeReadController();
      }
 
   //Stop all moving motors
-  for (i=0;i<numAxesMax_;i++)
+  for (i = 0; i < numAxesMax_; i++)
      {
      //Query moving status
      sprintf(cmd_, "MG _BG%c", (i + AASCII));
@@ -3836,16 +3855,6 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
         status = sync_writeReadController();
      }
   }
-  else if (function == GalilBrake_) {
-     if (value) {
-        status = pAxis->setBrake(true);
-        pAxis->brakeInit_ = true;
-     }
-     else {
-        status = pAxis->setBrake(false);
-        pAxis->brakeInit_ = false;
-     }
-  }
   else if (function == GalilMotorType_) {
      float newmtr;
 
@@ -3935,8 +3944,6 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
      //Axis now ready for move commands
      if (addr < MAX_GALIL_AXES) {
         pAxis->axisReady_ = true;//Real motor
-        //Restore brake cmd state
-        pAxis->restoreBrake();
      }
      else
         pCSAxis->axisReady_ = true;//CS motor
@@ -4137,7 +4144,6 @@ asynStatus GalilController::writeFloat64(asynUser *pasynUser, epicsFloat64 value
         {
         //Write new stepper smoothing factor to GalilController
         sprintf(cmd_, "KS%c=%lf",pAxis->axisName_, value);
-        //printf("GalilStepSmooth_ cmd:%s value %lf\n", cmd, value);
         status = sync_writeReadController();
         }
      }
@@ -4147,7 +4153,6 @@ asynStatus GalilController::writeFloat64(asynUser *pasynUser, epicsFloat64 value
         {
         //Write new error limit to GalilController
         sprintf(cmd_, "ER%c=%lf",pAxis->axisName_, value);
-        //printf("GalilErrorLimit_ cmd:%s value %lf\n", cmd, value);
         status = sync_writeReadController();
         }
      }
@@ -4170,7 +4175,6 @@ asynStatus GalilController::writeFloat64(asynUser *pasynUser, epicsFloat64 value
      {
      //Write new analog value to specified output (addr)
      sprintf(cmd_, "AO %d, %f", addr, value);
-     //printf("GalilAnalogOut_ cmd:%s value %lf\n", cmd, value);
      status = sync_writeReadController();
      }
   else if (function == GalilOutputCompareStart_ || function == GalilOutputCompareIncr_)
@@ -5619,17 +5623,17 @@ int GalilController::GalilInitializeVariables(bool burn_variables)
   * \param[in] axis Axis home code to replace
   * \param[in] filename User provided home code */
 void GalilController::GalilReplaceHomeCode(char *axis, string filename) {
-   GalilAxis *pAxis;				//GalilAxis
-   char axisName;				//Axis name specified
-   string str;					//Search string.  Home section start string (eg. IF(HOMEA=1))	
-   string line;					//Read the file line by line
-   string mesg = "";				//Error messages
-   ifstream file(filename);			//Input file stream
-   size_t found;				//Location of search string in thread code
-   int limit_sw_code_size;			//Generated code size in bytes for homing to limit switch
-   int home_sw_code_size;			//Generated code size in bytes for homing to home switch
-   size_t cut;					//Number of bytes to cut from thread code
-   size_t inpos;				//Position in code to insert custom code line
+   GalilAxis *pAxis;              //GalilAxis
+   char axisName;                 //Axis name specified
+   string str;                    //Search string.  Home section start string (eg. IF(HOMEA=1))	
+   string line;                   //Read the file line by line
+   string mesg = "";              //Error messages
+   ifstream file(filename);       //Input file stream
+   size_t found;                  //Location of search string in thread code
+   int limit_sw_code_size;        //Generated code size in bytes for homing to limit switch
+   int home_sw_code_size;         //Generated code size in bytes for homing to home switch
+   size_t cut;                    //Number of bytes to cut from thread code
+   size_t inpos;                  //Position in code to insert custom code line
 
    // Axis letter A-H
    axisName = (char)(toupper(axis[0]));
@@ -5720,12 +5724,12 @@ void GalilController::GalilReplaceHomeCode(char *axis, string filename) {
                        3 = Digital code
   * \param[in] filename Code file specified by user */
 void GalilController::GalilAddCode(int section, string filename) {
-   size_t found = string::npos; 	//Location of search string in thread code
-   char axis = 'A';					//Axis associated with specified section of thread code
-   string line;		    			//Read the file line by line
-   string mesg = "";				//Error messages
-   ifstream file(filename);			//Custom code to add
-   size_t inpos;	    			//Position in code to insert custom code line
+   size_t found = string::npos;     //Location of search string in thread code
+   char axis = 'A';                 //Axis associated with specified section of thread code
+   string line;                     //Read the file line by line
+   string mesg = "";                //Error messages
+   ifstream file(filename);         //Custom code to add
+   size_t inpos = string::npos;     //Position in code to insert custom code line
 
    if (section == 3 && !digitalinput_init_) {
       mesg = "GalilAddCode: Digital section not defined, review GalilCreateAxis";
@@ -5764,7 +5768,11 @@ void GalilController::GalilAddCode(int section, string filename) {
             //Add line to specified code section
             if (!section)
                card_code_ += line;
-            if (section == 1) {
+            if (section == 2)
+               limit_code_ += line;
+            if (section == 3)
+               digital_code_ += line;
+            if (section == 1 && inpos != string::npos) {
                // Check read line for $(AXIS) macro
                while ((found = line.find("$(AXIS)")) != string::npos) {
                   // Replace any found $(AXIS) macro with found axis
@@ -5776,10 +5784,6 @@ void GalilController::GalilAddCode(int section, string filename) {
                //Increment inpos to next insert position
                inpos = inpos + line.length();
             }
-            if (section == 2)
-               limit_code_ += line;
-            if (section == 3)
-               digital_code_ += line;
          }
       }
       // Done reading, close the file
@@ -5989,11 +5993,13 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
             errlogPrintf("Code started successfully on model %s, address %s\n",model_.c_str(), address_.c_str());
       }
 
-      //Limits motor direction consistency unknown
+      //Limits motor direction consistency unknown at connect/reconnect
       for (i = 0; i < numAxes_; i++) {
          pAxis = getAxis(axisList_[i] - AASCII);
          if (!pAxis) continue;
          pAxis->limitsDirState_ = unknown;
+         //Pass motor/limits consistency to paramList
+         setIntegerParam(pAxis->axisNo_, GalilLimitConsistent_, pAxis->limitsDirState_);
       }
 
       //Retrieve controller time base
@@ -6030,18 +6036,11 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
    }
 }
 
-/* Generate code headers that are always required for a dmc
-   Required headers are for card, and limit code
-   We dont add header for digital code (ie #ININT) as we dont know if it's required yet */
+//Generate code headers that are always required for both dmc and rio
 void GalilController::gen_code_headers(void)
 {
    //setup #AUTO label
    card_code_ = "#AUTO\n";
-   //Below for dmc only
-   if (!rio_ && numAxes_ != 0) {
-      //setup #LIMSWI label
-      limit_code_ = "#LIMSWI\n";
-   }
 }
 
 /* Generate code for rio */
