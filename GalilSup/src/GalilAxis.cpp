@@ -1401,6 +1401,7 @@ asynStatus GalilAxis::syncPosition(void)
   * \param[in] position The new absolute motor position that should be set in the hardware. Units=steps.*/
 asynStatus GalilAxis::setPosition(double position)
 {
+  static const char *functionName = "GalilAxis::setPosition";
   double mres, eres;				//MotorRecord mres, and eres
   double enc_pos;				//Calculated encoder position
   int motor;
@@ -1453,7 +1454,7 @@ asynStatus GalilAxis::setPosition(double position)
 // only needed for stepper motors
 bool GalilAxis::checkEncoderMotorSync(bool correct_motor)
 {
-    const char *functionName = "GalilAxis::checkEncoderMotorSync";
+    static const char *functionName = "GalilAxis::checkEncoderMotorSync";
     double posdiff_tol = 0.0;  // in physical egu
 	asynStatus status = pC_->getDoubleParam(axisNo_, pC_->GalilMotorEncoderSyncTol_, &posdiff_tol);
     sprintf(pC_->cmd_, "MT%c=?", axisName_);
@@ -1498,6 +1499,7 @@ bool GalilAxis::checkEncoderMotorSync(bool correct_motor)
   * \param[in] position The new absolute encoder position that should be set in the hardware. Units=steps.*/
 asynStatus GalilAxis::setEncoderPosition(double position)
 {
+  static const char *functionName = "GalilAxis::setEncoderPosition";
   asynStatus status;
   int motor;
 
