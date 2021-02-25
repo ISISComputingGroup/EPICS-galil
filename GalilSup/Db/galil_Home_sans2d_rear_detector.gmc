@@ -1,0 +1,69 @@
+NO*****************AXIS ${AXIS}********************
+NO*********HOME - Home Switch************
+#HOME${AXIS}
+IF (home${AXIS}=1)
+    inhome${AXIS}=1
+	IF ((home${AXIS}=1) & (hjog${AXIS}=0))
+	    slimfl${AXIS}=_FL${AXIS};FL${AXIS}=2147483647
+		slimbl${AXIS}=_BL${AXIS};BL${AXIS}=-2147483648
+        oldecel${AXIS}=_DC${AXIS}
+		hjog${AXIS}=1
+	ENDIF
+	IF ((_LR${AXIS}=0) & (_LF${AXIS}=0) & (home${AXIS}=1))
+		home${AXIS}=0;MG "home${AXIS}", home${AXIS};ENDIF
+	IF ((hjog${AXIS}=1) & (_BG${AXIS}=1) & (home${AXIS}=1))
+		ST${AXIS};ENDIF
+    g_hmst${AXIS}=1
+    IF ((_LF${AXIS}=1) & (_BG${AXIS}=0) & (hjog${AXIS}=1))
+	    WT 100
+		DC${AXIS}=(_DC${AXIS}*10)
+        SH${AXIS}
+        JG${AXIS}=2048;BG${AXIS}
+        hjog${AXIS}=2
+    ENDIF
+	IF ((_LF${AXIS}=0) & (_BG${AXIS}=1) & (hjog${AXIS}=2))
+	    ST${AXIS}
+        hjog${AXIS}=3
+    ENDIF
+    IF ((_LF${AXIS}=0) & (_LR${AXIS}=1) & (_BG${AXIS}=0) & (hjog${AXIS}=3))
+        speed${AXIS}=_SP${AXIS}
+        SH${AXIS}
+        SP${AXIS}=2048
+        PR${AXIS}=-25*125
+		WT 100
+        BG${AXIS}
+		hjog${AXIS}=4
+	ENDIF
+	IF ((hjog${AXIS}=4) & (_BG${AXIS}=0) & (_SC${AXIS}=1))
+        DC${AXIS}=16384
+        SP${AXIS}=128
+		HM${AXIS}
+		SH${AXIS}
+		WT 100
+        BG${AXIS}
+		hjog${AXIS}=5
+    ENDIF
+	IF ((hjog${AXIS}=5) & (_BG${AXIS}=0))
+        IF (_SC${AXIS}=10)
+            g_hmst${AXIS}=100
+        ENDIF
+        SP${AXIS}=speed${AXIS}
+        DC${AXIS}=oldecel${AXIS}
+        hjog${AXIS}=6
+    ENDIF
+	IF ((hjog${AXIS}=6) & (_BG${AXIS}=0) & (home${AXIS}=1) & (_SC${AXIS}=10))
+		hjog${AXIS}=0;home${AXIS}=0;homed${AXIS}=1
+		WT 50
+		MG "home${AXIS}", home${AXIS};MG "homed${AXIS}", homed${AXIS}
+	ENDIF
+ELSE
+	hjog${AXIS}=0
+ENDIF
+IF ((home${AXIS}=0) & (inhome${AXIS}=1))
+    FL${AXIS}=slimfl${AXIS}
+	BL${AXIS}=slimbl${AXIS}
+	inhome${AXIS}=0
+ENDIF
+IF (mlock=1)
+	II ,,dpon,dvalues
+ENDIF

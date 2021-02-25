@@ -753,6 +753,8 @@ asynStatus GalilAxis::move(double position, int relative, double minVelocity, do
         //Begin the move
 		if (!used_move_command) {
         status = beginMotion(functionName, position, relative, true);
+        // signal poller we have started moving
+        pC_->motion_started_.signal();
 		}
      }
   }
@@ -919,6 +921,7 @@ asynStatus GalilAxis::home(double minVelocity, double maxVelocity, double accele
   }
   }
 
+<<<<<<< HEAD
   //If axis is ok to go, begin motion
   if (!beginCheck(functionName, axisName_, maxVelocity)) {
      //set acceleration and velocity
@@ -958,6 +961,79 @@ asynStatus GalilAxis::home(double minVelocity, double maxVelocity, double accele
         pC_->sync_writeReadController();
      }
   }
+=======
+	//Retrieve needed parameters
+	pC_->getDoubleParam(axisNo_, pC_->motorResolution_, &mres);
+	pC_->getDoubleParam(axisNo_, pC_->GalilAfterLimit_, &egu_after_limit);
+
+	//recalculate home/limit switch deceleration for switch jog off given hvel
+	distance = (egu_after_limit < mres) ? mres : egu_after_limit;
+	//suvat equation for acceleration
+	deccel = (maxVelocity * maxVelocity)/((distance/mres) * 2.0);
+	//Find closest hardware setting
+	hjgdc = (long)(lrint(deccel/1024.0) * 1024);
+	sprintf(pC_->cmd_, "hjgdc%c=%ld\n", axisName_, hjgdc);
+	pC_->writeReadController(functionName);
+
+	//Calculate home jog off speed to use hvel
+        hjgsp = maxVelocity * home_direction;
+
+	//Home jog off speed
+	sprintf(pC_->cmd_, "hjgsp%c=%.0lf\n", axisName_, hjgsp);
+	pC_->writeReadController(functionName);
+
+	//Set Homed status to false
+	sprintf(pC_->cmd_, "homed%c=0\n", axisName_);
+	pC_->writeReadController(functionName);
+
+	//Set homed status for this axis
+	setIntegerParam(pC_->GalilHomed_, 0);
+	//Set motorRecord MSTA bit 15 motorStatusHomed_ too
+	//Homed is not part of Galil data record, we support it using Galil code and unsolicited messages over tcp instead
+	//We must use asynMotorAxis version of setIntegerParam to set MSTA bits for this MotorAxis
+        setIntegerParam(pC_->motorStatusHomed_, 0);
+
+	//calculate home velocity speed in motor steps per sec
+	//we need to do this because we use jog command
+	//SP command does not affect jog
+
+	hvel = maxVelocity * home_direction * -1;
+			
+//	sprintf(pC_->cmd_, "JG%c=%.0lf", axisName_, hvel);
+//	pC_->writeReadController(functionName);
+
+	//recalculate limit deceleration given hvel (instead of velo) and allowed steps after home/limit activation
+	setLimitDecel(hvel);	
+
+	//Set acceleration and deceleration for when limit not active
+	accel = (long)lrint(acceleration/1024.0) * 1024;
+	sprintf(pC_->cmd_, "AC%c=%ld;DC%c=%ld", axisName_, accel, axisName_, accel);
+	pC_->writeReadController(functionName);
+
+	//Execute motor auto on function
+	executeAutoOn();
+
+	//Execute motor record prem command
+	executePrem();
+
+        //Begin the move
+//	if (!beginMotion(functionName))
+//		{
+		homing_ = true;  //Start was successful
+                cancelHomeSent_ = false;  //Homing has not been cancelled yet
+		//tell controller which axis we are doing a home on
+		//We do this last so home algorithm doesn't cancel home jog in incase motor
+		//is sitting on opposite limit to which we are homing
+		sprintf(pC_->cmd_, "home%c=1\n", axisName_);
+		pC_->writeReadController(functionName);
+		std::cerr << "Home started axis " << axisName_ << std::endl;
+//		}
+
+        // signal poller we have started moving
+        pC_->motion_started_.signal();
+
+	}
+>>>>>>> origin/master
 
   //Return status
   return status;
@@ -1182,6 +1258,8 @@ asynStatus GalilAxis::moveVelocity(double minVelocity, double maxVelocity, doubl
 				
 	//Begin the move
 	status = beginMotion(functionName);
+    // signal poller we have started moving
+    pC_->motion_started_.signal();
 	}
    
   //Return status
@@ -2237,8 +2315,76 @@ void GalilAxis::pollServices(void)
                          break;
         case MOTOR_HOMED://Retrieve needed params
 						 errlogSevPrintf(errlogInfo, "Poll services: MOTOR HOMED %c\n", axisName_);
+<<<<<<< HEAD
         case MOTOR_HOMED://Perform jog after home if requested
                          jogAfterHome();
+=======
+                         status = pC_->getDoubleParam(axisNo_, pC_->GalilJogAfterHomeValue_, &jahv);
+                         status |= pC_->getDoubleParam(axisNo_, pC_->GalilMotorAccl_, &accl);
+                         status |= pC_->getDoubleParam(axisNo_, pC_->GalilMotorVelo_, &velo);
+                         status |= pC_->getDoubleParam(axisNo_, pC_->motorResolution_, &mres);
+                         status |= pC_->getIntegerParam(axisNo_, pC_->GalilDirection_, &dir);
+                         status |= pC_->getDoubleParam(axisNo_, pC_->GalilEncoderResolution_, &eres);
+                         status |= pC_->getDoubleParam(axisNo_, pC_->GalilUserOffset_, &off);
+                         status |= pC_->getDoubleParam(axisNo_, pC_->GalilHomeValue_, &homeval);
+                         status |= pC_->getIntegerParam(axisNo_, pC_->GalilJogAfterHome_, &jah);
+                         status |= pC_->getIntegerParam(axisNo_, pC_->GalilUseEncoder_, &ueip);
+
+                         //Program home registers
+                         if (!status)
+                            {
+                            //Calculate polarity of encoder, step register home value
+                            dirm = (dir == 0) ? 1 : -1;
+                            //Calculate the encoder home value and mtr home value each in steps
+                            if (homeval != 0.0000)
+                               {
+                               enhmval = (double)((homeval - off)/eres) * dirm;
+                               mrhmval = (double)((homeval - off)/mres) * dirm;
+                               }
+                            else
+                               {
+                               enhmval = 0.0;
+                               mrhmval = 0.0;
+                               }
+                            double tp = getGalilAxisVal("_TP");
+                            double td = getGalilAxisVal("_TD");
+                            // normally tp encoder, td motor i think; but if open loop is tp motor? And what is td?
+                            errlogSevPrintf(errlogInfo, "Poll services: current positions: _TD%c=%.0f _TP%c=%.0f\n", axisName_, td, axisName_, tp);
+                            //Program motor position register
+						    errlogSevPrintf(errlogInfo, "Poll services: applying motor %c raw home position %.0f\n", axisName_, mrhmval);
+                            sprintf(pC_->cmd_, "DP%c=%.0f\n", axisName_, mrhmval);
+                            pC_->writeReadController(functionName);
+                            //Program encoder position register
+                            if (ueip)
+                               {
+						       errlogSevPrintf(errlogInfo, "Poll services: applying encoder %c raw home position %.0f\n", axisName_, enhmval);
+                               sprintf(pC_->cmd_, "DE%c=%.0f\n", axisName_, enhmval);
+                               pC_->writeReadController(functionName);
+                               }
+                            //Give ample time for position register updates to complete
+                            epicsThreadSleep(.2);
+                            }
+
+                         //Do jog after home move
+                         if (!status && jah)
+                            {
+                            //Calculate position, velocity (velo not hvel) and acceleration
+                            velocity = velo/mres;
+                            acceleration = velocity/accl;
+                            position = (double)((jahv - off)/mres) * dirm;
+                            readback = motor_position_;//For step motors controller uses motor_position_ for positioning
+                            //If motor is servo and ueip_ = 1 then controller uses encoder_position_ for positioning
+                            if (ueip_ && (motorType_ == 0 || motorType_ == 1))
+                               readback = encoder_position_;
+                            //Do the move
+                            if (position != readback)
+                            	move(position, 0, 0, velocity, acceleration);
+                            }
+
+                         //Homed pollService completed
+                         homedExecuted_ = true;
+                         homedSent_ = false;
+>>>>>>> origin/master
                          break;
         default: break;
         }

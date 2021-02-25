@@ -1702,4 +1702,79 @@ record(stringout,"$(P)$(M)_MOVE_CMD")
 	field(OUT,  "@asyn($(PORT),$(ADDR))MOVE_COMMAND")
 }
 
+##
+## calculate the live difference between motor and encoder position
+## only calculate if UEIP is true and an encoder is actually
+## present (as per relevant MSTA bit)
+##
+record(calcout,"$(P):$(M)_MTRENC_DIFF")
+{
+	field(DESC, "Encoder motor difference")
+	field(INPA, "$(P):$(M).RMP CP")
+	field(INPB, "$(P):$(M).MRES CP")
+	field(INPC, "$(P):$(M).REP CP")
+	field(INPD, "$(P):$(M).ERES CP")
+	field(INPE, "$(P):$(M).UEIP CP")
+	field(INPF, "$(P):$(M).MSTA CP")
+	field(CALC, "(E&&(F&256))?(ABS(A*B)-ABS(C*D)):0")
+}
+
+##
+## calculate the difference between motor and encoder position
+## when not in motion
+##
+record(calcout,"$(P):$(M)_MTRENC_DRIFT_")
+{
+	field(DESC, "Encoder motor drift calc")
+	field(INPA, "$(P):$(M)_MTRENC_DIFF CP")
+	field(INPB, "$(P):$(M).DMOV CP")
+	field(CALC, "B")
+	field(OOPT, "When Non-zero")
+	field(DOPT, "Use OCAL")
+	field(OCAL, "A")
+	field(OUT, "$(P):$(M)_MTRENC_DRIFT PP")
+}
+
+##
+## difference between motor and encoder position when not in motion
+##
+record(ai,"$(P):$(M)_MTRENC_DRIFT")
+{
+    field(DESC, "Encoder motor drift")
+    field(EGU, "$(EGU)")
+    info(archive, "VAL")
+}
+
+## Hold the threshold value
+record(ao, "$(P):$(M)_THRESHOLD")
+{
+   field(DESC, "Encoder and motor threshold")
+   field(EGU, "$(EGU)")
+   field(PREC, 6)
+   field(VAL, 0)
+}
+
+record(calcout, "$(P):$(M)_DEFAULT_THRESHOLD")
+{
+    field(DESC, "Default threshold")
+    field(INPA, "$(P):$(M).MRES CP")
+    field(INPB, "$(P):$(M).ERES CP")
+    field(INPC, "$(P):$(M)_THRESHOLD")
+    field(CALC, "C=0?(10*(A>B?A:B)):C")
+    field(OUT, "$(P):$(M)_THRESHOLD PP")
+    field(EGU, "$(EGU)")
+}
+
+##
+## check if the drift is above the threshold limit
+##
+record(calcout, "$(P):$(M)_DRIFT_THRESHOLD_CHECK")
+{
+    field(DESC, "Drift and threshold check")
+    field(INPA, "$(P):$(M)_THRESHOLD.VAL CP")
+    field(INPB, "$(P):$(M)_MTRENC_DRIFT.VAL CP")
+    field(CALC, "B>A")
+    
+}
+
 #end

@@ -30,7 +30,7 @@ GalilTest_SRCS_DEFAULT += GalilTestMain.cpp
 
 #add a definition for each support application used by this application
 GalilTest_LIBS += GalilSupport
-GalilTest_LIBS += motorSimSupport motor asyn busy calc sscan autosave
+GalilTest_LIBS += motorSimSupport softMotor motor asyn busy calc sscan autosave
 ifeq ($(STATIC_BUILD),YES)
 GalilTest_LIBS_WIN32 += oncrpc
 endif
