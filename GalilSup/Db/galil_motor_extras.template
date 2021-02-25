@@ -1018,24 +1018,27 @@ record(stringout,"$(P):$(M)_MOVE_CMD")
 
 ##
 ## calculate the live difference between motor and encoder position
-## only calculate if UEIP is true and an encoder is actually
+## only calculate if UEIP is true and an encoder is also actually
 ## present (as per relevant MSTA bit)
+## In addition only calculate when moving to avoid noisy
+## encoder post move triggering recording 
 ##
 record(calcout,"$(P):$(M)_MTRENC_DIFF")
 {
-	field(DESC, "Encoder motor difference")
+	field(DESC, "In motion encoder motor difference")
 	field(INPA, "$(P):$(M).RMP CP")
 	field(INPB, "$(P):$(M).MRES CP")
 	field(INPC, "$(P):$(M).REP CP")
 	field(INPD, "$(P):$(M).ERES CP")
 	field(INPE, "$(P):$(M).UEIP CP")
 	field(INPF, "$(P):$(M).MSTA CP")
-	field(CALC, "(E&&(F&256))?(ABS(A*B)-ABS(C*D)):0")
+	field(INPG, "$(P):$(M).DMOV CP")
+	field(CALC, "H:=(G=0?((E&&(F&256))?(ABS(A*B)-ABS(C*D)):0):H);H")
 }
 
 ##
-## calculate the difference between motor and encoder position
-## when not in motion
+## determine the difference between motor and encoder position
+## when motion complete
 ##
 record(calcout,"$(P):$(M)_MTRENC_DRIFT_")
 {
@@ -1050,7 +1053,7 @@ record(calcout,"$(P):$(M)_MTRENC_DRIFT_")
 }
 
 ##
-## difference between motor and encoder position when not in motion
+## record difference between motor and encoder position when motion complete
 ##
 record(ai,"$(P):$(M)_MTRENC_DRIFT")
 {
