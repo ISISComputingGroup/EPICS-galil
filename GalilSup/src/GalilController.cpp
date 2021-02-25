@@ -476,8 +476,13 @@ static void myHookFunction(initHookState state)
 {
   //Update dbInitialized status for all GalilController instances
   if (state >= initHookAfterInitDatabase)
+  {
 	dbInitialized = true;
+  }
+  GalilController::init_state_ = state;
 }
+
+int GalilController::init_state_ = initHookAtIocBuild;
 
 //Connection status
 void connectCallback(asynUser *pasynUser, asynException exception)
@@ -3941,7 +3946,9 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
         getDoubleParam(pAxis->axisNo_, motorResolution_, &mres);
         if (mres != 0.000000) {
 			//Calculate step count from existing encoder_position, construct mesg to controller_
-			sprintf(cmd_, "DP%c=%.0lf", pAxis->axisName_, pAxis->encoder_position_ * (eres/mres));
+		    double newpos = pAxis->encoder_position_ * (eres/mres);
+		    std::cerr << "Detected motor type change from servo to stepper, redefining position to " << newpos << " for axis " << pAxis->axisName_ << std::endl;
+			sprintf(cmd_, "DP%c=%.0lf", pAxis->axisName_, newpos);
 			//Write setting to controller
 			status = sync_writeReadController();
         }
@@ -3952,6 +3959,7 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
      if (fabs(oldmotor) > 1.5 && (value < 2 || (value > 5 && value < 8))) {
         //Calculate step count from existing encoder_position, construct mesg to controller_
         sprintf(cmd_, "DP%c=%.0lf", pAxis->axisName_, pAxis->encoder_position_);
+		std::cerr << "Detected motor type change from stepper to servo, redefining position to " << pAxis->encoder_position_ << " for axis " << pAxis->axisName_ << std::endl;
         //Write setting to controller
         status = sync_writeReadController();
      }

@@ -403,6 +403,8 @@ public:
   bool shutdownRequested() { return shutdown_requested_; }
   virtual ~GalilController();
 
+  static int init_state_;
+
 protected:
   #define FIRST_GALIL_PARAM GalilDriver_
   int GalilDriver_;
