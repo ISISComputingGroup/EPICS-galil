@@ -3982,19 +3982,6 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
      else
         pCSAxis->axisReady_ = true;//CS motor
   }
-  else if (function == GalilJogAfterHome_)
-	{
-	//This is one of the last items pushed into driver at startup so flag
-	//Axis now ready for move commands
-	if (addr < MAX_GALIL_AXES)
-		{
-		pAxis->axisReady_ = true;//Real motor
-		//Restore brake cmd state
-		pAxis->restoreBrake();
-		}
-	else
-		pCSAxis->axisReady_ = true;//CS motor
-	}
   else if (function >= GalilSSIInput_ && function <= GalilSSIData_) {
      int ssicapable;	//Local copy of GalilSSICapable_
      //Retrieve GalilSSICapable_ param

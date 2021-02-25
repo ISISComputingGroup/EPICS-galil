@@ -94,7 +94,7 @@ public:
 
   //These are the methods that are new to this class
   //Poller for axis
-  asynStatus poller(void);
+  asynStatus poller(bool& moving);
 
   //Store settings, and implement defaults
   asynStatus setDefaults(int limit_as_home, char *enables_string, int switch_type);

@@ -60,6 +60,7 @@ void GalilPoller::run(void)
    GalilCSAxis *pCSAxis;//CSAxis structure
    double time_taken;	//Time taken last poll cycle
    double sleep_time;	//Calculated time to sleep in synchronous mode
+   bool moving, any_moving;
 
    //Loop until shutdown
    while (true) {
@@ -78,6 +79,7 @@ void GalilPoller::run(void)
             //Do callbacks for GalilController, GalilAxis records
             //Do all ParamLists/axis whether user called GalilCreateAxis or not
             //because analog/binary IO data are stored/organized in ParamList just same as axis data 
+            any_moving = false;
             for (i=0; i<MAX_GALIL_AXES + MAX_GALIL_CSAXES; i++) {
                if (i < MAX_GALIL_AXES) {
                   //Retrieve GalilAxis instance i
@@ -92,8 +94,8 @@ void GalilPoller::run(void)
                   else {
                      //Update GalilAxis, and upper layers, using retrieved datarecord
                      //Update records with analog/binary data
-                     pAxis->poller();
-					pAxis->poll(&moving);		//Update GalilAxis, and upper layers, using retrieved datarecord
+                     pAxis->poller(moving);
+					    		//Update GalilAxis, and upper layers, using retrieved datarecord
 									//Update records with analog/binary data
                     any_moving = (any_moving || moving);
                   }
@@ -118,7 +120,7 @@ void GalilPoller::run(void)
             if (!pC_->async_records_) {
                 // drop polling frequency if nothing moving. We will be signalled when motion is requested on an axis
                 // and then should continue at higher poll rate until motion is completed
-                pCntrl_->motion_started_.wait( (any_moving ? 1.0 : NO_MOTION_POLLING_FACTOR) * pCntrl_->updatePeriod_ / 1000.0 );
+                pC_->motion_started_.wait( (any_moving ? 1.0 : NO_MOTION_POLLING_FACTOR) * pC_->updatePeriod_ / 1000.0 );
                //Adjust sleep time according to time_taken last poll cycle
                sleep_time = pC_->updatePeriod_/1000.0 - time_taken;
                //Must sleep in synchronous mode to release lock for other threads
@@ -145,8 +147,9 @@ void GalilPoller::run(void)
       if (shutdownPoller_)  //Break from loop
       {
 		//Tell controller to stop async data record
-		if (pCntrl_->async_records_ && pCntrl_->gco_ != NULL)
-			pCntrl_->gco_->recordsStart(0);
+		if (pC_->async_records_) {
+			//pC_->gco_->recordsStart(0);
+        }
          break;
       }
    }//while

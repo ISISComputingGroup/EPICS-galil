@@ -921,7 +921,6 @@ asynStatus GalilAxis::home(double minVelocity, double maxVelocity, double accele
   }
   }
 
-<<<<<<< HEAD
   //If axis is ok to go, begin motion
   if (!beginCheck(functionName, axisName_, maxVelocity)) {
      //set acceleration and velocity
@@ -959,9 +958,14 @@ asynStatus GalilAxis::home(double minVelocity, double maxVelocity, double accele
         //is sitting on opposite limit to which we are homing
         sprintf(pC_->cmd_, "home%c=1", axisName_);
         pC_->sync_writeReadController();
+        // signal poller we have started moving
+        pC_->motion_started_.signal();
+		std::cerr << "Home started axis " << axisName_ << std::endl;
      }
   }
-=======
+
+#if 0
+// todo: check home setup
 	//Retrieve needed parameters
 	pC_->getDoubleParam(axisNo_, pC_->motorResolution_, &mres);
 	pC_->getDoubleParam(axisNo_, pC_->GalilAfterLimit_, &egu_after_limit);
@@ -1026,14 +1030,11 @@ asynStatus GalilAxis::home(double minVelocity, double maxVelocity, double accele
 		//is sitting on opposite limit to which we are homing
 		sprintf(pC_->cmd_, "home%c=1\n", axisName_);
 		pC_->writeReadController(functionName);
-		std::cerr << "Home started axis " << axisName_ << std::endl;
 //		}
 
-        // signal poller we have started moving
-        pC_->motion_started_.signal();
 
 	}
->>>>>>> origin/master
+#endif
 
   //Return status
   return status;
@@ -2313,78 +2314,9 @@ void GalilAxis::pollServices(void)
                          //Sync encoded stepper at encoder move completed
                          syncEncodedStepperAtEncSent_ = false;
                          break;
-        case MOTOR_HOMED://Retrieve needed params
-						 errlogSevPrintf(errlogInfo, "Poll services: MOTOR HOMED %c\n", axisName_);
-<<<<<<< HEAD
         case MOTOR_HOMED://Perform jog after home if requested
+						 errlogSevPrintf(errlogInfo, "Poll services: MOTOR HOMED %c\n", axisName_);
                          jogAfterHome();
-=======
-                         status = pC_->getDoubleParam(axisNo_, pC_->GalilJogAfterHomeValue_, &jahv);
-                         status |= pC_->getDoubleParam(axisNo_, pC_->GalilMotorAccl_, &accl);
-                         status |= pC_->getDoubleParam(axisNo_, pC_->GalilMotorVelo_, &velo);
-                         status |= pC_->getDoubleParam(axisNo_, pC_->motorResolution_, &mres);
-                         status |= pC_->getIntegerParam(axisNo_, pC_->GalilDirection_, &dir);
-                         status |= pC_->getDoubleParam(axisNo_, pC_->GalilEncoderResolution_, &eres);
-                         status |= pC_->getDoubleParam(axisNo_, pC_->GalilUserOffset_, &off);
-                         status |= pC_->getDoubleParam(axisNo_, pC_->GalilHomeValue_, &homeval);
-                         status |= pC_->getIntegerParam(axisNo_, pC_->GalilJogAfterHome_, &jah);
-                         status |= pC_->getIntegerParam(axisNo_, pC_->GalilUseEncoder_, &ueip);
-
-                         //Program home registers
-                         if (!status)
-                            {
-                            //Calculate polarity of encoder, step register home value
-                            dirm = (dir == 0) ? 1 : -1;
-                            //Calculate the encoder home value and mtr home value each in steps
-                            if (homeval != 0.0000)
-                               {
-                               enhmval = (double)((homeval - off)/eres) * dirm;
-                               mrhmval = (double)((homeval - off)/mres) * dirm;
-                               }
-                            else
-                               {
-                               enhmval = 0.0;
-                               mrhmval = 0.0;
-                               }
-                            double tp = getGalilAxisVal("_TP");
-                            double td = getGalilAxisVal("_TD");
-                            // normally tp encoder, td motor i think; but if open loop is tp motor? And what is td?
-                            errlogSevPrintf(errlogInfo, "Poll services: current positions: _TD%c=%.0f _TP%c=%.0f\n", axisName_, td, axisName_, tp);
-                            //Program motor position register
-						    errlogSevPrintf(errlogInfo, "Poll services: applying motor %c raw home position %.0f\n", axisName_, mrhmval);
-                            sprintf(pC_->cmd_, "DP%c=%.0f\n", axisName_, mrhmval);
-                            pC_->writeReadController(functionName);
-                            //Program encoder position register
-                            if (ueip)
-                               {
-						       errlogSevPrintf(errlogInfo, "Poll services: applying encoder %c raw home position %.0f\n", axisName_, enhmval);
-                               sprintf(pC_->cmd_, "DE%c=%.0f\n", axisName_, enhmval);
-                               pC_->writeReadController(functionName);
-                               }
-                            //Give ample time for position register updates to complete
-                            epicsThreadSleep(.2);
-                            }
-
-                         //Do jog after home move
-                         if (!status && jah)
-                            {
-                            //Calculate position, velocity (velo not hvel) and acceleration
-                            velocity = velo/mres;
-                            acceleration = velocity/accl;
-                            position = (double)((jahv - off)/mres) * dirm;
-                            readback = motor_position_;//For step motors controller uses motor_position_ for positioning
-                            //If motor is servo and ueip_ = 1 then controller uses encoder_position_ for positioning
-                            if (ueip_ && (motorType_ == 0 || motorType_ == 1))
-                               readback = encoder_position_;
-                            //Do the move
-                            if (position != readback)
-                            	move(position, 0, 0, velocity, acceleration);
-                            }
-
-                         //Homed pollService completed
-                         homedExecuted_ = true;
-                         homedSent_ = false;
->>>>>>> origin/master
                          break;
         default: break;
         }
@@ -2671,7 +2603,8 @@ asynStatus GalilAxis::beginMotion(const char *caller, double position, bool rela
             double tp = getGalilAxisVal("_TP"); // current position (from encoder if present)
             double td = getGalilAxisVal("_TD"); // current position (motor steps)
             double rp = getGalilAxisVal("_RP"); // commanded position (motor steps)
-            epicsSnprintf(mesg, sizeof(mesg), "%s begin failure axis %c after %f seconds: _BG%c=%f _SC%c=%f [%s] _BL%c=%f _FL%c=%f _TP%c=%f _TD%c=%f _RP%c=%f", caller, axisName_, begin_time, axisName_, bg_code, axisName_, sc_code, lookupStopCode((int)sc_code), axisName_, bl, axisName_, fl, axisName_, tp, axisName_, td, axisName_, rp);
+// need to check signal of event?
+//            epicsSnprintf(mesg, sizeof(mesg), "%s begin failure axis %c after %f seconds: _BG%c=%f _SC%c=%f [%s] _BL%c=%f _FL%c=%f _TP%c=%f _TD%c=%f _RP%c=%f", caller, axisName_, begin_time, axisName_, bg_code, axisName_, sc_code, lookupStopCode((int)sc_code), axisName_, bl, axisName_, fl, axisName_, tp, axisName_, td, axisName_, rp);
 			// getting these a lot, it it moving to somewhere very near current position?
 			// comment out sending to errlog for now and send to cerr instead
             //Set controller error mesg monitor
@@ -2892,10 +2825,10 @@ void GalilAxis::sendAxisEvents(void) {
   * added.
   * It calls setIntegerParam() and setDoubleParam() for each item that it polls,
   * \param[out] moving A flag that is set indicating that the axis is moving (1) or done (0). */
-asynStatus GalilAxis::poller(void)
+asynStatus GalilAxis::poller(bool& moving)
 {
    //static const char *functionName = "GalilAxis::poll";
-   bool moving;			//Moving status
+//   bool moving;			//Moving status
    int dmov;			//Motor record dmov
    bool csdmov;			//Related CSAxis dmov And'd together
    int home;			//Home status to give to motorRecord
