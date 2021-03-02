@@ -25,275 +25,6 @@
 # 800 Blackburn Road, Clayton, Victoria 3168, Australia.
 #
 
-record(scalcout, "$(P)$(M):MANAGERMODE")
-{
-    field(ASG, "READONLY")
-    field(DESC, "Non-zero if manager is required")
-    field(PINI, "YES")
-    field(INPA, "$(PVPREFIX)CS:MANAGER CP")
-    field(BB, "$(ASG)")
-    field(CALC, "A = 0 && BB = 'MANAGER'")
-    field(OOPT, "Every Time")
-}
-
-#Below records are used to extract data from MR
-#and pass to driver
-record(ao,"$(P)$(M)_ACCL_SP") {
-    field(DESC, "Motor record ACCL")
-    field(DOL,  "$(P)$(M).ACCL CP MS")
-    field(OMSL, "closed_loop")
-    field(DTYP, "asynFloat64")
-    field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_ACCL")
-    field(PREC, "$(PREC)")
-}
-
-record(ao,"$(P)$(M)_VMAX_SP") {
-    field(DESC, "Motor record VMAX")
-    field(DOL,  "$(P)$(M).VMAX CP MS")
-    field(OMSL, "closed_loop")
-    field(DTYP, "asynFloat64")
-    field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_VMAX")
-    field(PREC, "$(PREC)")
-}
-
-record(ao,"$(P)$(M)_VELO_SP") {
-    field(DESC, "Motor record VELO")
-    field(DOL,  "$(P)$(M).VELO CP MS")
-    field(OMSL, "closed_loop")
-    field(DTYP, "asynFloat64")
-    field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_VELO")
-    field(PREC, "$(PREC)")
-}
-
-record(ao,"$(P)$(M)_OFF_SP") {
-    field(DESC, "Motor record OFF")
-    field(DOL,  "$(P)$(M).OFF CP MS")
-    field(OMSL, "closed_loop")
-    field(DTYP, "asynFloat64")
-    field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_OFF")
-    field(PREC, "$(PREC)")
-}
-
-record(ao,"$(P)$(M)_MRES_SP") {
-    field(DESC, "Motor record MRES")
-    field(DOL,  "$(P)$(M).MRES CP MS")
-    field(OMSL, "closed_loop")
-    field(DTYP, "asynFloat64")
-    field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_RESOLUTION")
-    field(PREC, "$(PREC)")
-}
-
-record(ao,"$(P)$(M)_ERES_SP") {
-    field(DESC, "Motor record ERES")
-    field(DOL,  "$(P)$(M).ERES CP MS")
-    field(OMSL, "closed_loop")
-    field(DTYP, "asynFloat64")
-    field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_ERES")
-    field(PREC, "$(PREC)")
-}
-
-record(ao,"$(P)$(M)_MOT_ENC_SYNC_TOL_SP") {
-    field(DESC, "Motor encoder sync tol")
-    field(DTYP, "asynFloat64")
-    field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_ENC_TOL")
-    field(PREC, "$(PREC)")
-	field(EGU, "$(EGU)")
-	field(VAL, "0")
-	field(PINI, "YES")
-}
-
-record(bo,"$(P)$(M)_DIR_SP") {
-    field(DESC, "Motor record DIR")
-    field(DOL,  "$(P)$(M).DIR CP MS")
-    field(OMSL, "closed_loop")
-    field(DTYP, "asynInt32")
-    field(ZNAM, "Pos")
-    field(ZSV,  "NO_ALARM")
-    field(ONAM, "Neg")
-    field(OSV,  "NO_ALARM")
-    field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_DIR")
-}
-
-record(bo,"$(P)$(M)_UEIP_SP") {
-    field(DESC, "Motor record UEIP")
-    field(DOL,  "$(P)$(M).UEIP CP MS")
-    field(OMSL, "closed_loop")
-    field(DTYP, "asynInt32")
-    field(ZNAM, "No")
-    field(ZSV,  "NO_ALARM")
-    field(ONAM, "Yes")
-    field(OSV,  "NO_ALARM")
-    field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_UEIP")
-}
-
-record(stringout,"$(P)$(M)_PREM_CMD")
-{
-	field(DESC, "Motor record PREM")
-	field(OMSL, "closed_loop")
-	field(DTYP, "asynOctetWrite")
-	field(DOL,  "$(P)$(M).PREM CP MS")
-	field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_PREM")
-}
-
-record(stringout,"$(P)$(M)_POST_CMD")
-{
-	field(DESC, "Motor record POST")
-	field(OMSL, "closed_loop")
-	field(DTYP, "asynOctetWrite")
-	field(DOL,  "$(P)$(M).POST CP MS")
-	field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_POST")
-}
-
-#driver to mr command to stop/go
-#motors in coordsys
-#set initial value of 3 so if running with motor simulator we don't get all motors in STOP 
-record(ai,"$(P)$(M)_STOPGO_MON")
-{
-	field(DESC, "stop/go")
-	field(DTYP, "asynInt32")
-	field(SCAN, "I/O Intr")
-	field(INP,  "@asyn($(PORT),$(ADDR))MOTOR_STOPGO")
-	field(VAL, 3)
-}
-
-record(ao, "$(P)$(M)_STOPGO_CMD") 
-{
-	field(OMSL, "closed_loop") 
-	field(DOL,  "$(P)$(M)_STOPGO_MON CP MS")
-	field(OUT,  "$(P)$(M).SPMG CA")
-}
-
-# monitor the motor status and update a string field with results
-record(aSub, "$(P)$(M):_MSTACALC")
-{
-    field(SNAM, "displayMotorMSTA")
-	field(INPA, "$(P)$(M).MSTA CP")
-	field(FTA, "ULONG")
-	field(OUTA, "$(P)$(M)_MSTA_STR PP")
-	field(FTVA, "CHAR")
-	field(NOVA, "512")	
-}
-
-record(waveform, "$(P)$(M)_MSTA_STR")
-{
-	field(NELM, "512")
-	field(FTVL, "CHAR")
-	field(DESC, "Text version of motor MSTA")
-}
-
-record(aSub, "$(P)$(M):_STATUSCALC")
-{
-    field(SNAM, "displayMotorMSTASimple")
-	field(INPA, "$(P)$(M).MSTA CP")
-	field(FTA, "ULONG")
-	field(OUTA, "$(P)$(M)_STATUS PP")
-	field(FTVA, "STRING")
-	field(NOVA, "1")	
-}
-
-record(stringin, "$(P)$(M)_STATUS")
-{
-	field(DESC, "Simple Text version of motor MSTA")
-}
-
-record(stringin, "$(P)$(M)_MTR")
-{
-    field(VAL, "$(M)")
-}
-
-record(aSub,"$(P)$(M)_ERRCALC")
-{
-    field(SNAM,"checkMotorError")
-    field(SCAN,"Passive")
-    field(INPA,"$(P)$(M).MSTA CP")
-	field(FTA, "ULONG")
-    field(INPB,"$(P)$(M).LVIO CP")
-	field(FTB, "SHORT")
-    field(INPC,"$(P)$(M).HLS CP")
-	field(FTC, "SHORT")
-    field(INPD,"$(P)$(M).LLS CP")
-	field(FTD, "SHORT")
-    field(INPE,"$(P)$(M).STAT CP")
-	field(FTE, "USHORT")
-    field(INPF,"$(P)$(M).SEVR CP")
-	field(FTF, "USHORT")
-    field(INPG,"$(P)$(M)_MTR")
-	field(FTG, "STRING")
-	field(FTVA, "STRING")
-	field(FTVB, "ULONG")
-	# we want to process _ERRCALC_FAN only if the error message changes, so use OUTA not FLNK
-	# but strings outputs cannot be used to write to .PROC fields, so need to use intermediate string record 
-	field(OUTA, "$(P)$(M)_ERRCALC_MESS PP")
-}
-
-record(stringout, "$(P)$(M)_ERRCALC_MESS")
-{
-}
-
-record(stringout, "$(P)$(M)_PERROR")
-{
-    field(OMSL, "closed_loop")
-    field(DOL, "$(P)$(M)_ERRCALC_MESS CP")
-    field(DTYP, "stdio")
-    field(OUT, "@errlog")
-}
-
-# Expose the DMOV field as a PV record, so it can be access from a block
-record(ai,"$(P)$(M):DMOV")
-{
-	field(DESC, "Done move?")
-    field(SCAN, "Passive")
-    field(DTYP, "Soft Channel")
-    field(INP, "$(P)$(M).DMOV CP")
-}
-
-# Allow setting MRES/ERES as inverse
-
-record(ao, "$(P)$(M):INV_MRES")
-{
-	field(DESC, "Set the motor res in steps per EGU")
-	field(FLNK, "$(P)$(M):INV_MRES:SP_CALC")
-	field(PREC, "3")
-}
-
-record(calcout, "$(P)$(M):INV_MRES:SP_CALC")
-{
-	field(INPA, "$(P)$(M):INV_MRES")
-	field(CALC, "1/A")
-	field(OUT, "$(P)$(M).MRES")
-	field(OOPT, "On Change")
-}
-
-record(calcout, "$(P)$(M):INV_MRES_CALC")
-{
-	field(INPA, "$(P)$(M).MRES CP")
-	field(CALC, "1/A")
-	field(OUT, "$(P)$(M):INV_MRES PP")
-	field(OOPT, "On Change")
-}
-
-record(ao, "$(P)$(M):INV_ERES")
-{
-	field(DESC, "Set the encoder res in steps per EGU")
-	field(FLNK, "$(P)$(M):INV_ERES:SP_CALC")
-	field(PREC, "3")
-}
-
-record(calcout, "$(P)$(M):INV_ERES:SP_CALC")
-{
-	field(INPA, "$(P)$(M):INV_ERES")
-	field(CALC, "1/A")
-	field(OUT, "$(P)$(M).ERES")
-	field(OOPT, "On Change")
-}
-
-record(calcout, "$(P)$(M):INV_ERES_CALC")
-{
-	field(INPA, "$(P)$(M).ERES CP")
-	field(CALC, "1/A")
-	field(OUT, "$(P)$(M):INV_ERES PP")
-	field(OOPT, "On Change")
-}
 
 record(bi,"$(P)$(M)_SCONN_STATUS")
 {
@@ -1709,16 +1440,16 @@ record(stringout,"$(P)$(M)_MOVE_CMD")
 ## In addition only calculate when moving to avoid noisy
 ## encoder post move triggering recording 
 ##
-record(calcout,"$(P):$(M)_MTRENC_DIFF")
+record(calcout,"$(P)$(M)_MTRENC_DIFF")
 {
 	field(DESC, "In motion encoder motor difference")
-	field(INPA, "$(P):$(M).RMP CP")
-	field(INPB, "$(P):$(M).MRES CP")
-	field(INPC, "$(P):$(M).REP CP")
-	field(INPD, "$(P):$(M).ERES CP")
-	field(INPE, "$(P):$(M).UEIP CP")
-	field(INPF, "$(P):$(M).MSTA CP")
-	field(INPG, "$(P):$(M).DMOV CP")
+	field(INPA, "$(P)$(M).RMP CP")
+	field(INPB, "$(P)$(M).MRES CP")
+	field(INPC, "$(P)$(M).REP CP")
+	field(INPD, "$(P)$(M).ERES CP")
+	field(INPE, "$(P)$(M).UEIP CP")
+	field(INPF, "$(P)$(M).MSTA CP")
+	field(INPG, "$(P)$(M).DMOV CP")
 	field(CALC, "H:=(G=0?((E&&(F&256))?(ABS(A*B)-ABS(C*D)):0):H);H")
 }
 
@@ -1726,22 +1457,22 @@ record(calcout,"$(P):$(M)_MTRENC_DIFF")
 ## determine the difference between motor and encoder position
 ## when motion complete
 ##
-record(calcout,"$(P):$(M)_MTRENC_DRIFT_")
+record(calcout,"$(P)$(M)_MTRENC_DRIFT_")
 {
 	field(DESC, "Encoder motor drift calc")
-	field(INPA, "$(P):$(M)_MTRENC_DIFF CP")
-	field(INPB, "$(P):$(M).DMOV CP")
+	field(INPA, "$(P)$(M)_MTRENC_DIFF CP")
+	field(INPB, "$(P)$(M).DMOV CP")
 	field(CALC, "B")
 	field(OOPT, "When Non-zero")
 	field(DOPT, "Use OCAL")
 	field(OCAL, "A")
-	field(OUT, "$(P):$(M)_MTRENC_DRIFT PP")
+	field(OUT, "$(P)$(M)_MTRENC_DRIFT PP")
 }
 
 ##
 ## record difference between motor and encoder position when motion complete
 ##
-record(ai,"$(P):$(M)_MTRENC_DRIFT")
+record(ai,"$(P)$(M)_MTRENC_DRIFT")
 {
     field(DESC, "Encoder motor drift")
     field(EGU, "$(EGU)")
@@ -1749,7 +1480,7 @@ record(ai,"$(P):$(M)_MTRENC_DRIFT")
 }
 
 ## Hold the threshold value
-record(ao, "$(P):$(M)_THRESHOLD")
+record(ao, "$(P)$(M)_THRESHOLD")
 {
    field(DESC, "Encoder and motor threshold")
    field(EGU, "$(EGU)")
@@ -1757,27 +1488,187 @@ record(ao, "$(P):$(M)_THRESHOLD")
    field(VAL, 0)
 }
 
-record(calcout, "$(P):$(M)_DEFAULT_THRESHOLD")
+record(calcout, "$(P)$(M)_DEFAULT_THRESHOLD")
 {
     field(DESC, "Default threshold")
-    field(INPA, "$(P):$(M).MRES CP")
-    field(INPB, "$(P):$(M).ERES CP")
-    field(INPC, "$(P):$(M)_THRESHOLD")
+    field(INPA, "$(P)$(M).MRES CP")
+    field(INPB, "$(P)$(M).ERES CP")
+    field(INPC, "$(P)$(M)_THRESHOLD")
     field(CALC, "C=0?(10*(A>B?A:B)):C")
-    field(OUT, "$(P):$(M)_THRESHOLD PP")
+    field(OUT, "$(P)$(M)_THRESHOLD PP")
     field(EGU, "$(EGU)")
 }
 
 ##
 ## check if the drift is above the threshold limit
 ##
-record(calcout, "$(P):$(M)_DRIFT_THRESHOLD_CHECK")
+record(calcout, "$(P)$(M)_DRIFT_THRESHOLD_CHECK")
 {
     field(DESC, "Drift and threshold check")
-    field(INPA, "$(P):$(M)_THRESHOLD.VAL CP")
-    field(INPB, "$(P):$(M)_MTRENC_DRIFT.VAL CP")
+    field(INPA, "$(P)$(M)_THRESHOLD.VAL CP")
+    field(INPB, "$(P)$(M)_MTRENC_DRIFT.VAL CP")
     field(CALC, "B>A")
     
 }
 
 #end
+
+
+
+# monitor the motor status and update a string field with results
+record(aSub, "$(P)$(M):_MSTACALC")
+{
+    field(SNAM, "displayMotorMSTA")
+	field(INPA, "$(P)$(M).MSTA CP")
+	field(FTA, "ULONG")
+	field(OUTA, "$(P)$(M)_MSTA_STR PP")
+	field(FTVA, "CHAR")
+	field(NOVA, "512")	
+}
+
+record(waveform, "$(P)$(M)_MSTA_STR")
+{
+	field(NELM, "512")
+	field(FTVL, "CHAR")
+	field(DESC, "Text version of motor MSTA")
+}
+
+record(aSub, "$(P)$(M):_STATUSCALC")
+{
+    field(SNAM, "displayMotorMSTASimple")
+	field(INPA, "$(P)$(M).MSTA CP")
+	field(FTA, "ULONG")
+	field(OUTA, "$(P)$(M)_STATUS PP")
+	field(FTVA, "STRING")
+	field(NOVA, "1")	
+}
+
+record(stringin, "$(P)$(M)_STATUS")
+{
+	field(DESC, "Simple Text version of motor MSTA")
+}
+
+record(stringin, "$(P)$(M)_MTR")
+{
+    field(VAL, "$(M)")
+}
+
+record(aSub,"$(P)$(M)_ERRCALC")
+{
+    field(SNAM,"checkMotorError")
+    field(SCAN,"Passive")
+    field(INPA,"$(P)$(M).MSTA CP")
+	field(FTA, "ULONG")
+    field(INPB,"$(P)$(M).LVIO CP")
+	field(FTB, "SHORT")
+    field(INPC,"$(P)$(M).HLS CP")
+	field(FTC, "SHORT")
+    field(INPD,"$(P)$(M).LLS CP")
+	field(FTD, "SHORT")
+    field(INPE,"$(P)$(M).STAT CP")
+	field(FTE, "USHORT")
+    field(INPF,"$(P)$(M).SEVR CP")
+	field(FTF, "USHORT")
+    field(INPG,"$(P)$(M)_MTR")
+	field(FTG, "STRING")
+	field(FTVA, "STRING")
+	field(FTVB, "ULONG")
+	# we want to process _ERRCALC_FAN only if the error message changes, so use OUTA not FLNK
+	# but strings outputs cannot be used to write to .PROC fields, so need to use intermediate string record 
+	field(OUTA, "$(P)$(M)_ERRCALC_MESS PP")
+}
+
+record(stringout, "$(P)$(M)_ERRCALC_MESS")
+{
+}
+
+record(stringout, "$(P)$(M)_PERROR")
+{
+    field(OMSL, "closed_loop")
+    field(DOL, "$(P)$(M)_ERRCALC_MESS CP")
+    field(DTYP, "stdio")
+    field(OUT, "@errlog")
+}
+
+# Expose the DMOV field as a PV record, so it can be access from a block
+record(ai,"$(P)$(M):DMOV")
+{
+	field(DESC, "Done move?")
+    field(SCAN, "Passive")
+    field(DTYP, "Soft Channel")
+    field(INP, "$(P)$(M).DMOV CP")
+}
+
+record(scalcout, "$(P)$(M):MANAGERMODE")
+{
+    field(ASG, "READONLY")
+    field(DESC, "Non-zero if manager is required")
+    field(PINI, "YES")
+    field(INPA, "$(PVPREFIX)CS:MANAGER CP")
+    field(BB, "$(ASG)")
+    field(CALC, "A = 0 && BB = 'MANAGER'")
+    field(OOPT, "Every Time")
+}
+
+#Below records are used to extract data from MR
+#and pass to driver
+
+
+
+record(ao,"$(P)$(M)_MOT_ENC_SYNC_TOL_SP") {
+    field(DESC, "Motor encoder sync tol")
+    field(DTYP, "asynFloat64")
+    field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_ENC_TOL")
+    field(PREC, "$(PREC)")
+	field(EGU, "$(EGU)")
+	field(VAL, "0")
+	field(PINI, "YES")
+}
+
+# Allow setting MRES/ERES as inverse
+
+record(ao, "$(P)$(M):INV_MRES")
+{
+	field(DESC, "Set the motor res in steps per EGU")
+	field(FLNK, "$(P)$(M):INV_MRES:SP_CALC")
+	field(PREC, "3")
+}
+
+record(calcout, "$(P)$(M):INV_MRES:SP_CALC")
+{
+	field(INPA, "$(P)$(M):INV_MRES")
+	field(CALC, "1/A")
+	field(OUT, "$(P)$(M).MRES")
+	field(OOPT, "On Change")
+}
+
+record(calcout, "$(P)$(M):INV_MRES_CALC")
+{
+	field(INPA, "$(P)$(M).MRES CP")
+	field(CALC, "1/A")
+	field(OUT, "$(P)$(M):INV_MRES PP")
+	field(OOPT, "On Change")
+}
+
+record(ao, "$(P)$(M):INV_ERES")
+{
+	field(DESC, "Set the encoder res in steps per EGU")
+	field(FLNK, "$(P)$(M):INV_ERES:SP_CALC")
+	field(PREC, "3")
+}
+
+record(calcout, "$(P)$(M):INV_ERES:SP_CALC")
+{
+	field(INPA, "$(P)$(M):INV_ERES")
+	field(CALC, "1/A")
+	field(OUT, "$(P)$(M).ERES")
+	field(OOPT, "On Change")
+}
+
+record(calcout, "$(P)$(M):INV_ERES_CALC")
+{
+	field(INPA, "$(P)$(M).ERES CP")
+	field(CALC, "1/A")
+	field(OUT, "$(P)$(M):INV_ERES PP")
+	field(OOPT, "On Change")
+}

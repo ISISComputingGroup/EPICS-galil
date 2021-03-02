@@ -27,6 +27,7 @@
 
 grecord(motor,"$(P)$(M)")
 {
+	field(ASG, "$(ASG=DEFAULT)")
 	field(DTYP,"asynMotor")
 	field(VMAX,"$(VMAX)")
 	field(VBAS,"0")
@@ -371,88 +372,5 @@ record(ao, "$(P)$(M)_VALOUT_SP")
 	field(FLNK, "$(P)$(M)")
 }
 
-# monitor the motor status and update a string field with results
-record(aSub, "$(P)$(M):_MSTACALC")
-{
-    field(SNAM, "displayMotorMSTA")
-	field(INPA, "$(P)$(M).MSTA CP")
-	field(FTA, "ULONG")
-	field(OUTA, "$(P)$(M)_MSTA_STR PP")
-	field(FTVA, "CHAR")
-	field(NOVA, "512")	
-}
-
-record(waveform, "$(P)$(M)_MSTA_STR")
-{
-	field(NELM, "512")
-	field(FTVL, "CHAR")
-	field(DESC, "Text version of motor MSTA")
-}
-
-record(aSub, "$(P)$(M):_STATUSCALC")
-{
-    field(SNAM, "displayMotorMSTASimple")
-	field(INPA, "$(P)$(M).MSTA CP")
-	field(FTA, "ULONG")
-	field(OUTA, "$(P)$(M)_STATUS PP")
-	field(FTVA, "STRING")
-	field(NOVA, "1")	
-}
-
-record(stringin, "$(P)$(M)_STATUS")
-{
-	field(DESC, "Simple Text version of motor MSTA")
-}
-
-record(stringin, "$(P)$(M)_MTR")
-{
-    field(VAL, "$(M)")
-}
-
-record(aSub,"$(P)$(M)_ERRCALC")
-{
-    field(SNAM,"checkMotorError")
-    field(SCAN,"Passive")
-    field(INPA,"$(P)$(M).MSTA CP")
-	field(FTA, "ULONG")
-    field(INPB,"$(P)$(M).LVIO CP")
-	field(FTB, "SHORT")
-    field(INPC,"$(P)$(M).HLS CP")
-	field(FTC, "SHORT")
-    field(INPD,"$(P)$(M).LLS CP")
-	field(FTD, "SHORT")
-    field(INPE,"$(P)$(M).STAT CP")
-	field(FTE, "USHORT")
-    field(INPF,"$(P)$(M).SEVR CP")
-	field(FTF, "USHORT")
-    field(INPG,"$(P)$(M)_MTR")
-	field(FTG, "STRING")
-	field(FTVA, "STRING")
-	field(FTVB, "ULONG")
-	# we want to process _ERRCALC_FAN only if the error message changes, so use OUTA not FLNK
-	# but strings outputs cannot be used to write to .PROC fields, so need to use intermediate string record 
-	field(OUTA, "$(P)$(M)_ERRCALC_MESS PP")
-}
-
-record(stringout, "$(P)$(M)_ERRCALC_MESS")
-{
-}
-
-record(stringout, "$(P)$(M)_PERROR")
-{
-    field(OMSL, "closed_loop")
-    field(DOL, "$(P)$(M)_ERRCALC_MESS CP")
-    field(DTYP, "stdio")
-    field(OUT, "@errlog")
-}
-
-# Expose the DMOV field as a PV record, so it can be access from a block
-record(ai,"$(P)$(M):DMOV")
-{
-	field(DESC, "Done move?")
-    field(SCAN, "Passive")
-    field(DTYP, "Soft Channel")
-    field(INP, "$(P)$(M).DMOV CP")
-}
 
 # end

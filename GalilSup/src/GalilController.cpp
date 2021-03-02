@@ -706,11 +706,11 @@ GalilController::GalilController(const char *portName, const char *address, doub
   createParam(GalilStatusPollDelayString, asynParamFloat64, &GalilStatusPollDelay_);
 
 //Add new parameters here
-  createParam(GalilMoveCommandString, asynParamOctet, &GalilMoveCommand_);
-  createParam(GalilMotorEncoderSyncTolString, asynParamFloat64, &GalilMotorEncoderSyncTol_);
 
   createParam(GalilCommunicationErrorString, asynParamInt32, &GalilCommunicationError_);
+
   createParam(GalilMoveCommandString, asynParamOctet, &GalilMoveCommand_);
+  createParam(GalilMotorEncoderSyncTolString, asynParamFloat64, &GalilMotorEncoderSyncTol_);
 
   //Not connected to controller yet
   connected_ = false;
