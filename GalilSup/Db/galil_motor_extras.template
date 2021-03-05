@@ -1407,7 +1407,7 @@ record(ao,"$(P)$(M)_EDEL_SP")
 record(calcout,"$(P)$(M)_EDEL_SP_")
 {
     field(INPA, "$(P)$(M)_EDEL_SP")
-    field(INPB, "$(P)$(M).ERES CP")
+    field(INPB, "$(P)$(M).ERES")
     field(CALC, "B != 0 ? A/B : 0")
     field(OUT, "$(P)$(M)_ENC_TOLERANCE_SP PP")
 }
