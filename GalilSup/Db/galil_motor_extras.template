@@ -411,31 +411,31 @@ record(ao,"$(P):$(M)_EDEL_SP")
 ## converters for new ENC_TOLERANCE records
 ## these were like EDEL but in counts
 ##
-record(longout,"$(P)$(M)_ENC_TOLERANCE_SP")
+record(longout,"$(P):$(M)_ENC_TOLERANCE_SP")
 {
     field(EGU, "count")
-    field(FLNK, "$(P)$(M)_ENC_TOLERANCE_SP_")
+    field(FLNK, "$(P):$(M)_ENC_TOLERANCE_SP_")
 }
 
-record(calcout,"$(P)$(M)_ENC_TOLERANCE_SP_")
+record(calcout,"$(P):$(M)_ENC_TOLERANCE_SP_")
 {
-    field(INPA, "$(P)$(M)_ENC_TOLERANCE_SP")
-    field(INPB, "$(P)$(M).ERES")
+    field(INPA, "$(P):$(M)_ENC_TOLERANCE_SP")
+    field(INPB, "$(P):$(M).ERES")
     field(CALC, "A * B")
-    field(OUT, "$(P)$(M)_EDEL_SP PP")
+    field(OUT, "$(P):$(M)_EDEL_SP PP")
 }
 
-record(longin,"$(P)$(M)_ENC_TOLERANCE_MON")
+record(longin,"$(P):$(M)_ENC_TOLERANCE_MON")
 {
     field(EGU, "count")
 }
 
-record(calcout,"$(P)$(M)_ENC_TOLERANCE_MON_")
+record(calcout,"$(P):$(M)_ENC_TOLERANCE_MON_")
 {
-    field(INPA, "$(P)$(M)_EDEL_MON CP")
-    field(INPB, "$(P)$(M).ERES CP")
+    field(INPA, "$(P):$(M)_EDEL_MON CP")
+    field(INPB, "$(P):$(M).ERES CP")
     field(CALC, "B != 0 ? A/B : 0")
-    field(OUT, "$(P)$(M)_ENC_TOLERANCE_MON PP")
+    field(OUT, "$(P):$(M)_ENC_TOLERANCE_MON PP")
 }
 
 
