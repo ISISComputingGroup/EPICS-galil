@@ -1380,7 +1380,7 @@ record(longout,"$(P)$(M)_ENC_TOLERANCE_SP")
 	field(DESC, "Encoder Tolerance")
 	field(DTYP, "asynInt32")
 	field(PINI, "YES")
-	field(EGU,  "Counts")
+	field(EGU,  "count")
 	field(VAL,  "0")
 	field(DRVL, "0")
 	field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_ENCODER_TOLERANCE")
@@ -1390,9 +1390,42 @@ record(longin,"$(P)$(M)_ENC_TOLERANCE_MON")
 	field(DESC, "Encoder Tolerance")
 	field(DTYP, "asynInt32")
 	field(SCAN, "I/O Intr")
-	field(EGU, "Counts")
+	field(EGU, "count")
 	field(INP,  "@asyn($(PORT),$(ADDR))MOTOR_ENCODER_TOLERANCE")
 }
+
+##
+## converters for old EDEL encoder deadbanc names
+## these were like ENC_TOLERANCE but in physical units
+##
+record(ao,"$(P)$(M)_EDEL_SP")
+{
+    field(EGU, "mm")
+    field(FLNK, "$(P)$(M)_EDEL_SP_")
+}
+
+record(calcout,"$(P)$(M)_EDEL_SP_")
+{
+    field(INPA, "$(P)$(M)_EDEL_SP")
+    field(INPB, "$(P)$(M).ERES CP")
+    field(CALC, "B != 0 ? A/B : 0")
+    field(OUT, "$(P)$(M)_ENC_TOLERANCE_SP PP")
+}
+
+record(ai,"$(P)$(M)_EDEL_MON")
+{
+    field(EGU, "mm")
+}
+
+record(calcout,"$(P)$(M)_EDEL_MON_")
+{
+    field(INPA, "$(P)$(M)_ENC_TOLERANCE_MON CP")
+    field(INPB, "$(P)$(M).ERES CP")
+    field(CALC, "A * B")
+    field(OUT, "$(P)$(M)_EDEL_MON PP")
+}
+
+####
 
 record(bi,"$(P)$(M)_ON_STATUS")
 {
