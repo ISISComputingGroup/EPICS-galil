@@ -1014,8 +1014,10 @@ void GalilController::shutdownController()
       //Burn parameters on exit ensuring controller has correct settings at next power on
       //This effects motor type, soft limits, limit configuration etc
       //It does not effect the galil program on the controller
+//      errlogPrintf("Burning parameters to EEPROM model %s, address %s\n",model_.c_str(), address_.c_str());
 //      sprintf(cmd_, "BN");
 //      sync_writeReadController();
+
       //Configure serial for unsolicited at exit as per factory default
       strcpy(cmd_, "CF S");
       sync_writeReadController();
@@ -7703,17 +7705,19 @@ static void GalilAddCodeCallFunc(const iocshArgBuf *args)
 static const iocshArg GalilStartControllerArg0 = {"Controller Port name", iocshArgString};
 static const iocshArg GalilStartControllerArg1 = {"Code file", iocshArgString};
 static const iocshArg GalilStartControllerArg2 = {"Burn program", iocshArgInt};
-static const iocshArg GalilStartControllerArg3 = {"Thread mask", iocshArgInt};
+static const iocshArg GalilStartControllerArg3 = {"Display Code", iocshArgInt}; // ignored, left here for compatibility with old driver
+static const iocshArg GalilStartControllerArg4 = {"Thread mask", iocshArgInt};
 static const iocshArg * const GalilStartControllerArgs[] = {&GalilStartControllerArg0,
                                                             &GalilStartControllerArg1,
                                                             &GalilStartControllerArg2,
-															&GalilStartControllerArg3};
+                                                            &GalilStartControllerArg3,
+															&GalilStartControllerArg4};
                                                              
-static const iocshFuncDef GalilStartControllerDef = {"GalilStartController", 4, GalilStartControllerArgs};
+static const iocshFuncDef GalilStartControllerDef = {"GalilStartController", 5, GalilStartControllerArgs};
 
 static void GalilStartControllerCallFunc(const iocshArgBuf *args)
 {
-  GalilStartController(args[0].sval, args[1].sval, args[2].ival, args[3].ival);
+  GalilStartController(args[0].sval, args[1].sval, args[2].ival, args[4].ival);  // display code arg no longer used
 }
 
 //Construct GalilController iocsh function register
