@@ -118,19 +118,16 @@ void GalilPoller::run(void)
 
             //No async, so wait updatePeriod_ rather than relying on async record delivery frequency
             if (!pC_->async_records_) {
-                // drop polling frequency if nothing moving. We will be signalled when motion is requested on an axis
-                // and then should continue at higher poll rate until motion is completed
-                pC_->motion_started_.wait( (any_moving ? 1.0 : NO_MOTION_POLLING_FACTOR) * pC_->updatePeriod_ / 1000.0 );
                //Adjust sleep time according to time_taken last poll cycle
                sleep_time = pC_->updatePeriod_/1000.0 - time_taken;
                //Must sleep in synchronous mode to release lock for other threads
                sleep_time = (sleep_time < 0.000) ? 0.001 : sleep_time;
+               // drop polling frequency if nothing moving. We will be signalled when motion is requested on an axis
+               // and then should continue at higher poll rate until motion is completed
+               sleep_time *= (any_moving ? 1.0 : NO_MOTION_POLLING_FACTOR);
                if (sleep_time >= 0.001)
-                  epicsThreadSleep(sleep_time);
+                  pC_->motion_started_.wait(sleep_time);
             }
-
-
-
          } //Connected_
          else //Not connected so sleep a little
             epicsThreadSleep(.1);
