@@ -17,7 +17,6 @@ GalilTest_DBD += asyn.dbd
 GalilTest_DBD += drvAsynSerialPort.dbd
 GalilTest_DBD += drvAsynIPPort.dbd
 GalilTest_DBD += motorSupport.dbd
-GalilTest_DBD += motorSimSupport.dbd 
 GalilTest_DBD += calcSupport.dbd
 GalilTest_DBD += sscanSupport.dbd
 GalilTest_DBD += asSupport.dbd
@@ -30,14 +29,15 @@ GalilTest_SRCS_DEFAULT += GalilTestMain.cpp
 
 #add a definition for each support application used by this application
 GalilTest_LIBS += GalilSupport
-GalilTest_LIBS += motorSimSupport softMotor motor asyn busy calc sscan autosave
+GalilTest_LIBS += motor asyn busy calc sscan autosave
+ifdef ONCRPC
 ifeq ($(STATIC_BUILD),YES)
 GalilTest_LIBS_WIN32 += oncrpc
+endif
 endif
 ifdef SNCSEQ
 GalilTest_LIBS += seq pv
 endif
-
 GalilTest_LIBS += $(EPICS_BASE_IOC_LIBS)
 
 #===========================

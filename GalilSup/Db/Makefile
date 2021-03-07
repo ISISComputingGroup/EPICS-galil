@@ -29,10 +29,9 @@ DB += galil_userdef_records8.template
 # 6. Thread programs for axis not using limits as home should send home<Axis> = 0 at hardware limits violation
 # 7. If using single thread avoid use of blocking commands (eg. WT100, AD, etc)
 
-# galil_Muon_Slits is a routine used by the Muons
-
 # Example galil code templates
 # These are renamed and installed to a GMC directory for historic reasons
+# See ReadMe_dmc.md for details
 GMC += ReadMe_dmc.md
 GMC += $(patsubst ../%.dmc, %.gmc, $(wildcard ../*.dmc))
 
@@ -53,5 +52,3 @@ galil_userdef_records8.template ../O.Common/galil_userdef_records8.template : ..
 	$(MSI3_15) -V -o $@ -S ../galil_userdef_records8.substitutions ../galil_userdef_records.template
 
 endif
-
-

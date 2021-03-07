@@ -26,14 +26,6 @@ GalilSupport_SRCS += GalilController.cpp GalilAxis.cpp GalilCSAxis.cpp GalilConn
 GalilSupport_LIBS += asyn motor calc sscan autosave busy
 GalilSupport_LIBS += $(EPICS_BASE_IOC_LIBS)
 
-#PROD_IOC += GalilDumpPos
-#GalilDumpPos_SRCS += GalilDumpPos.cpp
-#GalilDumpPos_LIBS_WIN32 += Galil1
-#GalilDumpPos_SYS_LIBS_WIN32 += delayimp
-#GalilDumpPos_LDFLAGS_WIN32 += /DELAYLOAD:Galil1.dll
-#GalilDumpPos_LIBS += $(EPICS_BASE_IOC_LIBS)
-#GalilDumpPos_SYS_LIBS_Linux += Galil
-
 include $(TOP)/configure/RULES
 #----------------------------------------
 #  ADD RULES AFTER THIS LINE

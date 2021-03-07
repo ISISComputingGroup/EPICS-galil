@@ -1,4 +1,4 @@
-# GMC Files Read Me 
+# GMC Files Read Me
 
 The GMC files in his directory are for code sent to the Galil controller. The gallil files mostly control homing behaviour they are:
 
