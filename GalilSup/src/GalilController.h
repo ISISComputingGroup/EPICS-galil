@@ -225,6 +225,8 @@ public:
   void shutdownController();
   ~GalilController();
 
+  static int init_state_;
+
 protected:
   #define FIRST_GALIL_PARAM GalilAddress_
   int GalilAddress_;
