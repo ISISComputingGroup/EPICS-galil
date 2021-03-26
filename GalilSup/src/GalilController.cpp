@@ -284,14 +284,11 @@ GalilController::GalilController(const char *portName, const char *address, doub
   // Store startup mode
   quiet_start_ = quietStart;
  
-// temporarily commented out as per IBEX ticket #4351
-// we will always use QR
-//  if (updatePeriod < 0) {
-//      try_async_ = false;
-//  } else {
-//      try_async_ = true;
-//  }
-  try_async_ = false;
+  if (updatePeriod < 0) {
+      try_async_ = false;
+  } else {
+      try_async_ = true;
+  }
 
   //Set defaults in Paramlist before connect
   setParamDefaults();
