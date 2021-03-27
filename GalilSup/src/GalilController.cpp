@@ -758,15 +758,6 @@ GalilController::GalilController(const char *portName, const char *address, doub
   // Store startup mode
   quiet_start_ = quietStart;
  
-// temporarily commented out as per IBEX ticket #4351
-// we will always use QR
-//  if (updatePeriod < 0) {
-//      try_async_ = false;
-//  } else {
-//      try_async_ = true;
-//  }
-  try_async_ = false;
-
   //Set defaults in Paramlist before connect
   setParamDefaults();
 
@@ -3012,17 +3003,6 @@ asynStatus GalilController::beginSyncStartStopMove(int coordsys, const char *axe
   //Update coordinate system motor list at record layer
   setStringParam(coordsys, GalilCoordSysMotors_, axes);
 
-#if 0
-  //Loop through the axes list for this coordinate system
-  //Ensure all motors are enabled
-  for (int index = 0; index < strlen(axes); index++)
-     {
-     //Retrieve axis specified in axes list
-     GalilAxis *pAxis = getAxis(axes[index] - AASCII);
-     if (!pAxis->motor_enabled())
-        return asynError;
-     }
-#endif
   //Set linear interpolation mode and include motor list provided
   cmd += ";LM " + tsp(axes);
 

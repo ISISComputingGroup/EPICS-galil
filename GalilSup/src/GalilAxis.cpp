@@ -572,8 +572,12 @@ asynStatus GalilAxis::setAccelVelocity(double acceleration, double velocity, boo
    //Set limit deceleration
    limdc_ = (double)deceleration;
    cmd += ";limdc" + string(1, c) + "=" + tsp(limdc_, 0);
+   
+   cmd += ";hjgdc" + string(1, c) + "=" + tsp(limdc_, 0);  // for old homing code
+
    strcpy(pC_->cmd_, cmd.c_str());
    status = pC_->sync_writeReadController();
+   
 
    return (asynStatus)status;
 }
@@ -679,12 +683,6 @@ asynStatus GalilAxis::move(double position, int relative, double minVelocity, do
      maxVelocity = csaVelocity_;
      acceleration = csaAcceleration_;
   }
-
-#if 0
-  //Block backlash, retries if requested
-  if (stop_axis_)
-     return asynSuccess;
-#endif
     
 //  //Ensure home flag is 0
 //  sprintf(pC_->cmd_, "home%c=0", axisName_);
@@ -789,6 +787,10 @@ asynStatus GalilAxis::setupHome(double maxVelocity, int forwards)
    hjs = maxVelocity * home_direction;
    sprintf(pC_->cmd_, "hjs%c=%.0lf\n", axisName_, hjs);
    pC_->sync_writeReadController();
+   
+   // old name still used in dmc files
+   sprintf(pC_->cmd_, "hjgsp%c=%.0lf\n", axisName_, hjs);
+   pC_->sync_writeReadController();
 
    //Set Homed status to false
    sprintf(pC_->cmd_, "homed%c=0\n", axisName_);
@@ -815,8 +817,8 @@ asynStatus GalilAxis::setupHome(double maxVelocity, int forwards)
      //calculate jog toward switch speed, direction
      hvel = maxVelocity * home_direction * -1;
 
-     sprintf(pC_->cmd_, "JG%c=%.0lf", axisName_, hvel);
-     pC_->sync_writeReadController();
+     //sprintf(pC_->cmd_, "JG%c=%.0lf", axisName_, hvel);
+     //pC_->sync_writeReadController();
      //Tell controller home program that jog off switch is necessary
      sprintf(pC_->cmd_, "hjog%c=0", axisName_);
      pC_->sync_writeReadController();
@@ -827,7 +829,7 @@ asynStatus GalilAxis::setupHome(double maxVelocity, int forwards)
      sprintf(pC_->cmd_, "hjog%c=1", axisName_);
      pC_->sync_writeReadController();
    }
-
+   
    return asynSuccess;
 }
 
@@ -965,78 +967,6 @@ asynStatus GalilAxis::home(double minVelocity, double maxVelocity, double accele
      }
   }
 
-#if 0
-// todo: check home setup
-	//Retrieve needed parameters
-	pC_->getDoubleParam(axisNo_, pC_->motorResolution_, &mres);
-	pC_->getDoubleParam(axisNo_, pC_->GalilAfterLimit_, &egu_after_limit);
-
-	//recalculate home/limit switch deceleration for switch jog off given hvel
-	distance = (egu_after_limit < mres) ? mres : egu_after_limit;
-	//suvat equation for acceleration
-	deccel = (maxVelocity * maxVelocity)/((distance/mres) * 2.0);
-	//Find closest hardware setting
-	hjgdc = (long)(lrint(deccel/1024.0) * 1024);
-	sprintf(pC_->cmd_, "hjgdc%c=%ld\n", axisName_, hjgdc);
-	pC_->writeReadController(functionName);
-
-	//Calculate home jog off speed to use hvel
-        hjgsp = maxVelocity * home_direction;
-
-	//Home jog off speed
-	sprintf(pC_->cmd_, "hjgsp%c=%.0lf\n", axisName_, hjgsp);
-	pC_->writeReadController(functionName);
-
-	//Set Homed status to false
-	sprintf(pC_->cmd_, "homed%c=0\n", axisName_);
-	pC_->writeReadController(functionName);
-
-	//Set homed status for this axis
-	setIntegerParam(pC_->GalilHomed_, 0);
-	//Set motorRecord MSTA bit 15 motorStatusHomed_ too
-	//Homed is not part of Galil data record, we support it using Galil code and unsolicited messages over tcp instead
-	//We must use asynMotorAxis version of setIntegerParam to set MSTA bits for this MotorAxis
-        setIntegerParam(pC_->motorStatusHomed_, 0);
-
-	//calculate home velocity speed in motor steps per sec
-	//we need to do this because we use jog command
-	//SP command does not affect jog
-
-	hvel = maxVelocity * home_direction * -1;
-			
-//	sprintf(pC_->cmd_, "JG%c=%.0lf", axisName_, hvel);
-//	pC_->writeReadController(functionName);
-
-	//recalculate limit deceleration given hvel (instead of velo) and allowed steps after home/limit activation
-	setLimitDecel(hvel);	
-
-	//Set acceleration and deceleration for when limit not active
-	accel = (long)lrint(acceleration/1024.0) * 1024;
-	sprintf(pC_->cmd_, "AC%c=%ld;DC%c=%ld", axisName_, accel, axisName_, accel);
-	pC_->writeReadController(functionName);
-
-	//Execute motor auto on function
-	executeAutoOn();
-
-	//Execute motor record prem command
-	executePrem();
-
-        //Begin the move
-//	if (!beginMotion(functionName))
-//		{
-		homing_ = true;  //Start was successful
-                cancelHomeSent_ = false;  //Homing has not been cancelled yet
-		//tell controller which axis we are doing a home on
-		//We do this last so home algorithm doesn't cancel home jog in incase motor
-		//is sitting on opposite limit to which we are homing
-		sprintf(pC_->cmd_, "home%c=1\n", axisName_);
-		pC_->writeReadController(functionName);
-//		}
-
-
-	}
-#endif
-
   //Return status
   return status;
 }
@@ -1105,17 +1035,6 @@ asynStatus GalilAxis::checkLimits(const char *caller, char callaxis, double posi
    int rev, fwd;		//Motor limit status
    double readback;		//Readback in steps
 
-#if 0  //Motor on and Amp auto on/off status check
-  pC_->getIntegerParam(axisNo_, pC_->motorStatusPowerOn_, &motoron);
-  pC_->getIntegerParam(axisNo_, pC_->GalilAutoOnOff_, &autoonoff);
-  if (!motoron && !autoonoff)
-     {
-     sprintf(mesg, "%s failed, %c motor amplifier is off", functionName, axisName_);
-     //Set controller error mesg monitor
-     pC_->setCtrlError(mesg);
-     return asynError;  //Nothing to do 
-     }
-#endif	
    if (!checkEncoderMotorSync(true))
    {
         pC_->setCtrlError("Encoder and motor registers out of sync - you may need to rehome");
