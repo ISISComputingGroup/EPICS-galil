@@ -268,6 +268,7 @@ public:
 
   string address_;			//address string
   string model_;			//model string
+  static int init_state_;
 
   //Class constructor
   GalilController(const char *portName, const char *address, double updatePeriod, int quiet_start);
@@ -402,8 +403,6 @@ public:
   void shutdownController();
   bool shutdownRequested() { return shutdown_requested_; }
   virtual ~GalilController();
-
-  static int init_state_;
 
 protected:
   #define FIRST_GALIL_PARAM GalilDriver_
@@ -558,7 +557,7 @@ protected:
   #define LAST_GALIL_PARAM GalilCommunicationError_
 
 private:
-					
+
   std::unordered_map<std::string, Source> map; //data structure for data record
 
   char cmd_[MAX_GALIL_STRING_SIZE];	//holds the assembled Galil cmd string
@@ -619,6 +618,7 @@ private:
   unsigned numThreads_;			//Number of threads the controller supports
   bool codegen_init_;			//Has the code generator been initialised for this controller
   bool digitalinput_init_;		//Has the digital input label #ININT been included for this controller
+
   string thread_code_ = "";
   string limit_code_ = "";
   string digital_code_ = "";

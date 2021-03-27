@@ -477,7 +477,7 @@ static void myHookFunction(initHookState state)
   //Update dbInitialized status for all GalilController instances
   if (state >= initHookAfterInitDatabase)
   {
-	dbInitialized = true;
+    dbInitialized = true;
   }
   GalilController::init_state_ = state;
 }
@@ -1069,12 +1069,11 @@ void GalilController::setParamDefaults(void)
   setStringParam(0, GalilCoordSysMotors_, "");
   //Coordinate system T axes list empty
   setStringParam(1, GalilCoordSysMotors_, "");
-  //Put all motors in spmg go mode
   for (i = 0; i < MAX_GALIL_AXES + MAX_GALIL_CSAXES; i++)
   {
-//	setIntegerParam(i, GalilMotorStopGo_, 3);
     setStringParam(i, GalilMoveCommand_, "");
-	setDoubleParam(i, GalilMotorEncoderSyncTol_, 0.0);
+    setDoubleParam(i, GalilMotorEncoderSyncTol_, 0.0);
+    //setIntegerParam(i, GalilMotorStopGo_, 3);
   }
   //Output compare is off
   for (i = 0; i < 2; i++)
@@ -3026,12 +3025,6 @@ asynStatus GalilController::beginSyncStartStopMove(int coordsys, const char *axe
   strcpy(cmd_, cmd.c_str());
   sync_writeReadController();
 
-  //Execute motor auto on function
-  executeAutoOnBrakeOff(axes);
-
-  //Execute motor record prem
-  executePrem(axes);
-
   //move the coordinate system
   status = beginLinearGroupMotion(coordName, axes);
 
@@ -3927,12 +3920,12 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
         getDoubleParam(pAxis->axisNo_, GalilEncoderResolution_, &eres);
         getDoubleParam(pAxis->axisNo_, motorResolution_, &mres);
         if (mres != 0.000000) {
-			//Calculate step count from existing encoder_position, construct mesg to controller_
-		    double newpos = pAxis->encoder_position_ * (eres/mres);
-		    std::cerr << "Detected motor type change from servo to stepper, redefining position to " << newpos << " for axis " << pAxis->axisName_ << std::endl;
-			sprintf(cmd_, "DP%c=%.0lf", pAxis->axisName_, newpos);
-			//Write setting to controller
-			status = sync_writeReadController();
+            //Calculate step count from existing encoder_position, construct mesg to controller_
+            double newpos = pAxis->encoder_position_ * (eres/mres);
+            std::cerr << "Detected motor type change from servo to stepper, redefining position to " << newpos << " for axis " << pAxis->axisName_ << std::endl;
+            sprintf(cmd_, "DP%c=%.0lf", pAxis->axisName_, newpos);
+            //Write setting to controller
+            status = sync_writeReadController();
         }
      }
 
@@ -3941,7 +3934,7 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
      if (fabs(oldmotor) > 1.5 && (value < 2 || (value > 5 && value < 8))) {
         //Calculate step count from existing encoder_position, construct mesg to controller_
         sprintf(cmd_, "DP%c=%.0lf", pAxis->axisName_, pAxis->encoder_position_);
-		std::cerr << "Detected motor type change from stepper to servo, redefining position to " << pAxis->encoder_position_ << " for axis " << pAxis->axisName_ << std::endl;
+        std::cerr << "Detected motor type change from stepper to servo, redefining position to " << pAxis->encoder_position_ << " for axis " << pAxis->axisName_ << std::endl;
         //Write setting to controller
         status = sync_writeReadController();
      }
@@ -4737,7 +4730,7 @@ void GalilController::processUnsolicitedMesgs(void)
          //Retrieve next mesg
          charstr = epicsStrtok_r(NULL, " \r\n", &tokSave);
          }//while
-	  }//if
+    }
 }
 
 //Extract controller data from GalilController data record
@@ -5312,11 +5305,11 @@ asynStatus GalilController::async_writeReadController(const char *output, char *
 // return true if thread running, false if not
 bool GalilController::checkGalilThread(int thread)
 {
-	sprintf(cmd_, "MG _XQ%d\n", thread);
-	if (sync_writeReadController() == asynSuccess)
-	{
-		if (atoi(resp_) == -1)
-		{
+    sprintf(cmd_, "MG _XQ%d\n", thread);
+    if (sync_writeReadController() == asynSuccess)
+    {
+        if (atoi(resp_) == -1)
+        {
             return false;
         }
         else
@@ -5334,42 +5327,42 @@ bool GalilController::checkGalilThread(int thread)
 bool GalilController::checkGalilThreads()
 {
     bool result = true;
-	int stat;
+    int stat;
     if ( !checkGalilThread(0) ) // thread 0 should always be running
-    {	
+    {
         result = false;
-		errlogPrintf("Thread %d not running on model %s, address %s\n", 0, model_, address_);
+        errlogPrintf("Thread %d not running on model %s, address %s\n", 0, model_, address_);
     }
- 			//Check threads on controller
-			if (thread_mask_ != 0) // is we gave a mask, only check for these threads
-			{
-				for (int i=0; i<32; ++i)
-				{
-                    if ( ((thread_mask_ & (1 << i)) != 0) && !checkGalilThread(i) )
-                    {
-                        result = false;
-						errlogPrintf("Thread %d not running on model %s, address %s\n", i, model_, address_);
-                    }
-				}
-			}
-            else if ((numAxes_ > 0 || rio_) && thread_mask_ == 0) //Check code is running for all created GalilAxis
-			{
-                if (rio_) //Check thread 0 on rio
-                   numAxes_ = 1;
-                for (int i=0;i<numAxes_;++i)
-                {		
-                    if (rio_)
-						stat = checkGalilThread(i);
-					else
-						stat = checkGalilThread(axisList_[i] - AASCII);
-                    if ( !stat )
-					{
-                        result = false;
-						errlogPrintf("Thread %d not running on model %s, address %s\n", i, model_, address_);
-					}
-				}
-			}
-            return result;
+    //Check threads on controller
+    if (thread_mask_ != 0) // is we gave a mask, only check for these threads
+    {
+        for (int i=0; i<32; ++i)
+        {
+            if ( ((thread_mask_ & (1 << i)) != 0) && !checkGalilThread(i) )
+            {
+                result = false;
+                errlogPrintf("Thread %d not running on model %s, address %s\n", i, model_, address_);
+            }
+        }
+    }
+    else if ((numAxes_ > 0 || rio_) && thread_mask_ == 0) //Check code is running for all created GalilAxis
+    {
+        if (rio_) //Check thread 0 on rio
+            numAxes_ = 1;
+        for (int i=0;i<numAxes_;++i)
+        {
+            if (rio_)
+                stat = checkGalilThread(i);
+            else
+                stat = checkGalilThread(axisList_[i] - AASCII);
+            if ( !stat )
+            {
+                result = false;
+                errlogPrintf("Thread %d not running on model %s, address %s\n", i, model_, address_);
+            }
+        }
+    }
+    return result;
 }
 
 /*--------------------------------------------------------------*/
@@ -5377,24 +5370,24 @@ bool GalilController::checkGalilThreads()
 /*--------------------------------------------------------------*/
 void GalilController::findReplace(string& s, const string &toReplace, const string &replaceWith)
 {
-	while(s.find(toReplace) != std::string::npos) {
-		s.replace(s.find(toReplace), toReplace.length(), replaceWith);
-	}
+    while(s.find(toReplace) != std::string::npos) {
+        s.replace(s.find(toReplace), toReplace.length(), replaceWith);
+    }
 }
 
 /*--------------------------------------------------------------*/
 /* Remove non-functional elements from the code                 */
 /*--------------------------------------------------------------*/
 void GalilController::compressCode(string& code){
-	findReplace(code, "\r ", "");
-	// Tabs to space
-	findReplace(code, "\t", "    ");
-	// Trailing whitespace
-	findReplace(code, " \n", "\n");
-	// Leading whitespace
-	findReplace(code, "\n ", "\n");
-	// Blank lines
-	findReplace(code, "\n\n", "\n");
+    findReplace(code, "\r ", "");
+    // Tabs to space
+    findReplace(code, "\t", "    ");
+    // Trailing whitespace
+    findReplace(code, " \n", "\n");
+    // Leading whitespace
+    findReplace(code, "\n ", "\n");
+    // Blank lines
+    findReplace(code, "\n\n", "\n");
 }
 
 /*--------------------------------------------------------------*/
@@ -5402,37 +5395,37 @@ void GalilController::compressCode(string& code){
 /*--------------------------------------------------------------*/
 int GalilController::compareCode(string dc, string uc)
 {
-	compressCode(dc);
-	compressCode(uc);
-	return dc.compare(uc);
+    compressCode(dc);
+    compressCode(uc);
+    return dc.compare(uc);
 }
 
 /*--------------------------------------------------------------*/
 /* Halt all threads                                             */
 /*--------------------------------------------------------------*/
 void GalilController::stopThreads()
-{		
-	//Stop all threads running on the controller
-	for (int i=0;i<numThreads_;i++)
-		{
-		sprintf(cmd_, "HX%d",i);
-		sync_writeReadController();
-		}
+{
+    //Stop all threads running on the controller
+    for (int i=0;i<numThreads_;i++)
+    {
+        sprintf(cmd_, "HX%d",i);
+        sync_writeReadController();
+    }
 }
 
 /*--------------------------------------------------------------*/
 /* Stop all axes                                                */
 /*--------------------------------------------------------------*/
 void GalilController::stopAxes()
-{	
+{
   //Stop all moving motors
   for (int i=0;i<numAxesMax_;i++)
-     {
+  {
      //Query moving status
      sprintf(cmd_, "MG _BG%c", (i + AASCII));
      sync_writeReadController();
      if (atoi(resp_))
-        {
+     {
         //Stop moving motor
         sprintf(cmd_, "ST%c", (i + AASCII));
         sync_writeReadController();
@@ -5441,11 +5434,9 @@ void GalilController::stopAxes()
         //Ensure home process is stopped
         sprintf(cmd_, "home%c=0", (i + AASCII));
         sync_writeReadController();
-        }
      }
+  }
 }
-
-
 
 /** Downloads program to controller
 */
@@ -6059,19 +6050,18 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
          dc.push_back('\r');
 
       //If code we wish to download differs from controller current code then download the new code
-	  int code_changed = compareCode(dc, uc) != 0 && dc.compare("") != 0;
-		if (quiet_start_)
-		{
-			if (code_changed)
-			{
-				stopThreads();
-				stopAxes();
-			}
-			else
-				printf("\nControl code unchanged and quiet start requested. Threads will not be restarted\n");
-		}
-      if (code_changed)
-         {
+      int code_changed = compareCode(dc, uc) != 0 && dc.compare("") != 0;
+      if (quiet_start_)
+      {
+          if (code_changed)
+          {
+              stopThreads();
+              stopAxes();
+          }
+          else
+              printf("\nControl code unchanged and quiet start requested. Threads will not be restarted\n");
+      }
+      if (code_changed) {
          errlogPrintf("\nTransferring code to model %s, address %s\n",model_.c_str(), address_.c_str());		
          //Do the download
          status = programDownload(dc);
@@ -6118,11 +6108,9 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
 
       //Start thread 0 if upload reveals code exists on controller
       //Its assumed that thread 0 starts any other required threads on controller
-      if ((int)uc.length()>2 && thread_mask_ >= 0)
-         {
- 			// Only try and start thread 0 if it isn't already running
-			if (!checkGalilThread(0))
-			{
+      if ((int)uc.length()>2 && thread_mask_ >= 0) {
+          // Only try and start thread 0 if it isn't already running
+          if (!checkGalilThread(0)) {
          //Start thread 0
          sprintf(cmd_, "XQ 0,0");
          if (sync_writeReadController() != asynSuccess)
@@ -6130,19 +6118,16 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
             }
          //Wait a second before checking thread status
          epicsThreadSleep(1);
-			
- 			//Check threads on controller
-        if (thread_mask_ > 0) //user specified a thread mask, only check for these threads
-		{
-            if ( !checkGalilThreads() )
-            {
-				start_ok = 0;
+
+        //Check threads on controller
+        if (thread_mask_ > 0) { //user specified a thread mask, only check for these threads
+            if ( !checkGalilThreads() ) {
+                start_ok = false;
                 mesg = "Thread " + tsp(i, 0) + " failed to start on model " + model_ + ", address " + address_;
                 setCtrlError(mesg);
-            }			
-		}
-         else if ((numAxes_ > 0 || rio_) && thread_mask_ == 0) //Check code is running for all created GalilAxis
-            {
+            }
+         }
+         else if ((numAxes_ > 0 || rio_) && thread_mask_ == 0) { //Check code is running for all created GalilAxis
             if (rio_) //Check thread 0 on rio
                numAxes_ = 1;
             for (i = 0;i < numAxes_;i++) {		
@@ -6164,7 +6149,7 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
             }
          }
 
-	 if (start_ok)
+      if (start_ok)
             errlogPrintf("Code started successfully on model %s, address %s\n",model_.c_str(), address_.c_str());
       }
 
@@ -6552,7 +6537,6 @@ asynStatus GalilController::drvUserDestroy(asynUser *pasynUser)
       return asynMotorController::drvUserDestroy(pasynUser);
       }
 }
-
 
 /** Record an error message, and also display to ioc window
   * \param[in] mesg      	 Error message
@@ -7396,8 +7380,6 @@ void GalilController::dq_analog(int byte, int input_num)
 	}
 }
 
-
-
 //IocShell functions
 
 /** Creates a new GalilController object.
@@ -7691,7 +7673,7 @@ static const iocshArg * const GalilStartControllerArgs[] = {&GalilStartControlle
                                                             &GalilStartControllerArg1,
                                                             &GalilStartControllerArg2,
                                                             &GalilStartControllerArg3,
-															&GalilStartControllerArg4};
+                                                            &GalilStartControllerArg4};
                                                              
 static const iocshFuncDef GalilStartControllerDef = {"GalilStartController", 5, GalilStartControllerArgs};
 
@@ -7716,5 +7698,4 @@ static void GalilSupportRegister(void)
 extern "C" {
 epicsExportRegistrar(GalilSupportRegister);
 }
-
 

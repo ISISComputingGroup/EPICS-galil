@@ -35,7 +35,7 @@ using namespace std; //cout ostringstream vector string
 
 //Constructor
 GalilConnector::GalilConnector(GalilController *pcntrl)
-     : thread(*this,"GalilConnector",epicsThreadGetStackSize(epicsThreadStackMedium),epicsThreadPriorityLow)
+    :  thread(*this,"GalilConnector",epicsThreadGetStackSize(epicsThreadStackMedium),epicsThreadPriorityLow)
 {
 	//Store the GalilController instance that created this GalilConnector instance
 	pC_ = pcntrl;

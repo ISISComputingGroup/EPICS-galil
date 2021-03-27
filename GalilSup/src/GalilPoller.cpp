@@ -95,8 +95,8 @@ void GalilPoller::run(void)
                      //Update GalilAxis, and upper layers, using retrieved datarecord
                      //Update records with analog/binary data
                      pAxis->poller(moving);
-					    		//Update GalilAxis, and upper layers, using retrieved datarecord
-									//Update records with analog/binary data
+                    //Update GalilAxis, and upper layers, using retrieved datarecord
+                    //Update records with analog/binary data
                     any_moving = (any_moving || moving);
                   }
                }
@@ -143,9 +143,9 @@ void GalilPoller::run(void)
       //Kill loop as IOC is shuttingDown
       if (shutdownPoller_)  //Break from loop
       {
-		//Tell controller to stop async data record
-		if (pC_->async_records_) {
-			//pC_->gco_->recordsStart(0);
+        //Tell controller to stop async data record
+        if (pC_->async_records_) {
+           //pC_->gco_->recordsStart(0); //  tutn off DR ?
         }
          break;
       }

@@ -47,7 +47,6 @@ using namespace std; //cout ostringstream vector string
 static void pollServicesThreadC(void *pPvt);
 static void axisStatusThreadC(void *pPvt);
 static void eventMonitorThreadC(void *pPvt);
-
 static const char* lookupStopCode(int sc);
 
 // These are the GalilAxis methods
@@ -572,12 +571,10 @@ asynStatus GalilAxis::setAccelVelocity(double acceleration, double velocity, boo
    //Set limit deceleration
    limdc_ = (double)deceleration;
    cmd += ";limdc" + string(1, c) + "=" + tsp(limdc_, 0);
-   
    cmd += ";hjgdc" + string(1, c) + "=" + tsp(limdc_, 0);  // for old homing code
 
    strcpy(pC_->cmd_, cmd.c_str());
    status = pC_->sync_writeReadController();
-   
 
    return (asynStatus)status;
 }
@@ -683,13 +680,8 @@ asynStatus GalilAxis::move(double position, int relative, double minVelocity, do
      maxVelocity = csaVelocity_;
      acceleration = csaAcceleration_;
   }
-    
-//  //Ensure home flag is 0
-//  sprintf(pC_->cmd_, "home%c=0", axisName_);
-//  pC_->writeReadController(functionName);
-//  homing_ = false;
-		
-      std::cerr << "MOVE: axis " << axisName_ << " to " << position << (relative != 0 ? " (relative) " : " (absolute)") << " current readback " << readback << std::endl;
+
+  std::cerr << "MOVE: axis " << axisName_ << " to " << position << (relative != 0 ? " (relative) " : " (absolute)") << " current readback " << readback << std::endl;
   //Check for move thru motor record
   if (moveThruRecord_) {
      //Set flag false
@@ -724,17 +716,17 @@ asynStatus GalilAxis::move(double position, int relative, double minVelocity, do
      //Moves are not deferred
      //Check axis is ok to go
      if (!beginCheck(functionName, axisName_, maxVelocity)) {
-		move_command[0] = '\0';
+        move_command[0] = '\0';
         if ( (pC_->getStringParam(axisNo_, pC_->GalilMoveCommand_, sizeof(move_command), move_command) == asynSuccess) && (move_command[0] != '\0' && move_command[0] != ' ') )
-		{
-		    move_command[sizeof(move_command)-1] = '\0';
-			pC_->getDoubleParam(axisNo_, pC_->motorResolution_, &mres);
-			if (epicsSnprintf(pC_->cmd_, sizeof(pC_->cmd_), move_command, position * mres) > 0)
-			{
-			    pC_->sync_writeReadController();
-			}
-				used_move_command = true;
-		}
+        {
+            move_command[sizeof(move_command)-1] = '\0';
+            pC_->getDoubleParam(axisNo_, pC_->motorResolution_, &mres);
+            if (epicsSnprintf(pC_->cmd_, sizeof(pC_->cmd_), move_command, position * mres) > 0)
+            {
+                pC_->sync_writeReadController();
+            }
+            used_move_command = true;
+        }
         //Set absolute or relative move
         else if (relative) {
            //Set the relative move
@@ -750,11 +742,11 @@ asynStatus GalilAxis::move(double position, int relative, double minVelocity, do
         //set acceleration and velocity
         setAccelVelocity(acceleration, maxVelocity);
         //Begin the move
-		if (!used_move_command) {
-        status = beginMotion(functionName, position, relative, true);
-        // signal poller we have started moving
-        pC_->motion_started_.signal();
-		}
+        if (!used_move_command) {
+            status = beginMotion(functionName, position, relative, true);
+            // signal poller we have started moving
+            pC_->motion_started_.signal();
+        }
      }
   }
 
@@ -788,7 +780,7 @@ asynStatus GalilAxis::setupHome(double maxVelocity, int forwards)
    sprintf(pC_->cmd_, "hjs%c=%.0lf\n", axisName_, hjs);
    pC_->sync_writeReadController();
    
-   // old name still used in dmc files
+   // old galil variable name still used in dmc files
    sprintf(pC_->cmd_, "hjgsp%c=%.0lf\n", axisName_, hjs);
    pC_->sync_writeReadController();
 
@@ -817,6 +809,7 @@ asynStatus GalilAxis::setupHome(double maxVelocity, int forwards)
      //calculate jog toward switch speed, direction
      hvel = maxVelocity * home_direction * -1;
 
+     ///@todo we disabled this previously
      //sprintf(pC_->cmd_, "JG%c=%.0lf", axisName_, hvel);
      //pC_->sync_writeReadController();
      //Tell controller home program that jog off switch is necessary
@@ -829,7 +822,7 @@ asynStatus GalilAxis::setupHome(double maxVelocity, int forwards)
      sprintf(pC_->cmd_, "hjog%c=1", axisName_);
      pC_->sync_writeReadController();
    }
-   
+
    return asynSuccess;
 }
 
@@ -907,21 +900,21 @@ asynStatus GalilAxis::home(double minVelocity, double maxVelocity, double accele
   // check homing thread is available
   if ( !pC_->checkGalilThreads() )
   {
-  errlogPrintf("Galil home threads are not running. Attempting to restart homing threads.\n");
-  sprintf(pC_->cmd_, "HX0;HX1");
-  pC_->sync_writeReadController();
-  sprintf(pC_->cmd_, "XQ 0,0");
-  pC_->sync_writeReadController();
-  epicsThreadSleep(.2);
-  if ( !pC_->checkGalilThreads() )
-  {
-  errlogPrintf("Unable to start Galil homing threads.\n");
-  return asynError;
-  }
-  else
-  {
-  errlogPrintf("Galil homing threads restarted successfully.\n");
-  }
+    errlogPrintf("Galil home threads are not running. Attempting to restart homing threads.\n");
+    sprintf(pC_->cmd_, "HX0;HX1");
+    pC_->sync_writeReadController();
+    sprintf(pC_->cmd_, "XQ 0,0");
+    pC_->sync_writeReadController();
+    epicsThreadSleep(.2);
+    if ( !pC_->checkGalilThreads() )
+    {
+      errlogPrintf("Unable to start Galil homing threads.\n");
+      return asynError;
+    }
+    else
+    {
+      errlogPrintf("Galil homing threads restarted successfully.\n");
+    }
   }
 
   //If axis is ok to go, begin motion
@@ -963,7 +956,7 @@ asynStatus GalilAxis::home(double minVelocity, double maxVelocity, double accele
         pC_->sync_writeReadController();
         // signal poller we have started moving
         pC_->motion_started_.signal();
-		std::cerr << "Home started axis " << axisName_ << std::endl;
+        std::cerr << "Home started axis " << axisName_ << std::endl;
      }
   }
 
@@ -1038,7 +1031,7 @@ asynStatus GalilAxis::checkLimits(const char *caller, char callaxis, double posi
    if (!checkEncoderMotorSync(true))
    {
         pC_->setCtrlError("Encoder and motor registers out of sync - you may need to rehome");
-	    // return asynError;  // should we stop move attempts? 
+        // return asynError;  // should we stop move attempts? 
    }
    //Retrieve needed motor record parameters
    status = pC_->getIntegerParam(axisNo_, pC_->motorStatusLowLimit_, &rev);
@@ -1940,9 +1933,9 @@ void GalilAxis::checkEncoder(void)
          //Check time to see if possible stall is now a stall
          if (pestall_time >= estall_time && !stopSent_)
             {
-			// get last stop code
+            // get last stop code
             double sc_code = getGalilAxisVal("_SC");
-	        // get axis moving state
+            // get axis moving state
             double bg_code = getGalilAxisVal("_BG");
             //Pass stall status to higher layers
             setIntegerParam(pC_->motorStatusSlip_, 1);
@@ -1956,7 +1949,7 @@ void GalilAxis::checkEncoder(void)
             sprintf(message, "Encoder stall stop motor %c", axisName_);
             //Set controller error mesg monitor
             pC_->setCtrlError(message);
-		std::cerr << "STALL: pestall_time=" << pestall_time << " (>" << estall_time << ") encoderMove_=" << encoderMove_ << " encDirOk_=" << encDirOk_ << " _SC" << axisName_ << "=" << sc_code << " _BG" << axisName_ << "=" << bg_code << std::endl;
+            std::cerr << "STALL: pestall_time=" << pestall_time << " (>" << estall_time << ") encoderMove_=" << encoderMove_ << " encDirOk_=" << encDirOk_ << " _SC" << axisName_ << "=" << sc_code << " _BG" << axisName_ << "=" << bg_code << std::endl;
             }
          }
       }
@@ -2122,31 +2115,23 @@ void GalilAxis::checkHoming(void)
    pC_->getDoubleParam(axisNo_, pC_->GalilEStallTime_, &estall_time);
    double homing_timeout = (HOMING_TIMEOUT < estall_time ? estall_time : HOMING_TIMEOUT);
 
-   //Dont show limits whilst homing otherwise mr may interrupt custom routines
-   //Also stops wrongLimitProtection function during homing
-   if (homing_) {
-      //Dont show reverse limit when homing
-      rev_ = 0;
-      //Dont show forward limit when homing
-      fwd_ = 0;
-   }
    // ISIS: need to confirm limits high/low limit behaviour
    if ((homing_ && (stoppedTime_ >= homing_timeout) && !cancelHomeSent_) ||
        (((readback > highLimit_ && softlimits) || (readback < lowLimit_ && softlimits)) && homing_ && !cancelHomeSent_ && done_))
       {
-	    // get last stop code
-	    sprintf(pC_->cmd_, "MG _SC%c\n", axisName_);
+        // get last stop code
+        sprintf(pC_->cmd_, "MG _SC%c\n", axisName_);
         pC_->sync_writeReadController();
         double sc_code = atof(pC_->resp_);
 
-	    // get axis moving state
-	    sprintf(pC_->cmd_, "MG _BG%c\n", axisName_);
+        // get axis moving state
+        sprintf(pC_->cmd_, "MG _BG%c\n", axisName_);
         pC_->sync_writeReadController();
         double bg_code = atof(pC_->resp_);
 
-	  sprintf(message, "Homing timed out after %f: BG%c=%f SC%c=%f ", homing_timeout, axisName_, bg_code, axisName_, sc_code);
-	  pC_->setCtrlError(message);
-	  
+      sprintf(message, "Homing timed out after %f: BG%c=%f SC%c=%f ", homing_timeout, axisName_, bg_code, axisName_, sc_code);
+      pC_->setCtrlError(message);
+
       //Cancel home
       pollRequest_.send((void*)&MOTOR_CANCEL_HOME, sizeof(int));
       //Flag home has been cancelled
@@ -2194,8 +2179,8 @@ void GalilAxis::pollServices(void)
      {
      //Wait for poll to request a service
      pollRequest_.receive(&request, sizeof(int));
-	 if (pC_->shutdownRequested())
-		 break;
+     if (pC_->shutdownRequested())
+         break;
      //Obtain the lock
      pC_->lock();
      //What did poll request
@@ -2205,11 +2190,11 @@ void GalilAxis::pollServices(void)
         //Poll will not make upper layers wait for other services to complete
         case MOTOR_CANCEL_HOME: sprintf(pC_->cmd_, "home%c=0\n", axisName_);
                                 epicsThreadSleep(.2);  //Wait as controller may still issue move upto this time after
-						 errlogSevPrintf(errlogInfo, "Poll services: MOTOR CANCEL HOME %c\n", axisName_);
+                                errlogSevPrintf(errlogInfo, "Poll services: MOTOR CANCEL HOME %c\n", axisName_);
                                                        //Setting home to 0 (cancel home)
                                 //break; Delibrate fall through to MOTOR_STOP
         case MOTOR_STOP: stopInternal(limdc_);
-						 std::cerr << "Poll services: STOP " << axisName_ << std::endl;
+                         std::cerr << "Poll services: STOP " << axisName_ << std::endl;
                          break;
         case MOTOR_POST: status = pC_->getStringParam(axisNo_, pC_->GalilPost_, (int)sizeof(post), post);
                          if (!status) 
@@ -2223,11 +2208,11 @@ void GalilAxis::pollServices(void)
                          //Motor post complete
                          postExecuted_ = true;
                          break;
-        case MOTOR_OFF:  //Block auto motor off if again inmotion_ or auto on delay active
+        case MOTOR_OFF:  //Block auto motor off if again inmotion_
                          if (!inmotion_)
                          {
                             setClosedLoop(false);	//Execute the motor off command
-							std::cerr << "Poll services: MOTOR OFF " << axisName_ << std::endl;
+                            std::cerr << "Poll services: MOTOR OFF " << axisName_ << std::endl;
                          }
                          break;
         case MOTOR_BRAKE_ON://Block auto brake on if again inmotion_
@@ -2248,7 +2233,7 @@ void GalilAxis::pollServices(void)
                          syncEncodedStepperAtEncSent_ = false;
                          break;
         case MOTOR_HOMED://Perform jog after home if requested
-						 errlogSevPrintf(errlogInfo, "Poll services: MOTOR HOMED %c\n", axisName_);
+                         errlogSevPrintf(errlogInfo, "Poll services: MOTOR HOMED %c\n", axisName_);
                          jogAfterHome();
                          break;
         default: break;
@@ -2271,7 +2256,7 @@ void GalilAxis::executePrem(void)
         //Copy prem to cmd
         strcpy(pC_->cmd_, prem);
         //Execute the prem string
-	std::cerr << "Premove " << prem << std::endl;
+        std::cerr << "Premove " << prem << std::endl;
         pC_->sync_writeReadController();
         }
      }
@@ -2527,23 +2512,23 @@ asynStatus GalilAxis::beginMotion(const char *caller, double position, bool rela
    }
    else {
       //Controller gave error at begin
-			// get last stop code
-            double sc_code = getGalilAxisVal("_SC");
-	        // get axis moving state
-            double bg_code = getGalilAxisVal("_BG");
-            double bl = getGalilAxisVal("_BL"); // low limit
-            double fl = getGalilAxisVal("_FL"); // high limit
-            double tp = getGalilAxisVal("_TP"); // current position (from encoder if present)
-            double td = getGalilAxisVal("_TD"); // current position (motor steps)
-            double rp = getGalilAxisVal("_RP"); // commanded position (motor steps)
-// need to check signal of event?
-//            epicsSnprintf(mesg, sizeof(mesg), "%s begin failure axis %c after %f seconds: _BG%c=%f _SC%c=%f [%s] _BL%c=%f _FL%c=%f _TP%c=%f _TD%c=%f _RP%c=%f", caller, axisName_, begin_time, axisName_, bg_code, axisName_, sc_code, lookupStopCode((int)sc_code), axisName_, bl, axisName_, fl, axisName_, tp, axisName_, td, axisName_, rp);
-			// getting these a lot, it it moving to somewhere very near current position?
-			// comment out sending to errlog for now and send to cerr instead
-            //Set controller error mesg monitor
-//            pC_->setCtrlError(mesg);
-			std::cerr << mesg << std::endl;
-            return asynError;
+      // get last stop code
+      double sc_code = getGalilAxisVal("_SC");
+      // get axis moving state
+      double bg_code = getGalilAxisVal("_BG");
+      double bl = getGalilAxisVal("_BL"); // low limit
+      double fl = getGalilAxisVal("_FL"); // high limit
+      double tp = getGalilAxisVal("_TP"); // current position (from encoder if present)
+      double td = getGalilAxisVal("_TD"); // current position (motor steps)
+      double rp = getGalilAxisVal("_RP"); // commanded position (motor steps)
+      // need to check signal of event? need to check how axisEventMonitor above works
+      epicsSnprintf(mesg, sizeof(mesg), "%s begin failure axis %c after %f seconds: _BG%c=%f _SC%c=%f [%s] _BL%c=%f _FL%c=%f _TP%c=%f _TD%c=%f _RP%c=%f", caller, axisName_, begin_timeout, axisName_, bg_code, axisName_, sc_code, lookupStopCode((int)sc_code), axisName_, bl, axisName_, fl, axisName_, tp, axisName_, td, axisName_, rp);
+      // getting these a lot, it it moving to somewhere very near current position?
+      // comment out sending to errlog for now and send to cerr instead
+      //Set controller error mesg monitor
+      //pC_->setCtrlError(mesg);
+      std::cerr << mesg << std::endl;
+      return asynError;
    }
 
    //Success
@@ -2744,13 +2729,13 @@ void GalilAxis::sendAxisEvents(void) {
       }
 }
 
-  double GalilAxis::getGalilAxisVal(const char* name)
-  {
-      static const char *functionName = "GalilAxis::getGalilAxisVal";
-	  sprintf(pC_->cmd_, "MG %s%c\n", name, axisName_);
-      pC_->sync_writeReadController();
-	  return atof(pC_->resp_);
-  }
+double GalilAxis::getGalilAxisVal(const char* name)
+{
+    static const char *functionName = "GalilAxis::getGalilAxisVal";
+    sprintf(pC_->cmd_, "MG %s%c\n", name, axisName_);
+    pC_->sync_writeReadController();
+    return atof(pC_->resp_);
+}
 
 /** Polls the axis.
   * This function reads the controller position, encoder position, the limit status, the moving status, 
@@ -2761,7 +2746,6 @@ void GalilAxis::sendAxisEvents(void) {
 asynStatus GalilAxis::poller(bool& moving)
 {
    //static const char *functionName = "GalilAxis::poll";
-//   bool moving;			//Moving status
    int dmov;			//Motor record dmov
    bool csdmov;			//Related CSAxis dmov And'd together
    int home;			//Home status to give to motorRecord
@@ -3436,47 +3420,47 @@ void GalilAxis::axisStatusShutdown()
 
 struct StopCode
 {
-	int sc;
-	const char* mess;
+    int sc;
+    const char* mess;
 };
 
 static const StopCode stopCodes[] = { 
     { 0, "Motors are running, independent mode" }, 
     { 1, "Motors decelerating or stopped at commanded independent position" }, 
-	{ 2, "Decelerating or stopped by FWD limit switch or soft limit FL" }, 
-	{ 3, "Decelerating or stopped by REV limit switch or soft limit BL" }, 
-	{ 4, "Decelerating or stopped by Stop Command (ST)" }, 
-	{ 6, "Stopped by Abort input" }, 
-	{ 7, "Stopped by Abort command (AB)" }, 
-	{ 8, "Decelerating or stopped by Off on Error (OE1)" }, 
-	{ 9, "Stopped after finding edge (FE)" }, 
-	{ 10, "Stopped after homing (HM) or Find Index (FI)" }, 
-	{ 11, "Stopped by selective abort input" }, 
-	{ 12, "Decelerating or stopped by encoder failure (OA1)" }, //  (For controllers supporting OA/OV/OT)
-	{ 15, "Amplifier Fault" }, // (For controllers with internal drives)
-	{ 16, "Stepper position maintenance error" }, 
-	{ 30, "Running in PVT mode" }, 
-	{ 31, "PVT mode completed normally" }, 
-	{ 32, "PVT mode exited because buffer is empty" }, 
-	{ 50, "Contour Running" }, 
-	{ 51, "Contour Stopped" }, 
-	{ 60, "ECAM Running" }, 
-	{ 61, "ECAM Stopped" }, 
-	{ 70, "Stopped due to EtherCAT communication failure" }, 
-	{ 71, "Stopped due to EtherCAT drive fault" }, 
-	{ 99, "MC timeout" },
-	{ 100, "Vector Sequence running" },
-	{ 101, "Vector Sequence stopped" }
+    { 2, "Decelerating or stopped by FWD limit switch or soft limit FL" }, 
+    { 3, "Decelerating or stopped by REV limit switch or soft limit BL" }, 
+    { 4, "Decelerating or stopped by Stop Command (ST)" }, 
+    { 6, "Stopped by Abort input" }, 
+    { 7, "Stopped by Abort command (AB)" }, 
+    { 8, "Decelerating or stopped by Off on Error (OE1)" }, 
+    { 9, "Stopped after finding edge (FE)" }, 
+    { 10, "Stopped after homing (HM) or Find Index (FI)" }, 
+    { 11, "Stopped by selective abort input" }, 
+    { 12, "Decelerating or stopped by encoder failure (OA1)" }, //  (For controllers supporting OA/OV/OT)
+    { 15, "Amplifier Fault" }, // (For controllers with internal drives)
+    { 16, "Stepper position maintenance error" }, 
+    { 30, "Running in PVT mode" }, 
+    { 31, "PVT mode completed normally" }, 
+    { 32, "PVT mode exited because buffer is empty" }, 
+    { 50, "Contour Running" }, 
+    { 51, "Contour Stopped" }, 
+    { 60, "ECAM Running" }, 
+    { 61, "ECAM Stopped" }, 
+    { 70, "Stopped due to EtherCAT communication failure" }, 
+    { 71, "Stopped due to EtherCAT drive fault" }, 
+    { 99, "MC timeout" },
+    { 100, "Vector Sequence running" },
+    { 101, "Vector Sequence stopped" }
 };
 
 static const char* lookupStopCode(int sc)
 {
-	for(int i = 0; i < sizeof(stopCodes) / sizeof(StopCode); ++i)
-	{
-	    if (sc == stopCodes[i].sc)
-		{
-			return stopCodes[i].mess;
-		}			
-	}
-	return "UNKNOWN";
+    for(int i = 0; i < sizeof(stopCodes) / sizeof(StopCode); ++i)
+    {
+        if (sc == stopCodes[i].sc)
+        {
+            return stopCodes[i].mess;
+        }
+    }
+    return "UNKNOWN";
 }
