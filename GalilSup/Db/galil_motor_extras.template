@@ -1052,10 +1052,11 @@ record(stringout,"$(P):$(M)_MOVE_CMD")
 
 ##
 ## calculate the live difference between motor and encoder position
-## only calculate if UEIP is true and an encoder is also actually
-## present (as per relevant MSTA bit)
-## In addition only calculate when moving to avoid noisy
-## encoder post move triggering recording 
+## only calculate if UEIP (E) is true and an encoder is also actually
+## present (as per relevant MSTA bit, F&256)
+## In addition only calculate when moving (G == 0) to avoid noisy
+## encoder post move triggering recording. Store calculation
+## result in H so if moving (G != 0) can return previous calc value
 ##
 record(calcout,"$(P):$(M)_MTRENC_DIFF")
 {

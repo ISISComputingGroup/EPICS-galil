@@ -117,8 +117,13 @@ static void myHookFunction(initHookState state)
 {
   //Update dbInitialized status for all GalilController instances
   if (state >= initHookAfterInitDatabase)
+  {
 	dbInitialized = true;
+  }
+  GalilController::init_state_ = state;
 }
+
+int GalilController::init_state_ = initHookAtIocBuild;
 
 /** Creates a new GalilController object.
   * \param[in] portName          The name of the asyn port that will be created for this driver
@@ -587,6 +592,11 @@ void GalilController::connected(void)
 	writeReadController(functionName);
 	//Store max axes controller supports
 	numAxesMax_ = atoi(resp_);
+	if (numAxesMax_ > 8)
+	{
+		std::cerr << "Galil returned " << numAxesMax_ << " axes, exiting" << std::endl;
+		epicsExit(1);
+	}
 
 	//adjust numAxesMax_ when model is RIO.
 	numAxesMax_ = (strncmp(model_, "RIO",3) == 0)? 0 : numAxesMax_;
@@ -2354,7 +2364,9 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
 		getDoubleParam(pAxis->axisNo_, GalilEncoderResolution_, &eres);
 		getDoubleParam(pAxis->axisNo_, motorResolution_, &mres);
 		//Calculate step count from existing encoder_position, construct mesg to controller_
-		sprintf(cmd_, "DP%c=%.0f", pAxis->axisName_, pAxis->encoder_position_ * (eres/mres));
+		double newpos = pAxis->encoder_position_ * (eres/mres);
+		std::cerr << "Detected motor type change from servo to stepper, redefining position to " << newpos << " for axis " << pAxis->axisName_ << std::endl;
+		sprintf(cmd_, "DP%c=%.0f", pAxis->axisName_, newpos);
 		//Write setting to controller
 		status = writeReadController(functionName);
 		}
@@ -2364,6 +2376,7 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
 	if (fabs(oldmotor) > 1.0 && value < 2)
 		{
 		//Calculate step count from existing encoder_position, construct mesg to controller_
+		std::cerr << "Detected motor type change from stepper to servo, redefining position to " << pAxis->encoder_position_ << " for axis " << pAxis->axisName_ << std::endl;
 		sprintf(cmd_, "DP%c=%.0f", pAxis->axisName_, pAxis->encoder_position_);
 		//Write setting to controller
 		status = writeReadController(functionName);
@@ -2809,7 +2822,6 @@ asynStatus GalilController::poll(void)
 		acquireDataRecord("DR");  //Asynchronous, record already in ram so get a copy of it
 	else
 		acquireDataRecord("QR");  //Synchronous, poll controller for record
-
 	//Extract controller data from data record, store in GalilController, and ParamList
 	getStatus();
 
