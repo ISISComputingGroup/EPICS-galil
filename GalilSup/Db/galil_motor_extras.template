@@ -1395,13 +1395,18 @@ record(longin,"$(P)$(M)_ENC_TOLERANCE_MON")
 }
 
 ##
-## converters for old EDEL encoder deadbanc names
+## converters for old EDEL encoder deadband names
 ## these were like ENC_TOLERANCE but in physical units
+## 
+## first time we swap old->new driver we will have an autosaved EDEL_SP
+## so only apply value if > 0
 ##
 record(ao,"$(P)$(M)_EDEL_SP")
 {
     field(EGU, "mm")
     field(FLNK, "$(P)$(M)_EDEL_SP_")
+    field(PINI, "YES")
+    field(VAL, "0")
 }
 
 record(calcout,"$(P)$(M)_EDEL_SP_")
@@ -1409,6 +1414,7 @@ record(calcout,"$(P)$(M)_EDEL_SP_")
     field(INPA, "$(P)$(M)_EDEL_SP")
     field(INPB, "$(P)$(M).ERES")
     field(CALC, "B != 0 ? A/B : 0")
+    field(OOPT, "When Non-zero")
     field(OUT, "$(P)$(M)_ENC_TOLERANCE_SP PP")
 }
 

@@ -1271,7 +1271,7 @@ asynStatus GalilAxis::stopInternal(double acceleration)
 /** Stop axis motor record.  Called by driver internally.
   * Prevents backlash, and retry attempts from motorRecord */
 asynStatus GalilAxis::stopMotorRecord(void) {
-   int status;		//Return status
+   int status = asynSuccess;		//Return status
    //What is the source of the stop request ?
    //Possible sources are the driver, or the motor record
    if (stopInternal_) {
@@ -1317,7 +1317,6 @@ asynStatus GalilAxis::setPosition(double position)
   double mres, eres;				//MotorRecord mres, and eres
   double enc_pos;				//Calculated encoder position
   int motor;
-
 
   if (pC_->init_state_ < initHookAfterIocRunning)
   {
@@ -1368,43 +1367,43 @@ bool GalilAxis::checkEncoderMotorSync(bool correct_motor)
 {
     static const char *functionName = "GalilAxis::checkEncoderMotorSync";
     double posdiff_tol = 0.0;  // in physical egu
-	asynStatus status = pC_->getDoubleParam(axisNo_, pC_->GalilMotorEncoderSyncTol_, &posdiff_tol);
+    asynStatus status = pC_->getDoubleParam(axisNo_, pC_->GalilMotorEncoderSyncTol_, &posdiff_tol);
     sprintf(pC_->cmd_, "MT%c=?", axisName_);
     pC_->sync_writeReadController();
     int motor = atoi(pC_->resp_); // servo is -1.5, -1, 1, or 1.5 so abs(int(motor)) is 1 
-	if ( status != asynSuccess || abs(motor) == 1 || !ueip_ || posdiff_tol <= 0.0 )
-	{
-		return true;
-	}
+    if ( status != asynSuccess || abs(motor) == 1 || !ueip_ || posdiff_tol <= 0.0 )
+    {
+        return true;
+    }
     double mres = 0.0, eres = 0.0;				// MotorRecord mres, and eres
-	pC_->getDoubleParam(axisNo_, pC_->GalilEncoderResolution_, &eres);
-	pC_->getDoubleParam(axisNo_, pC_->motorResolution_, &mres);
-	double posdiff_egu = motor_position_ * mres - encoder_position_ * eres;
-	if (fabs(posdiff_egu) < posdiff_tol)
-	{
-		std::cerr << "Motor and Encoder are in sync by " << posdiff_egu << " < " << posdiff_tol << " egu" << std::endl;
-		return true;
-	}
-	else
-	{
-		std::cerr << "Motor and Encoder registers are out of sync by " << posdiff_egu << " > " << posdiff_tol << " egu" << std::endl;
-	}
-	if (!correct_motor)
-	{
-		return false;
-	}
-	double new_motor_pos = encoder_position_ * eres / mres;		
-	std::cerr << "Raw motor position corrected from " << motor_position_ << " to " << new_motor_pos << " using encoder for axis " << axisName_ << std::endl;
-	if (abs(motor) == 1) // currently servo branch should never get executed
-	{
-		sprintf(pC_->cmd_, "DE%c=%.0f", axisName_, new_motor_pos);  //Servo motor, use aux register for step count
-	}
-	else
-	{
-		sprintf(pC_->cmd_, "DP%c=%.0f", axisName_, new_motor_pos);  //Stepper motor, main register for step count
-	}
-	pC_->sync_writeReadController();
-	return true;		
+    pC_->getDoubleParam(axisNo_, pC_->GalilEncoderResolution_, &eres);
+    pC_->getDoubleParam(axisNo_, pC_->motorResolution_, &mres);
+    double posdiff_egu = motor_position_ * mres - encoder_position_ * eres;
+    if (fabs(posdiff_egu) < posdiff_tol)
+    {
+        std::cerr << "Motor and Encoder are in sync by " << posdiff_egu << " < " << posdiff_tol << " egu" << std::endl;
+        return true;
+    }
+    else
+    {
+        std::cerr << "Motor and Encoder registers are out of sync by " << posdiff_egu << " > " << posdiff_tol << " egu" << std::endl;
+    }
+    if (!correct_motor)
+    {
+        return false;
+    }
+    double new_motor_pos = encoder_position_ * eres / mres;		
+    std::cerr << "Raw motor position corrected from " << motor_position_ << " to " << new_motor_pos << " using encoder for axis " << axisName_ << std::endl;
+    if (abs(motor) == 1) // currently servo branch should never get executed
+    {
+        sprintf(pC_->cmd_, "DE%c=%.0f", axisName_, new_motor_pos);  //Servo motor, use aux register for step count
+    }
+    else
+    {
+        sprintf(pC_->cmd_, "DP%c=%.0f", axisName_, new_motor_pos);  //Stepper motor, main register for step count
+    }
+    pC_->sync_writeReadController();
+    return true;
 }
 
 /** Set the current position of the encoder.
@@ -1423,6 +1422,7 @@ asynStatus GalilAxis::setEncoderPosition(double position)
   sprintf(pC_->cmd_, "MT%c=?", axisName_);
   pC_->sync_writeReadController();
   motor = atoi(pC_->resp_);
+
   //output encoder counts to main encoder register on controller
   //DP and DE command function is different depending on motor type
   if (abs(motor) == 1 || abs(motor) == 1.5)
@@ -1868,7 +1868,7 @@ asynStatus GalilAxis::getStatus(void)
 //Called by poll
 void GalilAxis::setStatus(bool *moving)
 {
-  int encoder_direction;	//Determined encoder move direction
+  int encoder_direction = -1;	//Determined encoder move direction
 
   //Encoder move status
   encoderMove_ = false;
@@ -2119,15 +2119,15 @@ void GalilAxis::checkHoming(void)
    if ((homing_ && (stoppedTime_ >= homing_timeout) && !cancelHomeSent_) ||
        (((readback > highLimit_ && softlimits) || (readback < lowLimit_ && softlimits)) && homing_ && !cancelHomeSent_ && done_))
       {
-        // get last stop code
-        sprintf(pC_->cmd_, "MG _SC%c\n", axisName_);
-        pC_->sync_writeReadController();
-        double sc_code = atof(pC_->resp_);
+      // get last stop code
+      sprintf(pC_->cmd_, "MG _SC%c\n", axisName_);
+      pC_->sync_writeReadController();
+      double sc_code = atof(pC_->resp_);
 
-        // get axis moving state
-        sprintf(pC_->cmd_, "MG _BG%c\n", axisName_);
-        pC_->sync_writeReadController();
-        double bg_code = atof(pC_->resp_);
+      // get axis moving state
+      sprintf(pC_->cmd_, "MG _BG%c\n", axisName_);
+      pC_->sync_writeReadController();
+      double bg_code = atof(pC_->resp_);
 
       sprintf(message, "Homing timed out after %f: BG%c=%f SC%c=%f ", homing_timeout, axisName_, bg_code, axisName_, sc_code);
       pC_->setCtrlError(message);

@@ -475,8 +475,7 @@ static void shutdownCallback(void *pPvt)
 static void myHookFunction(initHookState state)
 {
   //Update dbInitialized status for all GalilController instances
-  if (state >= initHookAfterInitDatabase)
-  {
+  if (state >= initHookAfterInitDatabase) {
     dbInitialized = true;
   }
   GalilController::init_state_ = state;
@@ -1092,20 +1091,21 @@ void GalilController::setParamDefaults(void)
 std::string GalilController::extractEthAddr(const char* str)
 {
 	//Result string
-	std::string mac;
+	std::string mac("00-00-00-00-00-00");
 	//Search string
 	static const std::string eth("ETHERNET ADDRESS");
 	//Result from TH command
 	std::string th(str);
 	//Find start and end of substring containing mac address
 	size_t start = th.find(eth);
-	start = start + eth.size() + 1;
-	size_t end = start + 17;
-	//copy portion of the string containing the MAC addr
-	if ((start < 0) || (end >= th.size()) || (start >= end))
-		mac = std::string("00-00-00-00-00-00");  //tdebug
-	else
-		mac = std::string(th.substr(start, end - start));
+    if (start != std::string::npos) {
+        start = start + eth.size() + 1;
+        size_t end = start + 17;
+        //copy portion of the string containing the MAC addr
+        if (th.size() >= end) {
+            mac = th.substr(start, end - start);
+        }
+    }
 	//Trim final result to mac address length
 	mac.resize(17);
 	return mac;
@@ -1251,14 +1251,14 @@ void GalilController::connected(void)
   numThreads_ = (model_[3] == '1')? 2 : numThreads_;
 
   //Stop all threads running on the controller
-	if (quiet_start_==0)
-	{
-		cout << "Stopping running threads and moving axes." << endl;
-		stopThreads();
-		stopAxes();
-	}
-	else
-		cout << "Quiet start requested. Running threads and moving axes will not be stopped." << endl;
+  if (quiet_start_ == 0)
+  {
+    cout << "Stopping running threads and moving axes." << endl;
+    stopThreads();
+     stopAxes();
+  }
+  else
+    cout << "Quiet start requested. Running threads and moving axes will not be stopped." << endl;
 
   //Initialize data record structures
   InitializeDataRecord();
@@ -4730,7 +4730,7 @@ void GalilController::processUnsolicitedMesgs(void)
          //Retrieve next mesg
          charstr = epicsStrtok_r(NULL, " \r\n", &tokSave);
          }//while
-    }
+     }
 }
 
 //Extract controller data from GalilController data record
@@ -5351,6 +5351,7 @@ bool GalilController::checkGalilThreads()
             numAxes_ = 1;
         for (int i=0;i<numAxes_;++i)
         {
+            //Check that code is running
             if (rio_)
                 stat = checkGalilThread(i);
             else
@@ -5358,7 +5359,10 @@ bool GalilController::checkGalilThreads()
             if ( !stat )
             {
                 result = false;
-                errlogPrintf("Thread %d not running on model %s, address %s\n", i, model_, address_);
+                if (rio_)
+                    errlogPrintf("Thread %d not running on model %s, address %s\n", i, model_, address_);
+                else
+                    errlogPrintf("Thread %d not running on model %s, address %s\n", axisList_[i] - AASCII, model_, address_);
             }
         }
     }
@@ -6120,36 +6124,13 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
          epicsThreadSleep(1);
 
         //Check threads on controller
-        if (thread_mask_ > 0) { //user specified a thread mask, only check for these threads
-            if ( !checkGalilThreads() ) {
-                start_ok = false;
-                mesg = "Thread " + tsp(i, 0) + " failed to start on model " + model_ + ", address " + address_;
-                setCtrlError(mesg);
-            }
-         }
-         else if ((numAxes_ > 0 || rio_) && thread_mask_ == 0) { //Check code is running for all created GalilAxis
-            if (rio_) //Check thread 0 on rio
-               numAxes_ = 1;
-            for (i = 0;i < numAxes_;i++) {		
-               //Check that code is running
-               if (rio_)
-                  sprintf(cmd_, "MG _XQ%d", i);
-               else
-                  sprintf(cmd_, "MG _XQ%d", axisList_[i] - AASCII);
-               if (sync_writeReadController() == asynSuccess) {
-                  if (atoi(resp_) == -1) {
-                     start_ok = false;
-                     if (rio_)
-                        mesg = "Thread " + tsp(i, 0) + " failed to start on model " + model_ + ", address " + address_;
-                     else
-                        mesg = "Thread " + tsp(axisList_[i] - AASCII, 0) + " failed to start on model " + model_ + ", address " + address_;
-                     setCtrlError(mesg);
-                  }
-               }
-            }
-         }
+        if ( !checkGalilThreads() ) {
+            start_ok = false;
+            mesg = "Threads failed to start on model " + model_ + ", address " + address_;
+            setCtrlError(mesg);
+        }
 
-      if (start_ok)
+       if (start_ok)
             errlogPrintf("Code started successfully on model %s, address %s\n",model_.c_str(), address_.c_str());
       }
 
@@ -7667,7 +7648,7 @@ static void GalilAddCodeCallFunc(const iocshArgBuf *args)
 static const iocshArg GalilStartControllerArg0 = {"Controller Port name", iocshArgString};
 static const iocshArg GalilStartControllerArg1 = {"Code file", iocshArgString};
 static const iocshArg GalilStartControllerArg2 = {"Burn program", iocshArgInt};
-static const iocshArg GalilStartControllerArg3 = {"Display Code", iocshArgInt}; // ignored, left here for compatibility with old driver
+static const iocshArg GalilStartControllerArg3 = {"Display Code", iocshArgInt}; // ignored by driver, left here for compatibility with existing .cmd files
 static const iocshArg GalilStartControllerArg4 = {"Thread mask", iocshArgInt};
 static const iocshArg * const GalilStartControllerArgs[] = {&GalilStartControllerArg0,
                                                             &GalilStartControllerArg1,
@@ -7679,7 +7660,7 @@ static const iocshFuncDef GalilStartControllerDef = {"GalilStartController", 5, 
 
 static void GalilStartControllerCallFunc(const iocshArgBuf *args)
 {
-  GalilStartController(args[0].sval, args[1].sval, args[2].ival, args[4].ival);  // display code arg no longer used
+  GalilStartController(args[0].sval, args[1].sval, args[2].ival, args[4].ival);  // display code arg [3] no longer used, so not passed 
 }
 
 //Construct GalilController iocsh function register
