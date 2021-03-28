@@ -25,6 +25,9 @@
 # 800 Blackburn Road, Clayton, Victoria 3168, Australia.
 #
 
+# just the motor record has $(GPORT) that defaults to $(PORT) - this allows us to
+# connect the motor record to an EPICS simulated motor separately to the rest
+# of the driver
 grecord(motor,"$(P)$(M)")
 {
 	field(ASG, "$(ASG=DEFAULT)")
@@ -37,7 +40,7 @@ grecord(motor,"$(P)$(M)")
 	field(BVEL,"$(BVEL)")
 	field(BACC,"$(BACC)")
 	field(HVEL,"$(VELO)")
-	field(OUT, "@asyn($(PORT),$(ADDR))")
+	field(OUT, "@asyn($(GPORT=$(PORT)),$(ADDR))")
 	field(MRES,"$(MRES)")
 	field(ERES,"$(ERES)")
 	field(PREC,"$(PREC)")
