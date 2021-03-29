@@ -855,6 +855,12 @@ asynStatus GalilAxis::setPosition(double position)
 	enc_pos = (position * mres)/eres;
 	}
 
+  double tp = getGalilAxisVal("_TP"); // current position (from encoder if present)
+  double td = getGalilAxisVal("_TD"); // current position (motor steps)
+  double rp = getGalilAxisVal("_RP"); // commanded position (motor steps)
+
+  std::cerr << functionName << ": Redefining motor position to " << position << " on axis " << axisName_
+            << "[_TP=" << tp << " _TD=" << td << " _RP=" << rp << "]" << std::endl;
   //output motor position (step count) to aux encoder register on controller
   //DP and DE command function is different depending on motor type
   if (abs(motor) == 1)
@@ -862,7 +868,6 @@ asynStatus GalilAxis::setPosition(double position)
   else
 	sprintf(pC_->cmd_, "DP%c=%.0f", axisName_, position);  //Stepper motor, aux register for step count
   pC_->writeReadController(functionName);
-  std::cerr << functionName << ": Redefining motor position to " << position << " on axis " << axisName_ << std::endl;
   //Set encoder position
   setEncoderPosition(enc_pos);
 
@@ -931,6 +936,14 @@ asynStatus GalilAxis::setEncoderPosition(double position)
   sprintf(pC_->cmd_, "MT%c=?", axisName_);
   pC_->writeReadController(functionName);
   motor = atoi(pC_->resp_);
+  
+  double tp = getGalilAxisVal("_TP"); // current position (from encoder if present)
+  double td = getGalilAxisVal("_TD"); // current position (motor steps)
+  double rp = getGalilAxisVal("_RP"); // commanded position (motor steps)
+
+  std::cerr << functionName << ": Redefining encoder position to " << position << " on axis " << axisName_ 
+            << "[_TP=" << tp << " _TD=" << td << " _RP=" << rp << "]" << std::endl;
+
   //output encoder counts to main encoder register on controller
   //DP and DE command function is different depending on motor type
   if (abs(motor) == 1)
@@ -939,7 +952,6 @@ asynStatus GalilAxis::setEncoderPosition(double position)
 	sprintf(pC_->cmd_, "DE%c=%.0f", axisName_, position);   //Stepper motor, encoder is main register
 
   status = pC_->writeReadController(functionName);
-  std::cerr << functionName << ": Redefining encoder position to " << position << " on axis " << axisName_ << std::endl;
 
   //Always return success. Dont need more error mesgs
   return asynSuccess;
