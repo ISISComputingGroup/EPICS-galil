@@ -92,7 +92,7 @@ static bool libverPrinted = false;
 //Number of communication retries
 // GH 05/10/2015 Altered retries (from 1 to 3) and allowed timeouts (from 3 to 5)
 #define MAX_RETRIES 3
-#define ALLOWED_TIMEOUTS 5
+#define ALLOWED_TIMEOUTS 15
 
 #define MAX_FILENAME_LEN 256
 #define MAX_MESSAGE_LEN 256
@@ -428,9 +428,9 @@ void GalilController::connect(void)
 	   libverPrinted = true;
 	   }
 		
+	int timeout = (getenv("GALIL_COMM_TIMEOUT") != NULL ? atol(getenv("GALIL_COMM_TIMEOUT")) : 1000);
 	if (strncmp(address_, "COM", 3) == 0)
 	{
-	int timeout = (getenv("GALIL_COMM_TIMEOUT") != NULL ? atol(getenv("GALIL_COMM_TIMEOUT")) : 1000);
 	char galil_args[128];
 	epicsSnprintf(galil_args, sizeof(galil_args), "%s -t %d", address_, timeout);
 	gco_ = new Galil(galil_args);
@@ -449,7 +449,6 @@ void GalilController::connect(void)
 	//Open connection to address provided
 	// -t 500 is default timeout (ms)
 	// -mg 0 means don't set up for unsolicited messages
-	int timeout = 1000;
 	char galil_args[128];
 	epicsSnprintf(galil_args, sizeof(galil_args), "%s -mg 0 -t %d", address_, timeout);
 	gco_ = new Galil(galil_args);
