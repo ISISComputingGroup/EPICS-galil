@@ -6041,7 +6041,7 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
       //Change \n to \r (Galil Communications Library expects \r separated lines)
       std::replace(uc.begin(), uc.end(), '\n', '\r');
       //Some controllers dont finish upload with \r\n, ensure buffer ends in carriage return
-      if (uc.back() != 13)
+      if (uc.size() > 0 && uc.back() != 13)
          uc.push_back('\r');
       //Download code
       //Copy card_code_ into download code buffer
@@ -6050,7 +6050,7 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
       dc.erase (std::remove(dc.begin(), dc.end(), '\r'), dc.end());
       //Change \n to \r for controller
       std::replace(dc.begin(), dc.end(), '\n', '\r');
-      if (dc.back() != 13)
+      if (dc.size() > 0 && dc.back() != 13)
          dc.push_back('\r');
 
       //If code we wish to download differs from controller current code then download the new code
