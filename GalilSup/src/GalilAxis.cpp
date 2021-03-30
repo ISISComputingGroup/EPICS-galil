@@ -1339,7 +1339,12 @@ asynStatus GalilAxis::setPosition(double position)
 	pC_->getDoubleParam(axisNo_, pC_->motorResolution_, &mres);
 	enc_pos = (position * mres)/eres;
 	}
-
+  // print some details about current position on controller
+  double tp = getGalilAxisVal("_TP"); // current position (from encoder if present)
+  double td = getGalilAxisVal("_TD"); // current position (motor steps)
+  double rp = getGalilAxisVal("_RP"); // commanded position (motor steps)
+  std::cerr << functionName << ": Redefining motor position to " << position << " on axis " << axisName_ << std::endl;
+  std::cerr << functionName << ":   before: _TP=" << tp << " _TD=" << td << " _RP=" << rp << std::endl;
   //output motor position (step count) to aux encoder register on controller
   //DP and DE command function is different depending on motor type
   if (abs(motor) == 1 || abs(motor) == 1.5)
@@ -1352,7 +1357,11 @@ asynStatus GalilAxis::setPosition(double position)
   motor_position_ = position;
   //Pass step count/aux encoder value to motorRecord
   setDoubleParam(pC_->motorPosition_, motor_position_);
-  std::cerr << functionName << ": Redefining motor position to " << position << " on axis " << axisName_ << std::endl;
+
+  tp = getGalilAxisVal("_TP"); // current position (from encoder if present)
+  td = getGalilAxisVal("_TD"); // current position (motor steps)
+  rp = getGalilAxisVal("_RP"); // commanded position (motor steps)
+  std::cerr << functionName << ":    after: _TP=" << tp << " _TD=" << td << " _RP=" << rp << std::endl;
   
   //Set encoder position
   setEncoderPosition(enc_pos);
@@ -1422,7 +1431,12 @@ asynStatus GalilAxis::setEncoderPosition(double position)
   sprintf(pC_->cmd_, "MT%c=?", axisName_);
   pC_->sync_writeReadController();
   motor = atoi(pC_->resp_);
-
+  // print some details about current position on controller
+  double tp = getGalilAxisVal("_TP"); // current position (from encoder if present)
+  double td = getGalilAxisVal("_TD"); // current position (motor steps)
+  double rp = getGalilAxisVal("_RP"); // commanded position (motor steps)
+  std::cerr << functionName << ": Redefining encoder position to " << position << " on axis " << axisName_ << std::endl;
+  std::cerr << functionName << ":   before: _TP=" << tp << " _TD=" << td << " _RP=" << rp << std::endl;
   //output encoder counts to main encoder register on controller
   //DP and DE command function is different depending on motor type
   if (abs(motor) == 1 || abs(motor) == 1.5)
@@ -1435,7 +1449,11 @@ asynStatus GalilAxis::setEncoderPosition(double position)
   encoder_position_ = position;
   //Pass encoder value to motorRecord
   setDoubleParam(pC_->motorEncoderPosition_, encoder_position_);
-  std::cerr << functionName << ": Redefining encoder position to " << position << " on axis " << axisName_ << std::endl;
+
+  tp = getGalilAxisVal("_TP"); // current position (from encoder if present)
+  td = getGalilAxisVal("_TD"); // current position (motor steps)
+  rp = getGalilAxisVal("_RP"); // commanded position (motor steps)
+  std::cerr << functionName << ":    after: _TP=" << tp << " _TD=" << td << " _RP=" << rp << std::endl;
 
   return status;
 }
