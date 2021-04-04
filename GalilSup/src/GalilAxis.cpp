@@ -855,6 +855,11 @@ asynStatus GalilAxis::setPosition(double position)
 	enc_pos = (position * mres)/eres;
 	}
 
+  double tp = getGalilAxisVal("_TP"); // current position (from encoder if present)
+  double td = getGalilAxisVal("_TD"); // current position (motor steps)
+  double rp = getGalilAxisVal("_RP"); // commanded position (motor steps)
+  std::cerr << functionName << ": Redefining motor position to " << position << " on axis " << axisName_ << std::endl;
+  std::cerr << functionName << ":   before: _TP=" << tp << " _TD=" << td << " _RP=" << rp << std::endl;
   //output motor position (step count) to aux encoder register on controller
   //DP and DE command function is different depending on motor type
   if (abs(motor) == 1)
@@ -862,7 +867,12 @@ asynStatus GalilAxis::setPosition(double position)
   else
 	sprintf(pC_->cmd_, "DP%c=%.0f", axisName_, position);  //Stepper motor, aux register for step count
   pC_->writeReadController(functionName);
-  std::cerr << functionName << ": Redefining motor position to " << position << " on axis " << axisName_ << std::endl;
+
+  tp = getGalilAxisVal("_TP"); // current position (from encoder if present)
+  td = getGalilAxisVal("_TD"); // current position (motor steps)
+  rp = getGalilAxisVal("_RP"); // commanded position (motor steps)
+  std::cerr << functionName << ":    after: _TP=" << tp << " _TD=" << td << " _RP=" << rp << std::endl;
+
   //Set encoder position
   setEncoderPosition(enc_pos);
 
@@ -931,6 +941,12 @@ asynStatus GalilAxis::setEncoderPosition(double position)
   sprintf(pC_->cmd_, "MT%c=?", axisName_);
   pC_->writeReadController(functionName);
   motor = atoi(pC_->resp_);
+  
+  double tp = getGalilAxisVal("_TP"); // current position (from encoder if present)
+  double td = getGalilAxisVal("_TD"); // current position (motor steps)
+  double rp = getGalilAxisVal("_RP"); // commanded position (motor steps)
+  std::cerr << functionName << ": Redefining encoder position to " << position << " on axis " << axisName_ << std::endl;
+  std::cerr << functionName << ":   before: _TP=" << tp << " _TD=" << td << " _RP=" << rp << std::endl;
   //output encoder counts to main encoder register on controller
   //DP and DE command function is different depending on motor type
   if (abs(motor) == 1)
@@ -939,7 +955,11 @@ asynStatus GalilAxis::setEncoderPosition(double position)
 	sprintf(pC_->cmd_, "DE%c=%.0f", axisName_, position);   //Stepper motor, encoder is main register
 
   status = pC_->writeReadController(functionName);
-  std::cerr << functionName << ": Redefining encoder position to " << position << " on axis " << axisName_ << std::endl;
+
+  tp = getGalilAxisVal("_TP"); // current position (from encoder if present)
+  td = getGalilAxisVal("_TD"); // current position (motor steps)
+  rp = getGalilAxisVal("_RP"); // commanded position (motor steps)
+  std::cerr << functionName << ":    after: _TP=" << tp << " _TD=" << td << " _RP=" << rp << std::endl;
 
   //Always return success. Dont need more error mesgs
   return asynSuccess;
@@ -1464,8 +1484,9 @@ void GalilAxis::pollServices(void)
                                }
                             double tp = getGalilAxisVal("_TP");
                             double td = getGalilAxisVal("_TD");
+                            double rp = getGalilAxisVal("_RP");
                             // normally tp encoder, td motor i think; but if open loop is tp motor? And what is td?
-                            errlogSevPrintf(errlogInfo, "Poll services: current positions: _TD%c=%.0f _TP%c=%.0f\n", axisName_, td, axisName_, tp);
+                            errlogSevPrintf(errlogInfo, "Poll services: pre home positions: _TD%c=%.0f _TP%c=%.0f _RP%c=%.0f\n", axisName_, td, axisName_, tp, axisName_, rp);
                             //Program motor position register
 						    errlogSevPrintf(errlogInfo, "Poll services: applying motor %c raw home position %.0f\n", axisName_, mrhmval);
                             sprintf(pC_->cmd_, "DP%c=%.0f\n", axisName_, mrhmval);
@@ -1479,6 +1500,10 @@ void GalilAxis::pollServices(void)
                                }
                             //Give ample time for position register updates to complete
                             epicsThreadSleep(.2);
+                            tp = getGalilAxisVal("_TP");
+                            td = getGalilAxisVal("_TD");
+                            rp = getGalilAxisVal("_RP");
+                            errlogSevPrintf(errlogInfo, "Poll services: post home positions: _TD%c=%.0f _TP%c=%.0f _RP%c=%.0f\n", axisName_, td, axisName_, tp, axisName_, rp);
                             }
 
                          //Do jog after home move
