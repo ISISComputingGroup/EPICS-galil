@@ -2364,9 +2364,15 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
 		getDoubleParam(pAxis->axisNo_, GalilEncoderResolution_, &eres);
 		getDoubleParam(pAxis->axisNo_, motorResolution_, &mres);
 		//Calculate step count from existing encoder_position, construct mesg to controller_
-		double newpos = pAxis->encoder_position_ * (eres/mres);
-		std::cerr << "Detected motor type change from servo to stepper, redefining position to " << newpos << " for axis " << pAxis->axisName_ << std::endl;
-		sprintf(cmd_, "DP%c=%.0f", pAxis->axisName_, newpos);
+		if (mres != 0.0) {
+			double newpos = pAxis->encoder_position_ * (eres / mres);
+			std::cerr << "Detected motor type change from servo to stepper, redefining position to " << newpos << " for axis " << pAxis->axisName_ << std::endl;
+			sprintf(cmd_, "DP%c=%.0f", pAxis->axisName_, newpos);
+		}
+		else {
+			std::cerr << "Detected motor type change from servo to stepper, position may be wrong on axis " << pAxis->axisName_ << std::endl;
+		}
+
 		//Write setting to controller
 		status = writeReadController(functionName);
 		}
@@ -2803,7 +2809,7 @@ void GalilController::getStatus(void)
 asynStatus GalilController::poll(void)
 {
 	double time_taken;
-
+    epicsGuard<epicsMutex> _lock(pollLock_); 
 	//Read current time
 	epicsTimeGetCurrent(&pollnowt_);
 	//Calculate cycle time
