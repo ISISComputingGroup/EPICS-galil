@@ -38,9 +38,15 @@ GalilTest_LIBS += seq pv utilities pugixml pcrecpp pcre
 GalilTest_LIBS += $(EPICS_BASE_IOC_LIBS)
 
 ifeq ($(STATIC_BUILD),YES)
-GalilTest_LIBS_WIN32 += Galil1 # galil2
+# For VS2010 use Standard Galil COmmunication Library Galil1.dll
+# for Other VC version, build Galil2.dll from galil c library wrappers
+ifneq ($(findstring 10.0,$(VCVERSION)),)
+GalilTest_LIBS_WIN32 += Galil1
 GalilTest_SYS_LIBS_WIN32 += delayimp
 GalilTest_LDFLAGS_WIN32 += /DELAYLOAD:Galil1.dll
+else
+GalilTest_LIBS_WIN32 += Galil2
+endif
 endif
 
 #GalilTest_LIBS_WIN32 += Galil1 # galil2
