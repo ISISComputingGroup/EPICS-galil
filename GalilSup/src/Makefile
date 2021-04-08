@@ -11,24 +11,24 @@ else
 GCLIB_ARCH=x64
 endif
 
-# For VS2010 use Standard Galil COmmunication Library Galil1.dll
-# for Other VC version, build Galil2.dll from galil c library wrappers
-ifneq ($(findstring 10.0,$(VCVERSION)),)
-# Location of Galil communications library from their website, with directory structure rearranged to:
-#  galil.h -> $(LIBGALIL)/include/galil.h
-#  LibGalil-vs2010-x64/release/Galil1.lib -> $(LIBGALIL)/lib/windows-x64/Galil1.lib
-#  LibGalil-vs2010-x64/debug/Galil1.lib -> $(LIBGALIL)/lib/windows-x64-debug/Galil1.lib
-#  LibGalil-vs2010-x64/release/Galil1.dll -> $(LIBGALIL)/bin/windows-x64/Galil1.dll
-#  LibGalil-vs2010-x64/debug/Galil1.dll -> $(LIBGALIL)/bin/windows-x64-debug/Galil1.dll
-LIBGALIL = $(ICPBINARYDIR)/LibGalil/$(VCVERSION)
-Galil1_DIR = $(LIBGALIL)/lib/$(EPICS_HOST_ARCH)
-BIN_INSTALLS_WIN32 += $(wildcard $(LIBGALIL)/bin/$(EPICS_HOST_ARCH)/*.dll)
-BIN_INSTALLS_WIN32 += $(wildcard $(LIBGALIL)/bin/$(EPICS_HOST_ARCH)/*.pdb)
-LIB_INSTALLS_WIN32 += $(wildcard $(LIBGALIL)/lib/$(EPICS_HOST_ARCH)/*.lib)
-GalilSupport_SYS_LIBS_WIN32 += delayimp
-GalilSupport_LDFLAGS_WIN32 += /DELAYLOAD:Galil1.dll
-GALILDLL=Galil1
-else
+## For VS2010 use Standard Galil COmmunication Library Galil1.dll
+## for Other VC version, build Galil2.dll from galil c library wrappers
+#ifneq ($(findstring 10.0,$(VCVERSION)),)
+## Location of Galil communications library from their website, with directory structure rearranged to:
+##  galil.h -> $(LIBGALIL)/include/galil.h
+##  LibGalil-vs2010-x64/release/Galil1.lib -> $(LIBGALIL)/lib/windows-x64/Galil1.lib
+##  LibGalil-vs2010-x64/debug/Galil1.lib -> $(LIBGALIL)/lib/windows-x64-debug/Galil1.lib
+##  LibGalil-vs2010-x64/release/Galil1.dll -> $(LIBGALIL)/bin/windows-x64/Galil1.dll
+##  LibGalil-vs2010-x64/debug/Galil1.dll -> $(LIBGALIL)/bin/windows-x64-debug/Galil1.dll
+#LIBGALIL = $(ICPBINARYDIR)/LibGalil/$(VCVERSION)
+#Galil1_DIR = $(LIBGALIL)/lib/$(EPICS_HOST_ARCH)
+#BIN_INSTALLS_WIN32 += $(wildcard $(LIBGALIL)/bin/$(EPICS_HOST_ARCH)/*.dll)
+#BIN_INSTALLS_WIN32 += $(wildcard $(LIBGALIL)/bin/$(EPICS_HOST_ARCH)/*.pdb)
+#LIB_INSTALLS_WIN32 += $(wildcard $(LIBGALIL)/lib/$(EPICS_HOST_ARCH)/*.lib)
+#GalilSupport_SYS_LIBS_WIN32 += delayimp
+#GalilSupport_LDFLAGS_WIN32 += /DELAYLOAD:Galil1.dll
+#GALILDLL=Galil1
+#else
 # use galil c library (gclib) 
 LIBGALIL = $(ICPBINARYDIR)/galil_glibc
 LIBRARY_IOC += Galil2
@@ -40,7 +40,7 @@ gclibo_DIR = $(LIBGALIL)/lib/dynamic/$(GCLIB_ARCH)
 BIN_INSTALLS_WIN32 += $(wildcard $(LIBGALIL)/dll/$(GCLIB_ARCH)/*.dll)
 LIB_INSTALLS_WIN32 += $(wildcard $(LIBGALIL)/lib/dynamic/$(GCLIB_ARCH)/*.lib)
 GALILDLL=Galil2
-endif
+#endif
 
 #==================================================
 # Build an IOC support library
