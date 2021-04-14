@@ -371,6 +371,7 @@ private:
   void stopAxes();
   int quiet_start_;
   epicsEvent motion_started_;
+  epicsMutex pollLock_;
 
 					//Stores the motor enable disable interlock digital IO setup, only first 8 digital in ports supported
   struct Galilmotor_enables motor_enables_[8];
