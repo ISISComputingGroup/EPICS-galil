@@ -407,6 +407,46 @@ record(ao,"$(P):$(M)_EDEL_SP")
 	field(FLNK,"$(P):$(M)_EDEL_MON")
 }
 
+##
+## converters for new ENC_TOLERANCE records
+## these were like EDEL but in counts
+##
+## if we have a non-zero value, assume from autosave
+## as a result of sawapping new -> old driver
+##
+record(longout,"$(P):$(M)_ENC_TOLERANCE_SP")
+{
+    field(EGU, "count")
+    field(VAL, "0")
+    field(PINI, "YES")
+    field(FLNK, "$(P):$(M)_ENC_TOLERANCE_SP_")
+}
+
+record(calcout,"$(P):$(M)_ENC_TOLERANCE_SP_")
+{
+    field(INPA, "$(P):$(M)_ENC_TOLERANCE_SP")
+    field(INPB, "$(P):$(M).ERES")
+    field(CALC, "A * B")
+    field(OOPT, "When Non-zero")
+    field(OUT, "$(P):$(M)_EDEL_SP PP")
+}
+
+record(longin,"$(P):$(M)_ENC_TOLERANCE_MON")
+{
+    field(EGU, "count")
+}
+
+record(calcout,"$(P):$(M)_ENC_TOLERANCE_MON_")
+{
+    field(INPA, "$(P):$(M)_EDEL_MON CP")
+    field(INPB, "$(P):$(M).ERES CP")
+    field(CALC, "B != 0 ? A/B : 0")
+    field(OUT, "$(P):$(M)_ENC_TOLERANCE_MON PP")
+}
+
+
+####
+
 record(bi,"$(P):$(M)_MCONN_STATUS")
 {
 	field(DESC, "Connect stat")
