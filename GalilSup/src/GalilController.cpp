@@ -3927,6 +3927,9 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
             //Write setting to controller
             status = sync_writeReadController();
         }
+        else {
+            std::cerr << "Detected motor type change from servo to stepper, position may be wrong on axis " << pAxis->axisName_ << std::endl;
+        }
      }
 
      //IF motor was stepper, and now servo
@@ -4872,6 +4875,8 @@ void GalilController::getStatus(void)
 //Called by GalilPoller::run
 asynStatus GalilController::poller(void)
 {
+    epicsGuard<epicsMutex> _lock(pollLock_);
+
 	//Acquire a data record
 	acquireDataRecord();
 
