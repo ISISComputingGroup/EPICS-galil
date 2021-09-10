@@ -22,9 +22,6 @@ GalilTest_DBD += sscanSupport.dbd
 GalilTest_DBD += asSupport.dbd
 GalilTest_DBD += busySupport.dbd
 GalilTest_DBD += GalilSupport.dbd
-GalilTest_DBD += motorSimSupport.dbd 
-GalilTest_DBD += devSoftMotor.dbd 
-GalilTest_DBD += utilities.dbd devIocStats.dbd pvdump.dbd icpconfig.dbd stdSupport.dbd pvcomplete.dbd asubFunctions.dbd caPutLog.dbd
 
 # <name>_registerRecordDeviceDriver.cpp will be created from <name>.dbd
 GalilTest_SRCS += GalilTest_registerRecordDeviceDriver.cpp
@@ -32,25 +29,16 @@ GalilTest_SRCS_DEFAULT += GalilTestMain.cpp
 
 #add a definition for each support application used by this application
 GalilTest_LIBS += GalilSupport
-GalilTest_LIBS += motorSimSupport softMotor motor asyn busy calc sscan autosave pvcomplete asubFunctions
-GalilTest_LIBS += devIocStats pvdump $(MYSQLLIB) easySQLite sqlite caPutLog icpconfig std
-GalilTest_LIBS += seq pv utilities pugixml pcrecpp pcre
-GalilTest_LIBS += $(EPICS_BASE_IOC_LIBS)
-
+GalilTest_LIBS += motor asyn busy calc sscan autosave
+ifdef ONCRPC
 ifeq ($(STATIC_BUILD),YES)
-# For VS2010 use Standard Galil COmmunication Library Galil1.dll
-# for Other VC version, build Galil2.dll from galil c library wrappers
-ifneq ($(findstring 10.0,$(VCVERSION)),)
-GalilTest_LIBS_WIN32 += Galil1
-GalilTest_SYS_LIBS_WIN32 += delayimp
-GalilTest_LDFLAGS_WIN32 += /DELAYLOAD:Galil1.dll
-else
-GalilTest_LIBS_WIN32 += Galil2
+GalilTest_LIBS_WIN32 += oncrpc
 endif
 endif
-
-#GalilTest_LIBS_WIN32 += Galil1 # galil2
-GalilTest_SYS_LIBS_Linux += Galil
+ifdef SNCSEQ
+GalilTest_LIBS += seq pv
+endif
+GalilTest_LIBS += $(EPICS_BASE_IOC_LIBS)
 
 #===========================
 

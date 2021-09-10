@@ -21,11 +21,11 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 # Contact details:
-# mark.clift@synchrotron.org.au
+# cliftm@ansto.gov.au
 # 800 Blackburn Road, Clayton, Victoria 3168, Australia.
 #
 
-record(bi,"$(P):$(R)_NAME_MON")
+record(bi,"$(P)$(R)_NAME_MON")
 {
 	field(DESC, "coordsys name")
 	field(PINI, "YES")
@@ -36,7 +36,7 @@ record(bi,"$(P):$(R)_NAME_MON")
   	field(OSV,  "NO_ALARM")
 }
 
-record(stringin,"$(P):$(R)_MOTORS_MON")
+record(stringin,"$(P)$(R)_MOTORS_MON")
 {
 	field(DESC, "mtrs in coordsys")
 	field(DTYP, "asynOctetRead")
@@ -44,7 +44,7 @@ record(stringin,"$(P):$(R)_MOTORS_MON")
    	field(INP,  "@asyn($(PORT),$(ADDR))COORDINATE_SYSTEM_MOTORS")
 }
 
-record(bi,"$(P):$(R)_MOVN_STATUS")
+record(bi,"$(P)$(R)_MOVN_STATUS")
 {
 	field(DESC, "coordsys move")
 	field(DTYP, "asynInt32")
@@ -56,7 +56,7 @@ record(bi,"$(P):$(R)_MOVN_STATUS")
    	field(INP,  "@asyn($(PORT),$(ADDR))COORDINATE_SYSTEM_MOVING")
 }
 
-record(ai, "$(P):$(R)_SEGMENTS_MON") 
+record(ai, "$(P)$(R)_SEGMENTS_MON") 
 {
 	field(DESC, "segments processed")
 	field(SCAN, "I/O Intr")
@@ -64,9 +64,9 @@ record(ai, "$(P):$(R)_SEGMENTS_MON")
 	field(INP,  "@asyn($(PORT),$(ADDR))COORDINATE_SYSTEM_SEGMENTS")
 }
 
-record(bo, "$(P):$(R)_STOP_CMD")
+record(bo, "$(P)$(R)_STOP_CMD")
 {
-	field(DESC, "go all mtrs")
+	field(DESC, "stop all mtrs")
 	field(DTYP, "asynInt32")
 	field(ZNAM, "Stop")
 	field(ZSV,  "NO_ALARM")
@@ -75,9 +75,9 @@ record(bo, "$(P):$(R)_STOP_CMD")
 	field(OUT,  "@asyn($(PORT),$(ADDR))COORDINATE_SYSTEM_MOTORS_STOP")
 }
 
-record(bo, "$(P):$(R)_GO_CMD") 
+record(bo, "$(P)$(R)_GO_CMD") 
 {
-	field(DESC, "stop all mtrs")
+	field(DESC, "go all mtrs")
 	field(DTYP, "asynInt32")
 	field(ZNAM, "Stop")
 	field(ZSV,  "NO_ALARM")

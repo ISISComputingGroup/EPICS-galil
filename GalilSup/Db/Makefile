@@ -11,6 +11,8 @@ include $(TOP)/configure/CONFIG
 # Create and install (or just install) into <top>/db
 # databases, templates, substitutions like this
 
+DB += $(patsubst ../%, %, $(wildcard ../*.template))
+
 #----------------------------------------------------
 # If <anyname>.db template is not named <anyname>*.template add
 # <anyname>_template = <templatename>
@@ -27,35 +29,26 @@ DB += galil_userdef_records8.template
 # 6. Thread programs for axis not using limits as home should send home<Axis> = 0 at hardware limits violation
 # 7. If using single thread avoid use of blocking commands (eg. WT100, AD, etc)
 
-# galil_Muon_Slits is a routine used by the Muons
-
 # Example galil code templates
-GMC += ReadMe.md
-GMC += galil_Default_Footer.gmc  galil_Default_Header.gmc  
-# Homing routines
-GMC += galil_Home_ForwLimit.gmc  galil_Home_ForwLimit_Home.gmc
-GMC += galil_Home_Home.gmc  galil_Home_Home+FIneg.gmc  galil_Home_Home+FIpos.gmc  galil_Home_RevLimit.gmc
-GMC += galil_Home_RevLimit_Home.gmc  galil_Piezo_Home.gmc  galil_Home_ForwLimit+FIneg.gmc  galil_Home_RevLimit+FIpos.gmc
-GMC += galil_Home_Pin_Hole_Selector.gmc  galil_Home_Thread.gmc  galil_Home_Dummy_Axis.gmc
-GMC += galil_Home_FIpos.gmc galil_Home_FIneg.gmc 
-# Device specific routines
-GMC += galil_Oscillating_Collimator.gmc galil_Oscillating_Collimator_Merlin.gmc galil_Muon_Slits.gmc galil_emma_chopper_lifter.gmc
-GMC += galil_Home_sans2d_rear_detector.gmc
-GMC += galil_sans2d_front_det_limit_footer.gmc
-GMC += galil_sans2d_rear_det_limit_footer.gmc
-GMC += galil_Home_RevLimit+FIpos_sans2d_guides.gmc
-GMC += galil_Home_ForwLimit+FIneg_sans2d_apertures.gmc
-
-# Dummy routines mainly used for testing
-GMC += galil_Home_Dummy_Do_Nothing.gmc galil_Home_Dummy_Power_Light.gmc galil_Home_No_Home.gmc
+# These are renamed and installed to a GMC directory for historic reasons
+# See ReadMe_dmc.md for details
+GMC += ReadMe_dmc.md
+GMC += $(patsubst ../%.dmc, %.gmc, $(wildcard ../*.dmc))
 
 include $(TOP)/configure/RULES
 #----------------------------------------
 #  ADD RULES AFTER THIS LINE
+
+ifdef T_A
+
+%.gmc : ../%.dmc
+	$(CP) $< $@
+
 ifneq ($(BASE3_14),YES)
-galil_userdef_records8.template$(DEP) : $(TOP)/GalilSup/Db/galil_userdef_records.template $(TOP)/GalilSup/Db/galil_userdef_records8.substitutions
+galil_userdef_records8.template$(DEP) : ../galil_userdef_records.template ../galil_userdef_records8.substitutions
 endif
 
-galil_userdef_records8.template ../O.Common/galil_userdef_records8.template : $(TOP)/GalilSup/Db/galil_userdef_records.template $(TOP)/GalilSup/Db/galil_userdef_records8.substitutions
-	$(MSI3_15) -o $@ -S $(TOP)/GalilSup/Db/galil_userdef_records8.substitutions $(TOP)/GalilSup/Db/galil_userdef_records.template
+galil_userdef_records8.template ../O.Common/galil_userdef_records8.template : ../galil_userdef_records.template ../galil_userdef_records8.substitutions
+	$(MSI3_15) -V -o $@ -S ../galil_userdef_records8.substitutions ../galil_userdef_records.template
 
+endif

@@ -1,0 +1,15 @@
+NO***************Dummy Axis*****************
+NO**********Execute in own thread******************
+#HOME${AXIS}
+IF ((home${AXIS}=1))
+    inhome${AXIS}=1
+SH${AXIS}
+WT200
+AC${AXIS}=1024;DC${AXIS}=1024
+JG${AXIS}=1024
+BG${AXIS}
+WT15000
+ST${AXIS}
+AM${AXIS}
+MO${AXIS}
+EN

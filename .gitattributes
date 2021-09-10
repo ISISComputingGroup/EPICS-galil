@@ -9,13 +9,14 @@
 *.hpp text
 *.java text
 *.sh text eol=lf
-*.bat text
+*.bat text eol=crlf
 *.cmd text
 *.db text
 *.dbd text
 *.template text
 *.substitutions text
 *.gmc text
+*.dmc text
 *.req text
 
 # Declare files that will always have CRLF line endings on checkout.
@@ -26,4 +27,4 @@
 *.jpg binary
 *.class binary
 *.vi binary
-
+*.pdf binary

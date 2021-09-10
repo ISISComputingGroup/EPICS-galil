@@ -21,7 +21,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 # Contact details:
-# mark.clift@synchrotron.org.au
+# cliftm@ansto.gov.au
 # 800 Blackburn Road, Clayton, Victoria 3168, Australia.
 #
 # P    - PV prefix
@@ -30,12 +30,21 @@
 # ADDR - Hardware port to read
 # PREC - Precision
 
-record(ai, "$(P):$(R)_MON") {
+record(ai, "$(P)$(R)_MON") {
 	field(PREC, "$(PREC)")
 	field(EGU,  "V")
-	field(SCAN, "I/O Intr")
+	field(SCAN, "$(SCAN)")
 	field(DTYP, "asynFloat64")
 	field(INP,  "@asyn($(PORT),$(ADDR))ANALOG_IN")
+}
+
+record(ao, "$(P)$(R)Deadb_SP") {
+	field(PREC, "$(PREC)")
+	field(EGU,  "V")
+	field(PINI, "YES")
+	field(VAL,  "0.002")
+	field(DTYP, "asynFloat64")
+	field(OUT,  "@asyn($(PORT),$(ADDR))ANALOG_IN_DEADB")
 }
 
 # end

@@ -13,22 +13,20 @@
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
 //
 // Contact details:
-// mark.clift@synchrotron.org.au
+// cliftm@ansto.gov.au
 // 800 Blackburn Road, Clayton, Victoria 3168, Australia.
 //
-// Single thread to manage disconnect/connect for all registered GalilController(s)
+// Thread to manage disconnect/connect for a GalilController
 
 class GalilConnector: public epicsThreadRunable {
 public:
-  GalilConnector(void);
-  void registerController(GalilController *cntrl);
+  GalilConnector(class GalilController *pcntrl);
   virtual void run();
   epicsThread thread;
   ~GalilConnector();
 
 private:
-  bool shuttingDown_;
-  void shutdownConnector();
-  vector<GalilController *> pCntrlList_;
+  bool shutDownConnector_;
+  class GalilController *pC_;
 };
 
