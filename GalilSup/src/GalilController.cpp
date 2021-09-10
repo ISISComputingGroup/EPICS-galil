@@ -5362,7 +5362,7 @@ bool GalilController::checkGalilThreads()
     if ( !checkGalilThread(0) ) // thread 0 should always be running
     {
         result = false;
-        errlogPrintf("Thread %d not running on model %s, address %s\n", 0, model_, address_);
+        errlogPrintf("Thread %d not running on model %s, address %s\n", 0, model_.c_str(), address_.c_str());
     }
     //Check threads on controller
     if (thread_mask_ != 0) // is we gave a mask, only check for these threads
@@ -5372,7 +5372,7 @@ bool GalilController::checkGalilThreads()
             if ( ((thread_mask_ & (1 << i)) != 0) && !checkGalilThread(i) )
             {
                 result = false;
-                errlogPrintf("Thread %d not running on model %s, address %s\n", i, model_, address_);
+                errlogPrintf("Thread %d not running on model %s, address %s\n", i, model_.c_str(), address_.c_str());
             }
         }
     }
@@ -5391,9 +5391,9 @@ bool GalilController::checkGalilThreads()
             {
                 result = false;
                 if (rio_)
-                    errlogPrintf("Thread %d not running on model %s, address %s\n", i, model_, address_);
+                    errlogPrintf("Thread %d not running on model %s, address %s\n", i, model_.c_str(), address_.c_str());
                 else
-                    errlogPrintf("Thread %d not running on model %s, address %s\n", axisList_[i] - AASCII, model_, address_);
+                    errlogPrintf("Thread %d not running on model %s, address %s\n", axisList_[i] - AASCII, model_.c_str(), address_.c_str());
             }
         }
     }
