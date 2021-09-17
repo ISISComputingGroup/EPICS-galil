@@ -2,7 +2,10 @@
 TOP = .
 include $(TOP)/configure/CONFIG
 
+## only build on VS2010
+ifneq ($(findstring 10.0,$(VCVERSION)),)
 DIRS := configure GalilSup GalilTestApp iocBoot
+endif
 
 define DIR_template
  $(1)_DEPEND_DIRS = configure
