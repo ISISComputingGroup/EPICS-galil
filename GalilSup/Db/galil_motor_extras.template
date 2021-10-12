@@ -503,7 +503,7 @@ record(bo,"$(P):$(M)_JAH_CMD")
 {
 	field(DESC,"Jog after home")
 	field(DTYP,"asynInt32")
-	field(VAL, "1")
+	field(VAL, "0")
 	field(PINI,"YES")
 	field(ZNAM,"No")
 	field(ZSV, "NO_ALARM")
