@@ -1705,6 +1705,7 @@ record(calcout, "$(P)$(M):INV_MRES:SP_CALC")
 	field(INPA, "$(P)$(M):INV_MRES")
 	field(CALC, "1/A")
 	field(OUT, "$(P)$(M).MRES")
+	field(SDIS, "$(P)$(M):INV_MRES_CALC.PACT")
 	field(OOPT, "On Change")
 }
 
@@ -1728,6 +1729,7 @@ record(calcout, "$(P)$(M):INV_ERES:SP_CALC")
 	field(INPA, "$(P)$(M):INV_ERES")
 	field(CALC, "1/A")
 	field(OUT, "$(P)$(M).ERES")
+	field(SDIS, "$(P)$(M):INV_ERES_CALC.PACT")
 	field(OOPT, "On Change")
 }
 
