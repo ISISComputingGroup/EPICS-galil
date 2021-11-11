@@ -26,7 +26,7 @@
 
 #define KPMAX			1023.875
 #define KDMAX			4095.875
-#define HOMING_TIMEOUT		3.5
+#define HOMING_TIMEOUT	(getenv("HOMING_TIMEOUT") != NULL ? atof(getenv("HOMING_TIMEOUT")) : 3.5)
 
 //pollServices request numbers
 static const int MOTOR_STOP = 0;
