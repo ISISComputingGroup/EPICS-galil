@@ -2141,7 +2141,12 @@ void GalilAxis::checkHoming(void)
       pC_->sync_writeReadController();
       double bg_code = atof(pC_->resp_);
 
-      sprintf(message, "Homing timed out after %f: BG%c=%f SC%c=%f ", homing_timeout, axisName_, bg_code, axisName_, sc_code);
+      sprintf(pC_->cmd_, "MG hjog%c\n", axisName_);
+      pC_->sync_writeReadController();
+      double hjog = atof(pC_->resp_);
+
+      sprintf(message, "Homing timed out after %f seconds: _BG%c=%.0f _SC%c=%.0f [%s] hjog%c=%.0f", homing_timeout,
+                  axisName_, bg_code, axisName_, sc_code, lookupStopCode((int)sc_code), axisName_, hjog);
       pC_->setCtrlError(message);
 
       //Cancel home
@@ -2534,7 +2539,7 @@ asynStatus GalilAxis::beginMotion(const char *caller, double position, bool rela
       double td = getGalilAxisVal("_TD"); // current position (motor steps)
       double rp = getGalilAxisVal("_RP"); // commanded position (motor steps)
       // need to check signal of event? need to check how axisEventMonitor above works
-      epicsSnprintf(mesg, sizeof(mesg), "%s begin failure axis %c after %f seconds: _BG%c=%f _SC%c=%f [%s] _BL%c=%f _FL%c=%f _TP%c=%f _TD%c=%f _RP%c=%f", caller, axisName_, begin_timeout, axisName_, bg_code, axisName_, sc_code, lookupStopCode((int)sc_code), axisName_, bl, axisName_, fl, axisName_, tp, axisName_, td, axisName_, rp);
+      epicsSnprintf(mesg, sizeof(mesg), "%s begin failure axis %c after %f seconds: _BG%c=%.0f _SC%c=%.0f [%s] _BL%c=%f _FL%c=%f _TP%c=%f _TD%c=%f _RP%c=%f", caller, axisName_, begin_timeout, axisName_, bg_code, axisName_, sc_code, lookupStopCode((int)sc_code), axisName_, bl, axisName_, fl, axisName_, tp, axisName_, td, axisName_, rp);
       // getting these a lot, it it moving to somewhere very near current position?
       // comment out sending to errlog for now and send to cerr instead
       //Set controller error mesg monitor
