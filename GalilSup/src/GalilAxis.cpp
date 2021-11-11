@@ -1347,7 +1347,12 @@ void GalilAxis::checkHoming(void)
         pC_->writeReadController(functionName);
         double bg_code = atof(pC_->resp_);
 
-	  sprintf(message, "Homing timed out after %f: BG%c=%f SC%c=%f ", homing_timeout, axisName_, bg_code, axisName_, sc_code);
+      sprintf(pC_->cmd_, "MG hjog%c\n", axisName_);
+      pC_->sync_writeReadController();
+      double hjog = atof(pC_->resp_);
+
+      sprintf(message, "Homing timed out after %f seconds: _BG%c=%.0f _SC%c=%.0f [%s] hjog%c=%.0f", homing_timeout,
+                  axisName_, bg_code, axisName_, sc_code, lookupStopCode((int)sc_code), axisName_, hjog);
 	  pC_->setCtrlError(message);
 	  
       //Cancel home
