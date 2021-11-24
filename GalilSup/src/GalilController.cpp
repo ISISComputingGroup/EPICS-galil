@@ -3144,14 +3144,14 @@ void GalilController::stopAxes()
 		writeReadController(functionName);
 		if (atoi(resp_))
 			{
+			//Ensure home process is stopped
+			sprintf(cmd_, "home%c=0", (i + AASCII));
+			writeReadController(functionName);
 			//Stop moving motor
 			sprintf(cmd_, "ST%c", (i + AASCII));
 			writeReadController(functionName);
 			//Allow time for motor stop
 				epicsThreadSleep(1.0);
-			//Ensure home process is stopped
-			sprintf(cmd_, "home%c=0", (i + AASCII));
-			writeReadController(functionName);
 			}
 		//This is now done in via PINI of autosaved $(M)_ON_CMD PV 
 		// sprintf(cmd_, "MO%c", (i + AASCII));
