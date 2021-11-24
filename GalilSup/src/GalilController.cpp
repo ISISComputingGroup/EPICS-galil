@@ -247,6 +247,8 @@ GalilController::GalilController(const char *portName, const char *address, doub
   createParam(GalilMoveCommandString, asynParamOctet, &GalilMoveCommand_);
   createParam(GalilMotorEncoderSyncTolString, asynParamFloat64, &GalilMotorEncoderSyncTol_);
   createParam(GalilITCSmoothString, asynParamFloat64, &GalilITCSmooth_);
+  createParam(GalilBiasVoltageString, asynParamFloat64, &GalilBiasVoltage_);
+  createParam(GalilPoleString, asynParamFloat64, &GalilPole_);
 
   createParam(GalilCommunicationErrorString, asynParamInt32, &GalilCommunicationError_);
 
@@ -2160,6 +2162,16 @@ asynStatus GalilController::readFloat64(asynUser *pasynUser, epicsFloat64 *value
      sprintf(cmd_, "MG _IT%c", pAxis->axisName_);
      status = get_double(GalilITCSmooth_, value, pAxis->axisNo_);
      }
+  else if (function == GalilPole_)
+     {
+     sprintf(cmd_, "MG _PL%c", pAxis->axisName_);
+     status = get_double(GalilPole_, value, pAxis->axisNo_);
+     }
+  else if (function == GalilBiasVoltage_)
+     {
+     sprintf(cmd_, "MG _OF%c", pAxis->axisName_);
+     status = get_double(GalilBiasVoltage_, value, pAxis->axisNo_);
+     }
   else if (function == GalilErrorLimit_)
      {
      sprintf(cmd_, "MG _ER%c", pAxis->axisName_);
@@ -2533,6 +2545,24 @@ asynStatus GalilController::writeFloat64(asynUser *pasynUser, epicsFloat64 value
         //Write new Independent Time Constant - Smoothing Function to GalilController
         sprintf(cmd_, "IT%c=%lf",pAxis->axisName_, value);
         //printf("GalilITCSmooth_ cmd:%s value %lf\n", cmd, value);
+        status = writeReadController(functionName);
+        }
+     }
+  else if (function == GalilPole_)
+     {
+     if (pAxis)
+        {
+        //Write new PID low pass filter parameter
+        sprintf(cmd_, "PL%c=%lf",pAxis->axisName_, value);
+        status = writeReadController(functionName);
+        }
+     }
+  else if (function == GalilBiasVoltage_)
+     {
+     if (pAxis)
+        {
+        //Write new bias voltage
+        sprintf(cmd_, "OF%c=%lf",pAxis->axisName_, value);
         status = writeReadController(functionName);
         }
      }

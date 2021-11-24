@@ -107,6 +107,9 @@
 #define GalilAutoOnDelayString		"MOTOR_AUTO_ONDELAY"
 #define GalilAutoOffDelayString		"MOTOR_AUTO_OFFDELAY"
 
+#define GalilBiasVoltageString		"MOTOR_BIASVOLTAGE"
+#define GalilPoleString		        "MOTOR_POLE"
+
 #define GalilMainEncoderString		"MOTOR_MAIN_ENCODER"
 #define GalilAuxEncoderString		"MOTOR_AUX_ENCODER"
 
@@ -314,6 +317,8 @@ protected:
   int GalilMoveCommand_;
   int GalilMotorEncoderSyncTol_;
   int GalilITCSmooth_;
+  int GalilBiasVoltage_;
+  int GalilPole_;
   
   int GalilCommunicationError_;
   #define LAST_GALIL_PARAM GalilCommunicationError_
