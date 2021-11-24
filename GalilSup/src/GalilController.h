@@ -84,6 +84,7 @@
 #define GalilEncoderStallString		"MOTOR_ENCODER_STALL"
 #define GalilEncoderStallTimeString	"MOTOR_ENCODER_STALL_TIME"
 #define GalilStepSmoothString		"MOTOR_STEPSMOOTH"
+#define GalilITCSmoothString		"MOTOR_ITCSMOOTH"
 #define GalilEncoderDeadBString		"MOTOR_EDEL"
 #define GalilMotorTypeString		"MOTOR_TYPE"
 #define GalilMotorOnString		"MOTOR_ONOFF"
@@ -312,6 +313,7 @@ protected:
 //Add new parameters here
   int GalilMoveCommand_;
   int GalilMotorEncoderSyncTol_;
+  int GalilITCSmooth_;
   
   int GalilCommunicationError_;
   #define LAST_GALIL_PARAM GalilCommunicationError_
