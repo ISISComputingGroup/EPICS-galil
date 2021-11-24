@@ -719,6 +719,7 @@ GalilController::GalilController(const char *portName, const char *address, doub
 
   createParam(GalilMoveCommandString, asynParamOctet, &GalilMoveCommand_);
   createParam(GalilMotorEncoderSyncTolString, asynParamFloat64, &GalilMotorEncoderSyncTol_);
+  createParam(GalilITCSmoothString, asynParamFloat64, &GalilITCSmooth_);
 
   //Not connected to controller yet
   connected_ = false;
@@ -3709,6 +3710,11 @@ asynStatus GalilController::readFloat64(asynUser *pasynUser, epicsFloat64 *value
         get_double(GalilStepSmooth_, value, pAxis->axisNo_);
         }
      }
+  else if (function == GalilITCSmooth_)
+     {
+     sprintf(cmd_, "MG _IT%c", pAxis->axisName_);
+     get_double(GalilITCSmooth_, value, pAxis->axisNo_);
+     }
   else if (function == GalilErrorLimit_)
      {
      if (pAxis)
@@ -4190,6 +4196,15 @@ asynStatus GalilController::writeFloat64(asynUser *pasynUser, epicsFloat64 value
         {
         //Write new stepper smoothing factor to GalilController
         sprintf(cmd_, "KS%c=%lf",pAxis->axisName_, value);
+        status = sync_writeReadController();
+        }
+     }
+  else if (function == GalilITCSmooth_)
+     {
+     if (pAxis)
+        {
+        //Write new Independent Time Constant - Smoothing Function to GalilController
+        sprintf(cmd_, "IT%c=%lf",pAxis->axisName_, value);
         status = sync_writeReadController();
         }
      }

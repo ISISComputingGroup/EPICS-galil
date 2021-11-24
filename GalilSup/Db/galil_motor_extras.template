@@ -148,6 +148,28 @@ record(ao,"$(P)$(M)_STEPSMOOTH_SP")
 	field(FLNK,"$(P)$(M)_STEPSMOOTH_MON")
 }
 
+record(ai,"$(P)$(M)_ITCSMOOTH_MON")
+{
+	field(DESC,"Ind Time Const smooth func")
+	field(DTYP,"asynFloat64")
+	field(SCAN,"$(SCAN)")
+	field(PREC,"$(PREC)")
+	field(INP, "@asyn($(PORT),$(ADDR))MOTOR_ITCSMOOTH")
+}
+
+record(ao,"$(P)$(M)_ITCSMOOTH_SP")
+{
+	field(DESC, "Ind Time Const smooth func sp")
+	field(DTYP, "asynFloat64")
+	field(DRVL, "0.004")
+	field(DRVH, "1.0")
+	field(PREC, "$(PREC)")
+	field(PINI, "YES")
+	field(VAL,  "1.0")
+	field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_ITCSMOOTH")
+	field(FLNK,"$(P)$(M)_ITCSMOOTH_MON")
+}
+
 record(bi,"$(P)$(M)_MCONN_STATUS")
 {
 	field(DESC, "Connect stat")
