@@ -246,6 +246,7 @@ GalilController::GalilController(const char *portName, const char *address, doub
 //Add new parameters here
   createParam(GalilMoveCommandString, asynParamOctet, &GalilMoveCommand_);
   createParam(GalilMotorEncoderSyncTolString, asynParamFloat64, &GalilMotorEncoderSyncTol_);
+  createParam(GalilITCSmoothString, asynParamFloat64, &GalilITCSmooth_);
 
   createParam(GalilCommunicationErrorString, asynParamInt32, &GalilCommunicationError_);
 
@@ -2154,6 +2155,11 @@ asynStatus GalilController::readFloat64(asynUser *pasynUser, epicsFloat64 *value
      sprintf(cmd_, "MG _KS%c", pAxis->axisName_);
      status = get_double(GalilStepSmooth_, value, pAxis->axisNo_);
      }
+  else if (function == GalilITCSmooth_)
+     {
+     sprintf(cmd_, "MG _IT%c", pAxis->axisName_);
+     status = get_double(GalilITCSmooth_, value, pAxis->axisNo_);
+     }
   else if (function == GalilErrorLimit_)
      {
      sprintf(cmd_, "MG _ER%c", pAxis->axisName_);
@@ -2517,6 +2523,16 @@ asynStatus GalilController::writeFloat64(asynUser *pasynUser, epicsFloat64 value
         //Write new stepper smoothing factor to GalilController
         sprintf(cmd_, "KS%c=%lf",pAxis->axisName_, value);
         //printf("GalilStepSmooth_ cmd:%s value %lf\n", cmd, value);
+        status = writeReadController(functionName);
+        }
+     }
+  else if (function == GalilITCSmooth_)
+     {
+     if (pAxis)
+        {
+        //Write new Independent Time Constant - Smoothing Function to GalilController
+        sprintf(cmd_, "IT%c=%lf",pAxis->axisName_, value);
+        //printf("GalilITCSmooth_ cmd:%s value %lf\n", cmd, value);
         status = writeReadController(functionName);
         }
      }
@@ -3128,14 +3144,14 @@ void GalilController::stopAxes()
 		writeReadController(functionName);
 		if (atoi(resp_))
 			{
+			//Ensure home process is stopped
+			sprintf(cmd_, "home%c=0", (i + AASCII));
+			writeReadController(functionName);
 			//Stop moving motor
 			sprintf(cmd_, "ST%c", (i + AASCII));
 			writeReadController(functionName);
 			//Allow time for motor stop
 				epicsThreadSleep(1.0);
-			//Ensure home process is stopped
-			sprintf(cmd_, "home%c=0", (i + AASCII));
-			writeReadController(functionName);
 			}
 		//This is now done in via PINI of autosaved $(M)_ON_CMD PV 
 		// sprintf(cmd_, "MO%c", (i + AASCII));
