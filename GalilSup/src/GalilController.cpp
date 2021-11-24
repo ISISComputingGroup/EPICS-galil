@@ -5476,14 +5476,14 @@ void GalilController::stopAxes()
      sync_writeReadController();
      if (atoi(resp_))
      {
+        //Ensure home process is stopped
+        sprintf(cmd_, "home%c=0", (i + AASCII));
+        sync_writeReadController();
         //Stop moving motor
         sprintf(cmd_, "ST%c", (i + AASCII));
         sync_writeReadController();
         //Allow time for motor stop
         epicsThreadSleep(1.0);
-        //Ensure home process is stopped
-        sprintf(cmd_, "home%c=0", (i + AASCII));
-        sync_writeReadController();
      }
   }
 }
