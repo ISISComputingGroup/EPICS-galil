@@ -170,6 +170,52 @@ record(ao,"$(P)$(M)_ITCSMOOTH_SP")
 	field(FLNK,"$(P)$(M)_ITCSMOOTH_MON")
 }
 
+record(ai,"$(P)$(M)_POLE_MON")
+{
+	field(DESC,"PID Filter param")
+	field(DTYP,"asynFloat64")
+	field(SCAN,"$(SCAN)")
+	field(PREC,"$(PREC)")
+	field(INP, "@asyn($(PORT),$(ADDR))MOTOR_POLE")
+}
+
+record(ao,"$(P)$(M)_POLE_SP")
+{
+	field(DESC,"PID Filter param sp")
+	field(DTYP, "asynFloat64")
+	field(DRVL, "0.0")
+	field(DRVH, "0.9999")
+	field(PREC, "$(PREC)")
+	field(PINI, "YES")
+	field(VAL,  "0.0")
+	field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_POLE")
+	field(FLNK,"$(P)$(M)_POLE_MON")
+}
+
+record(ai,"$(P)$(M)_BIASVOLTAGE_MON")
+{
+	field(DESC,"Motor bias voltage")
+	field(DTYP,"asynFloat64")
+	field(SCAN,"$(SCAN)")
+	field(PREC,"$(PREC)")
+	field(EGU, "V")
+	field(INP, "@asyn($(PORT),$(ADDR))MOTOR_BIASVOLTAGE")
+}
+
+record(ao,"$(P)$(M)_BIASVOLTAGE_SP")
+{
+	field(DESC,"Motor bias voltage sp")
+	field(DTYP, "asynFloat64")
+	field(DRVL, "-9.998")
+	field(DRVH, "9.998")
+	field(PREC, "$(PREC)")
+	field(EGU, "V")
+	field(PINI, "YES")
+	field(VAL,  "0.0")
+	field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_BIASVOLTAGE")
+	field(FLNK,"$(P)$(M)_BIASVOLTAGE_MON")
+}
+
 record(bi,"$(P)$(M)_MCONN_STATUS")
 {
 	field(DESC, "Connect stat")
