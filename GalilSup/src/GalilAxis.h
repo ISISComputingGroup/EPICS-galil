@@ -171,6 +171,7 @@ private:
   bool homing_;				//Is motor homing now
   epicsTimeStamp stop_nowt_;		//Used to track length of motor stopped for.
   epicsTimeStamp stop_begint_;		//Used to track length of motor stopped for.
+  epicsEvent reset_stop_begint_;    //Used to reset stop_begint_ on home
   double stopped_time_;			//Time motor has been stopped for
   bool encDirOk_;			//Encoder direction ok flag
   bool encoderMove_;			//Encoder move status

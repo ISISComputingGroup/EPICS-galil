@@ -684,8 +684,9 @@ asynStatus GalilAxis::home(double minVelocity, double maxVelocity, double accele
         //Begin the move
 //	if (!beginMotion(functionName))
 //		{
+		reset_stop_begint_.signal();
 		homing_ = true;  //Start was successful
-                cancelHomeSent_ = false;  //Homing has not been cancelled yet
+		cancelHomeSent_ = false;  //Homing has not been cancelled yet
 		//tell controller which axis we are doing a home on
 		//We do this last so home algorithm doesn't cancel home jog in incase motor
 		//is sitting on opposite limit to which we are homing
@@ -1303,6 +1304,9 @@ void GalilAxis::setStopTime(void)
 {   
    //Default stopped time
    stopped_time_ = 0.0;
+   if (reset_stop_begint_.tryWait()) {
+      epicsTimeGetCurrent(&stop_begint_);
+   }
 
    if (done_ && !last_done_)
       {
@@ -1356,7 +1360,7 @@ void GalilAxis::checkHoming(void)
       pC_->writeReadController(functionName);
       double hjog = atof(pC_->resp_);
 
-      epicsSnprintf(message, sizeof(message), "Homing timed out after %f seconds: _BG%c=%.0f _SC%c=%.0f [%s] hjog%c=%.0f", homing_timeout,
+      epicsSnprintf(message, sizeof(message), "Homing timed out after %f seconds: _BG%c=%.0f _SC%c=%.0f [%s] hjog%c=%.0f", stopped_time_,
                   axisName_, bg_code, axisName_, sc_code, lookupStopCode((int)sc_code), axisName_, hjog);
 	  pC_->setCtrlError(message);
 	  
