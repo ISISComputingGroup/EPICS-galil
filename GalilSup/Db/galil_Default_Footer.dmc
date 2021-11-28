@@ -3,29 +3,29 @@ JP #HOMEA
 EN
 #CMDERR
 errstr=_ED;errcde=_TC;cmderr=cmderr+1
-RE 1
+MG "CMDERR_error", _TC; MG "CMDERR_line", _ED; MG "CMDERR_thread", _ED1
 EN
 #TCPERR
 errtcp=_IA4
-MG "TCP lost sync or timeout - Handle - ",errtcp
+MG "TCP_lost_sync_or_timeout_Handle", errtcp
 RE 1
 EN
 #LIMSWI
 IF (((_SCA=2) | (_SCA=3)) & (_BGA=1))
-	oldecelA=_DCA;DCA=limdcA;WT2;STA;DCA=oldecelA;ENDIF
+	oldecelA=_DCA;DCA=limdcA;WT2;STA;DCA=oldecelA;MG "LIMSWIA", _SCA;ENDIF
 IF (((_SCB=2) | (_SCB=3)) & (_BGB=1))
-	oldecelB=_DCB;DCB=limdcB;WT2;STB;DCB=oldecelB;ENDIF
+	oldecelB=_DCB;DCB=limdcB;WT2;STB;DCB=oldecelB;MG "LIMSWIB", _SCB;ENDIF
 IF (((_SCC=2) | (_SCC=3)) & (_BGC=1))
-	oldecelC=_DCC;DCC=limdcC;WT2;STC;DCC=oldecelC;ENDIF
+	oldecelC=_DCC;DCC=limdcC;WT2;STC;DCC=oldecelC;MG "LIMSWIC", _SCC;ENDIF
 IF (((_SCD=2) | (_SCD=3)) & (_BGD=1))
-	oldecelD=_DCD;DCD=limdcD;WT2;STD;DCD=oldecelD;ENDIF
+	oldecelD=_DCD;DCD=limdcD;WT2;STD;DCD=oldecelD;MG "LIMSWID", _SCD;ENDIF
 IF (((_SCE=2) | (_SCE=3)) & (_BGE=1))
-	oldecelE=_DCE;DCE=limdcE;WT2;STE;DCE=oldecelE;ENDIF
+	oldecelE=_DCE;DCE=limdcE;WT2;STE;DCE=oldecelE;MG "LIMSWIE", _SCE;ENDIF
 IF (((_SCF=2) | (_SCF=3)) & (_BGF=1))
-	oldecelF=_DCF;DCF=limdcF;WT2;STF;DCF=oldecelF;ENDIF
+	oldecelF=_DCF;DCF=limdcF;WT2;STF;DCF=oldecelF;MG "LIMSWIF", _SCF;ENDIF
 IF (((_SCG=2) | (_SCG=3)) & (_BGG=1))
-	oldecelG=_DCG;DCG=limdcG;WT2;STG;DCG=oldecelG;ENDIF
+	oldecelG=_DCG;DCG=limdcG;WT2;STG;DCG=oldecelG;MG "LIMSWIG", _SCG;ENDIF
 IF (((_SCH=2) | (_SCH=3)) & (_BGH=1))
-	oldecelH=_DCH;DCH=limdcH;WT2;STH;DCH=oldecelH;ENDIF
+	oldecelH=_DCH;DCH=limdcH;WT2;STH;DCH=oldecelH;MG "LIMSWIH", _SCH;ENDIF
 RE 1
 EN
