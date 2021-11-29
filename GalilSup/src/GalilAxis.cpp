@@ -847,6 +847,9 @@ asynStatus GalilAxis::setPosition(double position)
   sprintf(pC_->cmd_, "MT%c=?", axisName_);
   pC_->writeReadController(functionName);
   motor = atoi(pC_->resp_);
+  double tp = getGalilAxisVal("_TP");
+  double td = getGalilAxisVal("_TD");
+  std::cerr << functionName << ": _TP=" << tp << " _TD=" << td << " on axis " << axisName_ << std::endl;
 
   //Calculate encoder counts, from provided motor position
   //encmratio_ is non zero only during autosave restore of position, or after user changes eres, mres, ueip or position
@@ -937,6 +940,9 @@ asynStatus GalilAxis::setEncoderPosition(double position)
   sprintf(pC_->cmd_, "MT%c=?", axisName_);
   pC_->writeReadController(functionName);
   motor = atoi(pC_->resp_);
+  double tp = getGalilAxisVal("_TP");
+  double td = getGalilAxisVal("_TD");
+  std::cerr << functionName << ": _TP=" << tp << " _TD=" << td << " on axis " << axisName_ << std::endl;
   //output encoder counts to main encoder register on controller
   //DP and DE command function is different depending on motor type
   if (abs(motor) == 1)
