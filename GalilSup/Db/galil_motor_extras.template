@@ -156,12 +156,13 @@ record(ai,"$(P):$(M)_STOPGO_MON")
 	field(VAL, 3)
 }
 
-record(ao, "$(P):$(M)_STOPGO_CMD") 
-{
-	field(OMSL, "closed_loop") 
-	field(DOL,  "$(P):$(M)_STOPGO_MON CP MS")
-	field(OUT,  "$(P):$(M).SPMG CA")
-}
+## we do not use CS axes and this causes a motor init
+#record(ao, "$(P):$(M)_STOPGO_CMD") 
+#{
+#	field(OMSL, "closed_loop") 
+#	field(DOL,  "$(P):$(M)_STOPGO_MON CP MS")
+#	field(OUT,  "$(P):$(M).SPMG CA")
+#}
 
 # monitor the motor status and update a string field with results
 record(aSub, "$(P):$(M):_MSTACALC")
