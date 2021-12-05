@@ -7,7 +7,7 @@ hjogA=0;hjogB=0;hjogC=0;hjogD=0
 hjogE=0;hjogF=0;hjogG=0;hjogH=0
 inhomeA=0;inhomeB=0;inhomeC=0;inhomeD=0
 inhomeE=0;inhomeF=0;inhomeG=0;inhomeH=0
-cmderr=0
+cmderr=0;tcperr=0
 DM th[8]
 XQ #HOMEA,1
 #THREAD

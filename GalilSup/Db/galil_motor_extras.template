@@ -192,6 +192,20 @@ record(aSub, "$(P):$(M):_STATUSCALC")
 	field(NOVA, "1")	
 }
 
+# allow splitting out of MSTA
+record(mbbiDirect, "$(P)$(M):_MSTABITS")
+{
+    field(INP, "$(P)$(M).MSTA CP")
+}
+
+record(bi, "$(P)$(M)_HOMED")
+{
+    field(DESC, "Motor Homed")
+    field(ZNAM, "No")
+    field(ONAM, "Yes")
+    field(INP, "$(P)$(M):_MSTABITS.BE CP")
+}
+
 record(stringin, "$(P):$(M)_STATUS")
 {
 	field(DESC, "Simple Text version of motor MSTA")

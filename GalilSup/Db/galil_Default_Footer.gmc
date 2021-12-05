@@ -3,14 +3,15 @@ JP #HOMEA
 EN
 #CMDERR
 errstr=_ED;errcde=_TC;cmderr=cmderr+1
-MG "CMDERR_error", _TC; MG "CMDERR_line", _ED; MG "CMDERR_thread", _ED1
-EN
+MG "CMDERR_error", errcde; MG "CMDERR_line", errstr; MG "CMDERR_thread", _ED1
+EN1
 #TCPERR
-errtcp=_IA4
-MG "TCP_lost_sync_or_timeout_Handle", errtcp
-RE 1
+tcpcde=_TC;errtcp=_IA4;tcperr=tcperr+1
+MG "TCPERR_lost_sync_or_timeout_cde", tcpcde; MG "TCPERR_lost_sync_or_timeout_Handle", errtcp
+RE1
 EN
 #LIMSWI
+NO This is run for both soft and hard limits, _SC will see both, _LF/_LR just hard
 IF (((_SCA=2) | (_SCA=3)) & (_BGA=1))
 	oldsca=_SCA;oldecelA=_DCA;DCA=limdcA;WT2;STA;DCA=oldecelA;MG "LIMSWIA", _oldsca;ENDIF
 IF (((_SCB=2) | (_SCB=3)) & (_BGB=1))
@@ -27,5 +28,5 @@ IF (((_SCG=2) | (_SCG=3)) & (_BGG=1))
 	oldscg=_SCG;oldecelG=_DCG;DCG=limdcG;WT2;STG;DCG=oldecelG;MG "LIMSWIG", _oldscg;ENDIF
 IF (((_SCH=2) | (_SCH=3)) & (_BGH=1))
 	oldsch=_SCH;oldecelH=_DCH;DCH=limdcH;WT2;STH;DCH=oldecelH;MG "LIMSWIH", _oldsch;ENDIF
-RE 1
+RE1
 EN
