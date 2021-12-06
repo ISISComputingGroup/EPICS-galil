@@ -541,4 +541,12 @@ record(ai,"$(P)SEND_STRVAL_MON")
 	field(INP,  "@asyn($(PORT),0)USER_OCTET_VAL")
 }
 
+record(ai,"$(P)PD") {
+    field(DESC,"Power off detection")
+    field(SCAN,"5 minutes")
+    field(DTYP,"asynFloat64")
+    field(INP, "@asyn(Galil,0)USER_VAR vel")
+    info(INTEREST, "HIGH")
+    info(archive, "VAL")
+}
 #end
