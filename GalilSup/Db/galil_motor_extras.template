@@ -193,17 +193,17 @@ record(aSub, "$(P):$(M):_STATUSCALC")
 }
 
 # allow splitting out of MSTA
-record(mbbiDirect, "$(P)$(M):_MSTABITS")
+record(mbbiDirect, "$(P):$(M):_MSTABITS")
 {
-    field(INP, "$(P)$(M).MSTA CP")
+    field(INP, "$(P):$(M).MSTA CP")
 }
 
-record(bi, "$(P)$(M)_HOMED")
+record(bi, "$(P):$(M)_HOMED")
 {
     field(DESC, "Motor Homed")
     field(ZNAM, "No")
     field(ONAM, "Yes")
-    field(INP, "$(P)$(M):_MSTABITS.BE CP")
+    field(INP, "$(P):$(M):_MSTABITS.BE CP")
 }
 
 record(stringin, "$(P):$(M)_STATUS")
@@ -276,7 +276,7 @@ record(calcout, "$(P):$(M):INV_MRES:SP_CALC")
 	field(INPA, "$(P):$(M):INV_MRES")
 	field(CALC, "1/A")
 	field(OUT, "$(P):$(M).MRES")
-	field(SDIS, "$(P)$(M):INV_MRES_CALC.PACT")
+	field(SDIS, "$(P):$(M):INV_MRES_CALC.PACT")
 	field(OOPT, "On Change")
 }
 
@@ -300,7 +300,7 @@ record(calcout, "$(P):$(M):INV_ERES:SP_CALC")
 	field(INPA, "$(P):$(M):INV_ERES")
 	field(CALC, "1/A")
 	field(OUT, "$(P):$(M).ERES")
-	field(SDIS, "$(P)$(M):INV_ERES_CALC.PACT")
+	field(SDIS, "$(P):$(M):INV_ERES_CALC.PACT")
 	field(OOPT, "On Change")
 }
 
