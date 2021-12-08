@@ -893,7 +893,29 @@ void GalilController::connect(void)
   else
      {
      //Connect to the device, we don't want end of string processing
-     drvAsynSerialPortConfigure(syncPort_, (char *)address_.c_str(), epicsThreadPriorityMax, 0, 1);
+     //on windows address may be "COM32 115200" for COM32 at baud rate of 115200, this syntax used in original GalilTools library
+     //extended syntax only needed if COM port is not already configured with appropriate serial parameters
+     size_t n = address.find(" ");
+     int baud = 0;
+     if (n == string::npos) {
+        address_string = address;
+     } else {
+        address_string = address.substr(0, n);
+        baud = atoi(address.substr(n).c_str());
+     }
+     drvAsynSerialPortConfigure(syncPort_, (const char *)address_string.c_str(), epicsThreadPriorityMax, 0, 1);
+     if (baud != 0)
+     {
+         std::cerr << "Configuring asyn port " << syncPort_ << " for serial with software flow control and baud rate " << baud << std::endl;
+         asynSetOption(syncPort_, 0, "baud", std::to_string(baud).c_str());
+         asynSetOption(syncPort_, 0, "bits", "8");
+         asynSetOption(syncPort_, 0, "parity", "none");
+         asynSetOption(syncPort_, 0, "stop", "1");
+         asynSetOption(syncPort_, 0, "ixon", "Y");
+         asynSetOption(syncPort_, 0, "ixoff", "Y");
+         asynSetOption(syncPort_, 0, "clocal", "Y");
+         asynSetOption(syncPort_, 0, "crtscts", "N");
+     }
      //Flag try_async_ records false for serial connections
      try_async_ = false;
      }
