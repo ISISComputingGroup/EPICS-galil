@@ -541,7 +541,7 @@ record(ai,"$(P)SEND_STRVAL_MON")
 	field(INP,  "@asyn($(PORT),0)USER_OCTET_VAL")
 }
 
-record(ao,"$(P)PD") {
+record(ao,"$(P)pwrdet:SP") {
     field(DESC, "Power off detections")
     field(DTYP, "asynFloat64")
     field(OUT, "@asyn($(PORT),0)USER_VAR PD")
@@ -549,7 +549,7 @@ record(ao,"$(P)PD") {
     info(autosaveFields, "VAL")
 }
 
-record(ai,"$(P)PD_MONITOR") {
+record(ai,"$(P)pwrdet:RB") {
     field(DESC,"Power off detection check")
     field(SCAN,"5 second")
     field(DTYP,"asynFloat64")
