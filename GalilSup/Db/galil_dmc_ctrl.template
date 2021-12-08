@@ -544,16 +544,16 @@ record(ai,"$(P)SEND_STRVAL_MON")
 record(ao,"$(P)PD") {
     field(DESC, "Power off detections")
     field(DTYP, "asynFloat64")
-    field(OUT, "@asyn(Galil,0)USER_VAR PD")
+    field(OUT, "@asyn($(PORT),0)USER_VAR PD")
     info(archive, "VAL")
     info(autosaveFields, "VAL")
 }
 
 record(ai,"$(P)PD_MONITOR") {
     field(DESC,"Power off detection check")
-    field(SCAN,"5 minutes")
+    field(SCAN,"5 second")
     field(DTYP,"asynFloat64")
-    field(INP, "@asyn(Galil,0)USER_VAR PD")
+    field(INP, "@asyn($(PORT),0)USER_VAR PD")
     info(INTEREST, "HIGH")
     info(archive, "VAL")
 }
