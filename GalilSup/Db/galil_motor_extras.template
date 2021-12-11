@@ -1220,4 +1220,20 @@ record(calcout, "$(P):$(M)_DRIFT_THRESHOLD_CHECK")
     
 }
 
+# this is not used here, t is to allow swapping with new
+# driver and not lose setting
+record(mbbo,"$(P):$(M)_HOMEALLOWED_CMD")
+{
+	field(DESC, "Home allowed")
+	field(ZRST, "None")
+	field(ONST, "Reverse")
+	field(TWST, "Forward")
+	field(THST, "Both")
+	field(ZRVL, "0")
+	field(ONVL, "1")
+	field(TWVL, "2")
+	field(THVL, "3")
+	field(VAL,  "3")
+}
+
 #end
