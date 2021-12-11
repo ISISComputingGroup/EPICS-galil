@@ -624,6 +624,9 @@ asynStatus GalilAxis::home(double minVelocity, double maxVelocity, double accele
   //Home only if interlock ok
   if (motor_enabled())
   	{
+	// do this early as potential race condition with poller
+	reset_stop_begint_.signal();
+
 	//Calculate direction of jog off home switch
 	home_direction = (forwards == 0) ? 1 : -1;
 
@@ -684,7 +687,6 @@ asynStatus GalilAxis::home(double minVelocity, double maxVelocity, double accele
         //Begin the move
 //	if (!beginMotion(functionName))
 //		{
-		reset_stop_begint_.signal();
 		homing_ = true;  //Start was successful
 		cancelHomeSent_ = false;  //Homing has not been cancelled yet
 		//tell controller which axis we are doing a home on
