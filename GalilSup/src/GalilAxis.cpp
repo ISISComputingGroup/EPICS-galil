@@ -1435,6 +1435,7 @@ void GalilAxis::pollServices(void)
                                 //break; Delibrate fall through to MOTOR_STOP
         case MOTOR_STOP: stop(1);
 						 std::cerr << "Poll services: STOP " << axisName_ << std::endl;
+                if (request == MOTOR_CANCEL_HOME) { setIntegerParam(pC_->motorStatusSlip_, 1); }
                          break;
         case MOTOR_POST: if (pC_->getStringParam(axisNo_, pC_->GalilPost_, (int)sizeof(post), post) == asynSuccess)
                             {
