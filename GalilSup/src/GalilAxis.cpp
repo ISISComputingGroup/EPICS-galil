@@ -1432,10 +1432,11 @@ void GalilAxis::pollServices(void)
                                 epicsThreadSleep(.2);  //Wait as controller may still issue move upto this time after
                                                        //Setting home to 0 (cancel home)
 						 errlogSevPrintf(errlogInfo, "Poll services: MOTOR CANCEL HOME %c\n", axisName_);
+		stopSent_ = true;
+                setIntegerParam(pC_->motorStatusSlip_, 1);
                                 //break; Delibrate fall through to MOTOR_STOP
         case MOTOR_STOP: stop(1);
 						 std::cerr << "Poll services: STOP " << axisName_ << std::endl;
-                if (request == MOTOR_CANCEL_HOME) { setIntegerParam(pC_->motorStatusSlip_, 1); }
                          break;
         case MOTOR_POST: if (pC_->getStringParam(axisNo_, pC_->GalilPost_, (int)sizeof(post), post) == asynSuccess)
                             {
