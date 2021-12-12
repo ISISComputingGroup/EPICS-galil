@@ -2121,7 +2121,7 @@ void GalilAxis::setStopTime(void)
 void GalilAxis::checkHoming(void)
 {
    bool softlimits;
-   char message[MAX_GALIL_STRING_SIZE];
+   char message[256];
 
    //Determine if soft limits are active
    softlimits = (bool)(lowLimit_ == highLimit_ && lowLimit_ == 0.0) ? false : true;
@@ -2150,8 +2150,12 @@ void GalilAxis::checkHoming(void)
       pC_->sync_writeReadController();
       double hjog = atof(pC_->resp_);
 
-      epicsSnprintf(message, sizeof(message), "Homing timed out after %f seconds: _BG%c=%.0f _SC%c=%.0f [%s] hjog%c=%.0f", homing_timeout,
-                  axisName_, bg_code, axisName_, sc_code, lookupStopCode((int)sc_code), axisName_, hjog);
+      sprintf(pC_->cmd_, "MG homed%c\n", axisName_);
+      pC_->sync_writeReadController();
+      double homed = atof(pC_->resp_);
+
+      epicsSnprintf(message, sizeof(message), "Homing timed out after %f seconds: _BG%c=%.0f _SC%c=%.0f [%s] hjog%c=%.0f homed%c=%.0f",
+                  homing_timeout, axisName_, bg_code, axisName_, sc_code, lookupStopCode((int)sc_code), axisName_, hjog, homed);
       pC_->setCtrlError(message);
 
       //Cancel home
