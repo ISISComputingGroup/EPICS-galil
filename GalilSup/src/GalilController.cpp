@@ -906,15 +906,17 @@ void GalilController::connect(void)
      drvAsynSerialPortConfigure(syncPort_, (const char *)address_string.c_str(), epicsThreadPriorityMax, 0, 1);
      if (baud != 0)
      {
-         std::cerr << "Configuring asyn port " << syncPort_ << " for serial with software flow control and baud rate " << baud << std::endl;
+         std::cerr << "Configuring asyn port \"" << syncPort_ << "\" for serial with baud rate " << baud << std::endl;
          asynSetOption(syncPort_, 0, "baud", std::to_string(baud).c_str());
          asynSetOption(syncPort_, 0, "bits", "8");
          asynSetOption(syncPort_, 0, "parity", "none");
          asynSetOption(syncPort_, 0, "stop", "1");
-         asynSetOption(syncPort_, 0, "ixon", "Y");
-         asynSetOption(syncPort_, 0, "ixoff", "Y");
-         asynSetOption(syncPort_, 0, "clocal", "Y");
-         asynSetOption(syncPort_, 0, "crtscts", "N");
+         // disable XON/XOFF flow control. This seemed to be required in the old driver that used the GalilTools DLL
+         // but here it seems to lead to parts of the data record being interpreted as XOFF and getting dropped
+         // from the readback particularly when a motor is moving. It was only enabled in the old version as otherwise
+         // download of the homing programs timed out, but that doesn't seem to be an issue here
+         asynSetOption(syncPort_, 0, "xon", "N");
+         asynSetOption(syncPort_, 0, "xoff", "N");
      }
      //Flag try_async_ records false for serial connections
      try_async_ = false;
