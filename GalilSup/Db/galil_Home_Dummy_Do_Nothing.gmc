@@ -13,13 +13,19 @@ IF (home${AXIS}=1)
 	IF ((hjog${AXIS}=1) & (_BG${AXIS}=1) & (home${AXIS}=1))
 		ST${AXIS};ENDIF
 	IF ((hjog${AXIS}=1) & (_BG${AXIS}=0) & (home${AXIS}=1))
-		WT100;hjog${AXIS}=2
+		PR${AXIS}=(_SP${AXIS} * 2);SH${AXIS};WT100;BG${AXIS};hjog${AXIS}=2
 	ENDIF
-	IF ((hjog${AXIS}>=2) & (_BG${AXIS}=0) & (home${AXIS}=1))
-		hjog${AXIS}=hjog${AXIS}+1
+	IF ((hjog${AXIS}=2) & (_BG${AXIS}=0) & (home${AXIS}=1) & (_SC${AXIS}=1))
+        hjog${AXIS}=3
 	ENDIF
-	IF ((hjog${AXIS}=5) & (_BG${AXIS}=0) & (home${AXIS}=1))
-		hjog${AXIS}=0;home${AXIS}=0;homed${AXIS}=1;MO${AXIS}
+	IF ((hjog${AXIS}>=3) & (hjog${AXIS}<10) & (_BG${AXIS}=0) & (home${AXIS}=1))
+		hjog${AXIS}=hjog${AXIS}+1;WT10
+	ENDIF
+	IF ((hjog${AXIS}=10) & (_BG${AXIS}=0) & (home${AXIS}=1))
+		PR${AXIS}=(_SP${AXIS} * -2);SH${AXIS};WT100;BG${AXIS};hjog${AXIS}=11
+	ENDIF
+	IF ((hjog${AXIS}=11) & (_BG${AXIS}=0) & (home${AXIS}=1) & (_SC${AXIS}=1))
+		hjog${AXIS}=0;home${AXIS}=0;homed${AXIS}=1
 		MG "home${AXIS}", home${AXIS};MG "homed${AXIS}", homed${AXIS}
 	ENDIF
 ELSE
