@@ -1339,7 +1339,7 @@ void GalilAxis::setStopTime(void)
 void GalilAxis::checkHoming(void)
 {
    const char *functionName = "GalilAxis::checkHoming";
-   char message[MAX_GALIL_STRING_SIZE];
+   char message[256];
    double readback = motor_position_;	//For step motors controller uses motor_position_ for positioning
    double estall_time;
    pC_->getDoubleParam(axisNo_, pC_->GalilEStallTime_, &estall_time);
