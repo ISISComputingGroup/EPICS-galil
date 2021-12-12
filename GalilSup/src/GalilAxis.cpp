@@ -2214,6 +2214,9 @@ void GalilAxis::pollServices(void)
                                 epicsThreadSleep(.2);  //Wait as controller may still issue move upto this time after
                                 errlogSevPrintf(errlogInfo, "Poll services: MOTOR CANCEL HOME %c\n", axisName_);
                                                        //Setting home to 0 (cancel home)
+                                stopSent_ = true;
+                                stop_reason_ = MOTOR_STOP_ONSTALL;
+                                setIntegerParam(pC_->motorStatusSlip_, 1);
                                 //break; Delibrate fall through to MOTOR_STOP
         case MOTOR_STOP: stopInternal(limdc_);
                          std::cerr << "Poll services: STOP " << axisName_ << std::endl;
