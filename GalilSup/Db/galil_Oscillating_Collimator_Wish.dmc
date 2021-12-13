@@ -1,10 +1,10 @@
-#WishORC
-mode="I"
+#StartORC
+mode=0
 count=0
 SP~a=16384
 AC~a=16384
 DC~a=16384
-mode="H"
+mode=1
 HM~a
 SH~a
 BG~a
@@ -21,7 +21,7 @@ PA~a=-dist/2
 MC~a
 'AM~a
 #Oscill8
-mode="O"
+mode=2
 PA~a=dist/2
 BG~a
 MC~a
@@ -33,7 +33,7 @@ MC~a
 count=count+1
 JP#Oscill8,count<=cycles
 'maintenance rotation
-mode="M"
+mode=4
 SP~a=16384
 AC~a=16384
 DC~a=16384
@@ -41,7 +41,7 @@ PA~a=fullrev
 BG~a
 AM~a
 WT200
-mode="H"
+mode=1
 HM~a
 SH~a
 BG~a
