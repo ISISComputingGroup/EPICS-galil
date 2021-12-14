@@ -550,11 +550,33 @@ record(ao,"$(P)pwrdet:SP") {
 }
 
 record(ai,"$(P)pwrdet:RB") {
-    field(DESC,"Power off detection check")
-    field(SCAN,"5 second")
-    field(DTYP,"asynFloat64")
-    field(INP, "@asyn($(PORT),0)USER_VAR pwrdet")
-    info(INTEREST, "HIGH")
-    info(archive, "VAL")
+    field(DESC, "Power off detection check")
+	field(PINI, "YES")
+    field(SCAN, "5 second")
+    field(DTYP, "asynFloat64")
+	field(FLNK, "$(P)pwrdet_alert")
+    field(INP,  "@asyn($(PORT),0)USER_VAR pwrdet")
+}
+
+record(calc,"$(P)pwrdet_alert") {
+    field(DESC, "Power off detection check calculation")
+	field(SCAN, "Passive")
+    field(INPA, "$(P)pwrdet:RB")
+	field(INPB, "$(P)pwrdet:SP")
+	field(FLNK, "$(P)pwrdet_reset")
+	field(CALC, "A=B")
+}
+
+record(calcout,"$(P)pwrdet_reset") {
+    field(DESC, "Power off detection reset")
+	field(SCAN, "Passive")
+    field(INPA, "$(P)pwrdet_alert")
+	field(INPB, "$(P)pwrdet:SP")
+	field(CALC, "A")
+	field(OOPT, "When Non-zero")
+	field(DOPT, "Use OCAL")
+	field(OCAL, "B+1")
+	field(OUT, "$(P)pwrdet:SP")
+	field(FLNK, "$(P)pwrdet:SP")
 }
 #end
