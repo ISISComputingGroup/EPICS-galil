@@ -545,6 +545,7 @@ record(ao,"$(P)pwrdet:SP") {
     field(DESC, "Power off detections")
     field(DTYP, "asynFloat64")
     field(OUT, "@asyn($(PORT),0)USER_VAR pwrdet")
+	field(SCAN, "Passive")
     info(archive, "VAL")
     info(autosaveFields, "VAL")
 }
@@ -577,6 +578,5 @@ record(calcout,"$(P)pwrdet_reset") {
 	field(DOPT, "Use OCAL")
 	field(OCAL, "B+1")
 	field(OUT, "$(P)pwrdet:SP")
-	field(FLNK, "$(P)pwrdet:SP")
 }
 #end
