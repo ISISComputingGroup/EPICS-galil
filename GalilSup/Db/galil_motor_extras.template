@@ -1262,7 +1262,7 @@ record(compress, "$(P):$(M):_EPOS_CB")
 {
     field(ALG, "Circular Buffer")
     field(INP, "$(P):$(M):_EPOS_CALC NPP MS")
-    field(NSAM, "$(ENCAVNSAMP=20)")
+    field(NSAM, "$(ENCAVNSAMP=10)")
     field(FLNK, "$(P):$(M):EPOS_AV")
 }
 
@@ -1273,7 +1273,7 @@ record(compress, "$(P):$(M):EPOS_AV")
     field(ALG, "N to 1 Average")
     field(INP, "$(P):$(M):_EPOS_CB NPP MS")
     field(NSAM, "1")
-    field(N, "$(ENCAVNSAMP=20)")
+    field(N, "$(ENCAVNSAMP=10)")
 }
 
 #end
