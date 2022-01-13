@@ -553,7 +553,7 @@ record(ao,"$(P)pwrdet:SP") {
 record(ai,"$(P)pwrdet:RB") {
     field(DESC, "Power off detection check")
 	field(PINI, "YES")
-    field(SCAN, "5 second")
+    field(SCAN, "10 second")
     field(DTYP, "asynFloat64")
 	field(FLNK, "$(P)pwrdet_alert")
     field(INP,  "@asyn($(PORT),0)USER_VAR pwrdet")
@@ -576,7 +576,8 @@ record(calcout,"$(P)pwrdet_reset") {
 	field(CALC, "A")
 	field(OOPT, "When Non-zero")
 	field(DOPT, "Use OCAL")
-	field(OCAL, "B+1")
+	field(OCAL, "CEIL(RNDM*100)")
+	field(FLNK, "$(P)pwrdet:SP")
 	field(OUT, "$(P)pwrdet:SP")
 }
 #end
