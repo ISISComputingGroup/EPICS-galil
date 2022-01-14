@@ -581,7 +581,6 @@ record(calcout,"$(P)pwrdet_reset") {
     field(DESC, "Power off detection reset")
 	field(SCAN, "Passive")
     field(INPA, "$(P)pwrdet_alert")
-	field(INPB, "$(P)pwrdet:SP")
 	field(CALC, "A")
 	field(OOPT, "When Non-zero")
 	field(DOPT, "Use OCAL")
