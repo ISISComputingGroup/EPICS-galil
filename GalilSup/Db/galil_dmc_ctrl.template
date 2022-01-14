@@ -584,7 +584,7 @@ record(calcout,"$(P)pwrdet_reset") {
 	field(CALC, "A")
 	field(OOPT, "When Non-zero")
 	field(DOPT, "Use OCAL")
-	field(OCAL, "CEIL(RNDM*100)")
+	field(OCAL, "CEIL(RNDM*100)+1")
 	field(OUT, "$(P)pwrdet:SP PP")
 }
 #end
