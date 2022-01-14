@@ -555,8 +555,17 @@ record(ai,"$(P)pwrdet:RB") {
 	field(PINI, "YES")
     field(SCAN, "10 second")
     field(DTYP, "asynFloat64")
-	field(FLNK, "$(P)pwrdet_alert")
+	field(FLNK, "$(P)pwrdet_timer")
     field(INP,  "@asyn($(PORT),0)USER_VAR pwrdet")
+}
+
+record(calcout, "$(P)pwrdet_timer") {
+	field(SCAN, "10 second")
+	field(DESC, "Prevent processing every scan")
+	field(CALC, "A % 30; A := A + 1")
+	field(INPA, "0")
+	field(OOPT, "When Zero")
+	field(OUT,  "$(P)pwrdet_alert.PROC")
 }
 
 record(calc,"$(P)pwrdet_alert") {
