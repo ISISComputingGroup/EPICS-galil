@@ -16,35 +16,27 @@ EN
 NO runs for both soft and hard limits, _SC will see both, _LF/_LR just hard
 IF (((_SCA=2) | (_SCA=3)) & (_BGA=1))
 	oldsca=_SCA;oldecelA=_DCA;DCA=limdcA;WT2;STA;DCA=oldecelA
-	MG "LIMSWIA", oldsca
 ENDIF
 IF (((_SCB=2) | (_SCB=3)) & (_BGB=1))
 	oldscb=_SCB;oldecelB=_DCB;DCB=limdcB;WT2;STB;DCB=oldecelB
-	MG "LIMSWIB", oldscb
 ENDIF
 IF (((_SCC=2) | (_SCC=3)) & (_BGC=1))
 	oldscc=_SCC;oldecelC=_DCC;DCC=limdcC;WT2;STC;DCC=oldecelC
-	MG "LIMSWIC", oldscc
 ENDIF
 IF (((_SCD=2) | (_SCD=3)) & (_BGD=1))
 	oldscd=_SCD;oldecelD=_DCD;DCD=limdcD;WT2;STD;DCD=oldecelD
-	MG "LIMSWID", oldscd
 ENDIF
 IF (((_SCE=2) | (_SCE=3)) & (_BGE=1))
 	oldsce=_SCE;oldecelE=_DCE;DCE=limdcE;WT2;STE;DCE=oldecelE
-	MG "LIMSWIE", oldsce
 ENDIF
 IF (((_SCF=2) | (_SCF=3)) & (_BGF=1))
 	oldscf=_SCF;oldecelF=_DCF;DCF=limdcF;WT2;STF;DCF=oldecelF
-	MG "LIMSWIF", oldscf
 ENDIF
 IF (((_SCG=2) | (_SCG=3)) & (_BGG=1))
 	oldscg=_SCG;oldecelG=_DCG;DCG=limdcG;WT2;STG;DCG=oldecelG
-	MG "LIMSWIG", oldscg
 ENDIF
 IF (((_SCH=2) | (_SCH=3)) & (_BGH=1))
 	oldsch=_SCH;oldecelH=_DCH;DCH=limdcH;WT2;STH;DCH=oldecelH
-	MG "LIMSWIH", oldsch
 ENDIF
 RE1
 EN
