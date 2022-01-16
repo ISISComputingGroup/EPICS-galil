@@ -1276,5 +1276,16 @@ record(compress, "$(P):$(M):EPOS_AV")
     field(N, "$(ENCAVNSAMP=10)")
 }
 
+## listen for motor disable event signalled from controller PV
+record(bo, "$(P):$(M):_ctrl_disable")
+{
+    field(EVNT, "DisableAllMotors")
+    field(SCAN, "Event")
+    field(VAL, "1")
+    field(ZNAM,"Enable")
+    field(ONAM,"Disable")
+    field(OUT, "$(P):$(M)_able PP")
+}
+
 #end
 
