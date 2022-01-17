@@ -893,6 +893,11 @@ asynStatus GalilAxis::home(double minVelocity, double maxVelocity, double accele
      return asynSuccess;
   }
 
+  if (homing_)
+  {
+      errlogSevPrintf(errlogInfo, "Axis %c already homing - request ignored.\n", axisName_);
+      return asynSuccess;  //Nothing to do
+  }
   // check homing thread is available
   if ( !pC_->checkGalilThreads() )
   {
@@ -1961,7 +1966,7 @@ void GalilAxis::checkEncoder(void)
             sprintf(message, "Encoder stall stop motor %c", axisName_);
             //Set controller error mesg monitor
             pC_->setCtrlError(message);
-            std::cerr << "STALL: pestall_time=" << pestall_time << " (>" << estall_time << ") encoderMove_=" << encoderMove_ << " encDirOk_=" << encDirOk_ << " _SC" << axisName_ << "=" << sc_code << " _BG" << axisName_ << "=" << bg_code << std::endl;
+            std::cerr << "STALL: pestall_time=" << pestall_time << " (>" << estall_time << ") encoderMove_=" << encoderMove_ << " encDirOk_=" << encDirOk_ << " _SC" << axisName_ << "=" << sc_code << " [" << lookupStopCode((int)sc_code) << "] _BG" << axisName_ << "=" << bg_code << std::endl;
             }
          }
       }
@@ -2116,7 +2121,7 @@ void GalilAxis::setStopTime(void)
 void GalilAxis::checkHoming(void)
 {
    bool softlimits;
-   char message[MAX_GALIL_STRING_SIZE];
+   char message[256];
 
    //Determine if soft limits are active
    softlimits = (bool)(lowLimit_ == highLimit_ && lowLimit_ == 0.0) ? false : true;
@@ -2131,6 +2136,24 @@ void GalilAxis::checkHoming(void)
    if ((homing_ && (stoppedTime_ >= homing_timeout) && !cancelHomeSent_) ||
        (((readback > highLimit_ && softlimits) || (readback < lowLimit_ && softlimits)) && homing_ && !cancelHomeSent_ && done_))
       {
+      sprintf(pC_->cmd_, "MG homed%c\n", axisName_);
+      pC_->sync_writeReadController();
+      double homed = atof(pC_->resp_);
+      
+      if (homed == 1)
+      {
+            std::cerr << "Looks like homing completed OK but unsolicited message from controller got lost" << std::endl;
+            // execute logic as per GalilController::processUnsolicitedMesgs
+            this->homedExecuted_ = false;
+            this->pollRequest_.send((void*)&MOTOR_HOMED, sizeof(int));
+            this->homedSent_ = true;
+            //pC_->setIntegerParam(axisNo_, pC_->GalilHomed_, 1);
+            pC_->setIntegerParam(axisNo_, pC_->motorStatusHomed_, 1);
+            this->homing_ = false;
+      }
+      else
+      {
+
       // get last stop code
       sprintf(pC_->cmd_, "MG _SC%c\n", axisName_);
       pC_->sync_writeReadController();
@@ -2141,7 +2164,13 @@ void GalilAxis::checkHoming(void)
       pC_->sync_writeReadController();
       double bg_code = atof(pC_->resp_);
 
-      sprintf(message, "Homing timed out after %f: BG%c=%f SC%c=%f ", homing_timeout, axisName_, bg_code, axisName_, sc_code);
+      sprintf(pC_->cmd_, "MG hjog%c\n", axisName_);
+      pC_->sync_writeReadController();
+      double hjog = atof(pC_->resp_);
+
+
+      epicsSnprintf(message, sizeof(message), "Homing timed out after %f seconds: _BG%c=%.0f _SC%c=%.0f [%s] hjog%c=%.0f homed%c=%.0f",
+                  homing_timeout, axisName_, bg_code, axisName_, sc_code, lookupStopCode((int)sc_code), axisName_, hjog, homed);
       pC_->setCtrlError(message);
 
       //Cancel home
@@ -2155,6 +2184,7 @@ void GalilAxis::checkHoming(void)
          sprintf(message, "%c Homing violated soft limits", axisName_);
       //Set controller error mesg monitor
       pC_->setCtrlError(message);
+      }
       }
 }
 
@@ -2204,6 +2234,9 @@ void GalilAxis::pollServices(void)
                                 epicsThreadSleep(.2);  //Wait as controller may still issue move upto this time after
                                 errlogSevPrintf(errlogInfo, "Poll services: MOTOR CANCEL HOME %c\n", axisName_);
                                                        //Setting home to 0 (cancel home)
+                                stopSent_ = true;
+                                stop_reason_ = MOTOR_STOP_ONSTALL;
+                                setIntegerParam(pC_->motorStatusSlip_, 1);
                                 //break; Delibrate fall through to MOTOR_STOP
         case MOTOR_STOP: stopInternal(limdc_);
                          std::cerr << "Poll services: STOP " << axisName_ << std::endl;
@@ -2534,7 +2567,7 @@ asynStatus GalilAxis::beginMotion(const char *caller, double position, bool rela
       double td = getGalilAxisVal("_TD"); // current position (motor steps)
       double rp = getGalilAxisVal("_RP"); // commanded position (motor steps)
       // need to check signal of event? need to check how axisEventMonitor above works
-      epicsSnprintf(mesg, sizeof(mesg), "%s begin failure axis %c after %f seconds: _BG%c=%f _SC%c=%f [%s] _BL%c=%f _FL%c=%f _TP%c=%f _TD%c=%f _RP%c=%f", caller, axisName_, begin_timeout, axisName_, bg_code, axisName_, sc_code, lookupStopCode((int)sc_code), axisName_, bl, axisName_, fl, axisName_, tp, axisName_, td, axisName_, rp);
+      epicsSnprintf(mesg, sizeof(mesg), "%s begin failure axis %c after %f seconds: _BG%c=%.0f _SC%c=%.0f [%s] _BL%c=%f _FL%c=%f _TP%c=%f _TD%c=%f _RP%c=%f", caller, axisName_, begin_timeout, axisName_, bg_code, axisName_, sc_code, lookupStopCode((int)sc_code), axisName_, bl, axisName_, fl, axisName_, tp, axisName_, td, axisName_, rp);
       // getting these a lot, it it moving to somewhere very near current position?
       // comment out sending to errlog for now and send to cerr instead
       //Set controller error mesg monitor
@@ -2638,6 +2671,7 @@ asynStatus GalilAxis::jogAfterHome(void) {
 
       if (!status) {
          //If all settings OK, do the move
+         errlogSevPrintf(errlogInfo, "jogging %c after home to raw position %.0f\n", axisName_, position);
          if (!moveThruMotorRecord(position, true)) {
             //Requested move equal or larger than 1 motor step, move success
             //Retrieve AutoOn delay from ParamList

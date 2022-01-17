@@ -719,6 +719,9 @@ GalilController::GalilController(const char *portName, const char *address, doub
 
   createParam(GalilMoveCommandString, asynParamOctet, &GalilMoveCommand_);
   createParam(GalilMotorEncoderSyncTolString, asynParamFloat64, &GalilMotorEncoderSyncTol_);
+  createParam(GalilITCSmoothString, asynParamFloat64, &GalilITCSmooth_);
+  createParam(GalilBiasVoltageString, asynParamFloat64, &GalilBiasVoltage_);
+  createParam(GalilPoleString, asynParamFloat64, &GalilPole_);
 
   //Not connected to controller yet
   connected_ = false;
@@ -890,7 +893,31 @@ void GalilController::connect(void)
   else
      {
      //Connect to the device, we don't want end of string processing
-     drvAsynSerialPortConfigure(syncPort_, (char *)address_.c_str(), epicsThreadPriorityMax, 0, 1);
+     //on windows address may be "COM32 115200" for COM32 at baud rate of 115200, this syntax used in original GalilTools library
+     //extended syntax only needed if COM port is not already configured with appropriate serial parameters
+     size_t n = address.find(" ");
+     int baud = 0;
+     if (n == string::npos) {
+        address_string = address;
+     } else {
+        address_string = address.substr(0, n);
+        baud = atoi(address.substr(n).c_str());
+     }
+     drvAsynSerialPortConfigure(syncPort_, (const char *)address_string.c_str(), epicsThreadPriorityMax, 0, 1);
+     if (baud != 0)
+     {
+         std::cerr << "Configuring asyn port \"" << syncPort_ << "\" for serial with baud rate " << baud << std::endl;
+         asynSetOption(syncPort_, 0, "baud", std::to_string(baud).c_str());
+         asynSetOption(syncPort_, 0, "bits", "8");
+         asynSetOption(syncPort_, 0, "parity", "none");
+         asynSetOption(syncPort_, 0, "stop", "1");
+         // disable XON/XOFF flow control. This seemed to be required in the old driver that used the GalilTools DLL
+         // but here it seems to lead to parts of the data record being interpreted as XOFF and getting dropped
+         // from the readback particularly when a motor is moving. It was only enabled in the old version as otherwise
+         // download of the homing programs timed out, but that doesn't seem to be an issue here
+         asynSetOption(syncPort_, 0, "xon", "N");
+         asynSetOption(syncPort_, 0, "xoff", "N");
+     }
      //Flag try_async_ records false for serial connections
      try_async_ = false;
      }
@@ -3709,6 +3736,30 @@ asynStatus GalilController::readFloat64(asynUser *pasynUser, epicsFloat64 *value
         get_double(GalilStepSmooth_, value, pAxis->axisNo_);
         }
      }
+  else if (function == GalilITCSmooth_)
+     {
+     if (pAxis)
+        {
+        sprintf(cmd_, "MG _IT%c", pAxis->axisName_);
+        get_double(GalilITCSmooth_, value, pAxis->axisNo_);
+        }
+     }
+  else if (function == GalilPole_)
+     {
+     if (pAxis)
+        {
+        sprintf(cmd_, "MG _PL%c", pAxis->axisName_);
+        get_double(GalilPole_, value, pAxis->axisNo_);
+        }
+     }
+  else if (function == GalilBiasVoltage_)
+     {
+     if (pAxis)
+        {
+        sprintf(cmd_, "MG _OF%c", pAxis->axisName_);
+        get_double(GalilBiasVoltage_, value, pAxis->axisNo_);
+        }
+     }
   else if (function == GalilErrorLimit_)
      {
      if (pAxis)
@@ -4190,6 +4241,33 @@ asynStatus GalilController::writeFloat64(asynUser *pasynUser, epicsFloat64 value
         {
         //Write new stepper smoothing factor to GalilController
         sprintf(cmd_, "KS%c=%lf",pAxis->axisName_, value);
+        status = sync_writeReadController();
+        }
+     }
+  else if (function == GalilITCSmooth_)
+     {
+     if (pAxis)
+        {
+        //Write new Independent Time Constant - Smoothing Function to GalilController
+        sprintf(cmd_, "IT%c=%lf",pAxis->axisName_, value);
+        status = sync_writeReadController();
+        }
+     }
+  else if (function == GalilPole_)
+     {
+     if (pAxis)
+        {
+        //Write new PID low pass filter parameter
+        sprintf(cmd_, "PL%c=%lf",pAxis->axisName_, value);
+        status = sync_writeReadController();
+        }
+     }
+  else if (function == GalilBiasVoltage_)
+     {
+     if (pAxis)
+        {
+        //Write new bias voltage
+        sprintf(cmd_, "OF%c=%lf",pAxis->axisName_, value);
         status = sync_writeReadController();
         }
      }
@@ -4697,6 +4775,7 @@ void GalilController::processUnsolicitedMesgs(void)
                   if (value)
                      {
                      //Send homed message to pollServices
+                     // logical also replicated in GalilAxis::checkHoming()
                      pAxis->homedExecuted_ = false;
                      pAxis->pollRequest_.send((void*)&MOTOR_HOMED, sizeof(int));
                      pAxis->homedSent_ = true;
@@ -5461,14 +5540,14 @@ void GalilController::stopAxes()
      sync_writeReadController();
      if (atoi(resp_))
      {
+        //Ensure home process is stopped
+        sprintf(cmd_, "home%c=0", (i + AASCII));
+        sync_writeReadController();
         //Stop moving motor
         sprintf(cmd_, "ST%c", (i + AASCII));
         sync_writeReadController();
         //Allow time for motor stop
         epicsThreadSleep(1.0);
-        //Ensure home process is stopped
-        sprintf(cmd_, "home%c=0", (i + AASCII));
-        sync_writeReadController();
      }
   }
 }

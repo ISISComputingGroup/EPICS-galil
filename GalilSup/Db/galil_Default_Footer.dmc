@@ -3,29 +3,48 @@ JP #HOMEA
 EN
 #CMDERR
 errstr=_ED;errcde=_TC;cmderr=cmderr+1
-RE 1
-EN
+MG "CMDERR_error", errcde; MG "CMDERR_line", errstr
+MG "CMDERR_thread", _ED1
+EN1
 #TCPERR
-errtcp=_IA4
-MG "TCP lost sync or timeout - Handle - ",errtcp
-RE 1
+tcpcde=_TC;errtcp=_IA4;tcperr=tcperr+1
+MG "TCPERR_lost_sync_or_timeout_cde", tcpcde
+MG "TCPERR_lost_sync_or_timeout_Handle", errtcp
+RE1
 EN
 #LIMSWI
+NO runs for both soft and hard limits, _SC will see both, _LF/_LR just hard
 IF (((_SCA=2) | (_SCA=3)) & (_BGA=1))
-	oldecelA=_DCA;DCA=limdcA;WT2;STA;DCA=oldecelA;ENDIF
+	oldsca=_SCA;oldecelA=_DCA;DCA=limdcA;WT2;STA;DCA=oldecelA
+	MG "LIMSWIA", oldsca
+ENDIF
 IF (((_SCB=2) | (_SCB=3)) & (_BGB=1))
-	oldecelB=_DCB;DCB=limdcB;WT2;STB;DCB=oldecelB;ENDIF
+	oldscb=_SCB;oldecelB=_DCB;DCB=limdcB;WT2;STB;DCB=oldecelB
+	MG "LIMSWIB", oldscb
+ENDIF
 IF (((_SCC=2) | (_SCC=3)) & (_BGC=1))
-	oldecelC=_DCC;DCC=limdcC;WT2;STC;DCC=oldecelC;ENDIF
+	oldscc=_SCC;oldecelC=_DCC;DCC=limdcC;WT2;STC;DCC=oldecelC
+	MG "LIMSWIC", oldscc
+ENDIF
 IF (((_SCD=2) | (_SCD=3)) & (_BGD=1))
-	oldecelD=_DCD;DCD=limdcD;WT2;STD;DCD=oldecelD;ENDIF
+	oldscd=_SCD;oldecelD=_DCD;DCD=limdcD;WT2;STD;DCD=oldecelD
+	MG "LIMSWID", oldscd
+ENDIF
 IF (((_SCE=2) | (_SCE=3)) & (_BGE=1))
-	oldecelE=_DCE;DCE=limdcE;WT2;STE;DCE=oldecelE;ENDIF
+	oldsce=_SCE;oldecelE=_DCE;DCE=limdcE;WT2;STE;DCE=oldecelE
+	MG "LIMSWIE", oldsce
+ENDIF
 IF (((_SCF=2) | (_SCF=3)) & (_BGF=1))
-	oldecelF=_DCF;DCF=limdcF;WT2;STF;DCF=oldecelF;ENDIF
+	oldscf=_SCF;oldecelF=_DCF;DCF=limdcF;WT2;STF;DCF=oldecelF
+	MG "LIMSWIF", oldscf
+ENDIF
 IF (((_SCG=2) | (_SCG=3)) & (_BGG=1))
-	oldecelG=_DCG;DCG=limdcG;WT2;STG;DCG=oldecelG;ENDIF
+	oldscg=_SCG;oldecelG=_DCG;DCG=limdcG;WT2;STG;DCG=oldecelG
+	MG "LIMSWIG", oldscg
+ENDIF
 IF (((_SCH=2) | (_SCH=3)) & (_BGH=1))
-	oldecelH=_DCH;DCH=limdcH;WT2;STH;DCH=oldecelH;ENDIF
-RE 1
+	oldsch=_SCH;oldecelH=_DCH;DCH=limdcH;WT2;STH;DCH=oldecelH
+	MG "LIMSWIH", oldsch
+ENDIF
+RE1
 EN

@@ -134,6 +134,7 @@
 #define GalilSSIConnectedString		"MOTOR_SSI_CONNECTED"
 #define GalilEncoderStallTimeString	"MOTOR_ENCODER_STALL_TIME"
 #define GalilStepSmoothString		"MOTOR_STEPSMOOTH"
+#define GalilITCSmoothString		"MOTOR_ITCSMOOTH"
 #define GalilMotorTypeString		"MOTOR_TYPE"
 
 #define GalilEtherCatCapableString	"CONTROLLER_ECATCAPABLE"
@@ -179,6 +180,9 @@
 #define GalilLimitDisableString		"MOTOR_LIMIT_DISABLE"
 #define GalilLimitConsistentString	"MOTOR_LIMIT_CONSISTENT"
 #define GalilEncoderToleranceString     "MOTOR_ENCODER_TOLERANCE"
+
+#define GalilBiasVoltageString		"MOTOR_BIASVOLTAGE"
+#define GalilPoleString		        "MOTOR_POLE"
 
 #define GalilMainEncoderString		"MOTOR_MAIN_ENCODER"
 #define GalilAuxEncoderString		"MOTOR_AUX_ENCODER"
@@ -558,6 +562,9 @@ protected:
 //Add new parameters here
   int GalilMoveCommand_;
   int GalilMotorEncoderSyncTol_;
+  int GalilITCSmooth_;
+  int GalilBiasVoltage_;
+  int GalilPole_;
   
   int GalilCommunicationError_;
   #define LAST_GALIL_PARAM GalilCommunicationError_

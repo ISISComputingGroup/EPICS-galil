@@ -32,3 +32,8 @@ create_monitor_set("GalilTest_positions.req", 5,"P=DMC01:")
 # Save motor settings every 30 seconds
 create_monitor_set("GalilTest_settings.req", 30,"IOC=IOC01:,P1=DMC01:, P2=RIO01:")
 
+## if you are using RealCOM mode with moxa nport on windows then serial parameters
+## are set by the application rather than on the port. Uncomment the following if
+## using hardware flow control with the GALIL 
+## do not use/enable software (xon/xoff) flow control - see comments in GalilController.cpp
+#asynSetOption("GALILSYNC0", 0, "crtscts", "Y");

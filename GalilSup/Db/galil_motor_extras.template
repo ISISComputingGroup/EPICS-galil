@@ -148,6 +148,74 @@ record(ao,"$(P)$(M)_STEPSMOOTH_SP")
 	field(FLNK,"$(P)$(M)_STEPSMOOTH_MON")
 }
 
+record(ai,"$(P)$(M)_ITCSMOOTH_MON")
+{
+	field(DESC,"Ind Time Const smooth func")
+	field(DTYP,"asynFloat64")
+	field(SCAN,"$(SCAN)")
+	field(PREC,"$(PREC)")
+	field(INP, "@asyn($(PORT),$(ADDR))MOTOR_ITCSMOOTH")
+}
+
+record(ao,"$(P)$(M)_ITCSMOOTH_SP")
+{
+	field(DESC, "Ind Time Const smooth func sp")
+	field(DTYP, "asynFloat64")
+	field(DRVL, "0.004")
+	field(DRVH, "1.0")
+	field(PREC, "$(PREC)")
+	field(PINI, "YES")
+	field(VAL,  "1.0")
+	field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_ITCSMOOTH")
+	field(FLNK,"$(P)$(M)_ITCSMOOTH_MON")
+}
+
+record(ai,"$(P)$(M)_POLE_MON")
+{
+	field(DESC,"PID Filter param")
+	field(DTYP,"asynFloat64")
+	field(SCAN,"$(SCAN)")
+	field(PREC,"$(PREC)")
+	field(INP, "@asyn($(PORT),$(ADDR))MOTOR_POLE")
+}
+
+record(ao,"$(P)$(M)_POLE_SP")
+{
+	field(DESC,"PID Filter param sp")
+	field(DTYP, "asynFloat64")
+	field(DRVL, "0.0")
+	field(DRVH, "0.9999")
+	field(PREC, "$(PREC)")
+	field(PINI, "YES")
+	field(VAL,  "0.0")
+	field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_POLE")
+	field(FLNK,"$(P)$(M)_POLE_MON")
+}
+
+record(ai,"$(P)$(M)_BIASVOLTAGE_MON")
+{
+	field(DESC,"Motor bias voltage")
+	field(DTYP,"asynFloat64")
+	field(SCAN,"$(SCAN)")
+	field(PREC,"$(PREC)")
+	field(EGU, "V")
+	field(INP, "@asyn($(PORT),$(ADDR))MOTOR_BIASVOLTAGE")
+}
+
+record(ao,"$(P)$(M)_BIASVOLTAGE_SP")
+{
+	field(DESC,"Motor bias voltage sp")
+	field(DTYP, "asynFloat64")
+	field(DRVL, "-9.998")
+	field(DRVH, "9.998")
+	field(PREC, "$(PREC)")
+	field(EGU, "V")
+	field(PINI, "YES")
+	field(VAL,  "0.0")
+	field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_BIASVOLTAGE")
+	field(FLNK,"$(P)$(M)_BIASVOLTAGE_MON")
+}
+
 record(bi,"$(P)$(M)_MCONN_STATUS")
 {
 	field(DESC, "Connect stat")
@@ -1609,9 +1677,23 @@ record(aSub, "$(P)$(M):_STATUSCALC")
 	field(NOVA, "1")	
 }
 
+# allow splitting out of MSTA
+record(mbbiDirect, "$(P)$(M):_MSTABITS")
+{
+    field(INP, "$(P)$(M).MSTA CP")
+}
+
+record(bi, "$(P)$(M)_HOMED")
+{
+    field(DESC, "Motor Homed")
+    field(ZNAM, "No")
+    field(ONAM, "Yes")
+    field(INP, "$(P)$(M):_MSTABITS.BE CP")
+}
+
 record(stringin, "$(P)$(M)_STATUS")
 {
-	field(DESC, "Simple Text version of motor MSTA")
+    field(DESC, "Simple Text version of motor MSTA")
 }
 
 record(stringin, "$(P)$(M)_MTR")
@@ -1739,4 +1821,74 @@ record(calcout, "$(P)$(M):INV_ERES_CALC")
 	field(CALC, "1/A")
 	field(OUT, "$(P)$(M):INV_ERES PP")
 	field(OOPT, "On Change")
+}
+
+##
+## these generate an averages encoder position and
+## EPOS_AV can be used with the RDBL motor record field to
+## have the motor display and use an averaged encoder value
+## for operations
+##
+## set RDBL to be "EPOS_AV CP MS"
+## set URIP to Yes
+## set RDLY for a time long enough that all values covered by ENCAVNSAMP were taken when a motion reached position,
+##          otherwise retries get confused as aveage is scewed by values from when in-motion  
+## set ENCAVNSAMP to large enough number to get a good average
+## if encoder is noisy enough leave ENCAVSCAN as Passive and CP triggering will be enough, otherwise set a SCAN value
+## 
+record(calcout, "$(P)$(M):_EPOS_CALC")
+{
+    field(INPA, "$(P)$(M).REP CP MS")
+    field(INPB, "$(P)$(M).ERES CP MS")
+    field(CALC, "A * B")
+    field(SCAN, "$(ENCAVSCAN=Passive)")
+    field(FLNK, "$(P)$(M):_EPOS_CB")
+}
+
+record(compress, "$(P)$(M):_EPOS_CB")
+{
+    field(ALG, "Circular Buffer")
+    field(INP, "$(P)$(M):_EPOS_CALC NPP MS")
+    field(NSAM, "$(ENCAVNSAMP=10)")
+    field(FLNK, "$(P)$(M):EPOS_AV")
+}
+
+## average encoder dial position
+record(compress, "$(P)$(M):EPOS_AV")
+{
+    field(DESC, "Averaged encoder dial pos")
+    field(ALG, "N to 1 Average")
+    field(INP, "$(P)$(M):_EPOS_CB NPP MS")
+    field(NSAM, "1")
+    field(N, "$(ENCAVNSAMP=10)")
+}
+
+## if URIP is enabled, sync positions
+record(calcout, "$(P)$(M):_EPOS_INIT")
+{
+    field(INPA, "$(P)$(M).URIP CP")
+    field(CALC, "A")
+    field(OOPT, "When Non-zero")
+    field(SCAN, "Passive")
+    field(VAL, "1")
+    field(OUT, "$(P)$(M):_EPOS_SYNC.PROC CA")
+}
+
+## delay sync to allow startup to finish
+record(seq, "$(P)$(M):_EPOS_SYNC")
+{
+    field(DO0, "1")
+    field(DLY0, "8")
+    field(LNK0, "$(P)$(M).SYNC CA")
+}
+
+## listen for motor disable event signalled from controller PV
+record(bo, "$(P)$(M)_ctrl_disable")
+{
+    field(EVNT, "DisableAllMotors")
+    field(SCAN, "Event")
+    field(VAL, "1")
+    field(ZNAM,"Enable")
+    field(ONAM,"Disable")
+    field(OUT, "$(P)$(M)_able PP")
 }

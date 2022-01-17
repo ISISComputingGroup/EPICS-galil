@@ -541,6 +541,16 @@ record(ai,"$(P)SEND_STRVAL_MON")
 	field(INP,  "@asyn($(PORT),0)USER_OCTET_VAL")
 }
 
+record(bo, "$(P)DISABLE_ALL_MOTORS") {
+    field(FLNK, "$(P)_DISABLE_ALL_MOTORS.PROC")
+}
+
+record(event, "$(P)_DISABLE_ALL_MOTORS") {
+    field(DESC, "Disable all motors")
+    field(VAL, "DisableAllMotors")
+    field(DTYP, "Soft Channel")
+}
+
 record(ao,"$(P)pwrdet:SP") {
     field(DESC, "Power off detections")
     field(DTYP, "asynFloat64")
