@@ -4775,6 +4775,7 @@ void GalilController::processUnsolicitedMesgs(void)
                   if (value)
                      {
                      //Send homed message to pollServices
+                     // logical also replicated in GalilAxis::checkHoming()
                      pAxis->homedExecuted_ = false;
                      pAxis->pollRequest_.send((void*)&MOTOR_HOMED, sizeof(int));
                      pAxis->homedSent_ = true;

@@ -2136,6 +2136,24 @@ void GalilAxis::checkHoming(void)
    if ((homing_ && (stoppedTime_ >= homing_timeout) && !cancelHomeSent_) ||
        (((readback > highLimit_ && softlimits) || (readback < lowLimit_ && softlimits)) && homing_ && !cancelHomeSent_ && done_))
       {
+      sprintf(pC_->cmd_, "MG homed%c\n", axisName_);
+      pC_->sync_writeReadController();
+      double homed = atof(pC_->resp_);
+      
+      if (homed == 1)
+      {
+            std::cerr << "Looks like homing completed OK but unsolicited message from controller got lost" << std::endl;
+            // execute logic as per GalilController::processUnsolicitedMesgs
+            this->homedExecuted_ = false;
+            this->pollRequest_.send((void*)&MOTOR_HOMED, sizeof(int));
+            this->homedSent_ = true;
+            //pC_->setIntegerParam(axisNo_, pC_->GalilHomed_, 1);
+            pC_->setIntegerParam(axisNo_, pC_->motorStatusHomed_, 1);
+            this->homing_ = false;
+      }
+      else
+      {
+
       // get last stop code
       sprintf(pC_->cmd_, "MG _SC%c\n", axisName_);
       pC_->sync_writeReadController();
@@ -2150,9 +2168,6 @@ void GalilAxis::checkHoming(void)
       pC_->sync_writeReadController();
       double hjog = atof(pC_->resp_);
 
-      sprintf(pC_->cmd_, "MG homed%c\n", axisName_);
-      pC_->sync_writeReadController();
-      double homed = atof(pC_->resp_);
 
       epicsSnprintf(message, sizeof(message), "Homing timed out after %f seconds: _BG%c=%.0f _SC%c=%.0f [%s] hjog%c=%.0f homed%c=%.0f",
                   homing_timeout, axisName_, bg_code, axisName_, sc_code, lookupStopCode((int)sc_code), axisName_, hjog, homed);
@@ -2169,6 +2184,7 @@ void GalilAxis::checkHoming(void)
          sprintf(message, "%c Homing violated soft limits", axisName_);
       //Set controller error mesg monitor
       pC_->setCtrlError(message);
+      }
       }
 }
 
