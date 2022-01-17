@@ -571,7 +571,7 @@ record(ai,"$(P)PWRDET") {
     field(DTYP, "asynFloat64")
     field(INP,  "@asyn($(PORT),0)USER_VAR pwrdet")
 	field(SCAN, "10 second")
-	field(FLNK, "$(P)PWRDET:CHECK.PROC")
+	field(FLNK, "$(P)PWRDET:ALERT.PROC")
 }
 
 ## 0 = ok, 1 = problem
