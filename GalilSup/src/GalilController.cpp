@@ -2716,6 +2716,7 @@ void GalilController::processUnsolicitedMesgs(void)
          //Process known messages
 
          //Motor homed message
+         // note: logic duplcated in GalilAxis::checkHoming keep both in sync
          if (!abs(strcmp(mesg, "homed")))
             {
             //Send homed message to pollServices only if homed%c=1

@@ -1354,39 +1354,54 @@ void GalilAxis::checkHoming(void)
 //       ((readback > highLimit_ || readback < lowLimit_) && homing_ && !cancelHomeSent_ && done_))
    if (homing_ && (stopped_time_ >= homing_timeout) && !cancelHomeSent_)
       {
-	    // get last stop code
-	    sprintf(pC_->cmd_, "MG _SC%c\n", axisName_);
+        // have we actually completed and it is just that the unsolicited message frogm the controller got lost?
+        sprintf(pC_->cmd_, "MG homed%c\n", axisName_);
         pC_->writeReadController(functionName);
-        double sc_code = atof(pC_->resp_);
+        double homed = atof(pC_->resp_);
+        
+        if (homed == 1)
+        {
+            std::cerr << "Looks like homing completed OK but unsolicited message from controller got lost" << std::endl;
+            // execute logic as per GalilController::processUnsolicitedMesgs
+            this->homedExecuted_ = false;
+            this->pollRequest_.send((void*)&MOTOR_HOMED, sizeof(int));
+            this->homedSent_ = true;
+            pC_->setIntegerParam(axisNo_, pC_->GalilHomed_, 1);
+            pC_->setIntegerParam(axisNo_, pC_->motorStatusHomed_, 1);
+            this->homing_ = false;
+        }
+        else
+        {
+	        // get last stop code
+	        sprintf(pC_->cmd_, "MG _SC%c\n", axisName_);
+            pC_->writeReadController(functionName);
+            double sc_code = atof(pC_->resp_);
 
-	    // get axis moving state
-	    sprintf(pC_->cmd_, "MG _BG%c\n", axisName_);
-        pC_->writeReadController(functionName);
-        double bg_code = atof(pC_->resp_);
+	        // get axis moving state
+	        sprintf(pC_->cmd_, "MG _BG%c\n", axisName_);
+            pC_->writeReadController(functionName);
+            double bg_code = atof(pC_->resp_);
 
-      sprintf(pC_->cmd_, "MG hjog%c\n", axisName_);
-      pC_->writeReadController(functionName);
-      double hjog = atof(pC_->resp_);
+            sprintf(pC_->cmd_, "MG hjog%c\n", axisName_);
+            pC_->writeReadController(functionName);
+            double hjog = atof(pC_->resp_);
 
-      sprintf(pC_->cmd_, "MG homed%c\n", axisName_);
-      pC_->writeReadController(functionName);
-      double homed = atof(pC_->resp_);
-
-      epicsSnprintf(message, sizeof(message), "Homing timed out after %f seconds: _BG%c=%.0f _SC%c=%.0f [%s] hjog%c=%.0f homed%c=%.0f", stopped_time_,
+            epicsSnprintf(message, sizeof(message), "Homing timed out after %f seconds: _BG%c=%.0f _SC%c=%.0f [%s] hjog%c=%.0f homed%c=%.0f", stopped_time_,
                   axisName_, bg_code, axisName_, sc_code, lookupStopCode((int)sc_code), axisName_, hjog, homed);
-	  pC_->setCtrlError(message);
+	        pC_->setCtrlError(message);
 	  
-      //Cancel home
-      pollRequest_.send((void*)&MOTOR_CANCEL_HOME, sizeof(int));
-      //Flag home has been cancelled
-      cancelHomeSent_ = true;
-      //Inform user
-      if (stopped_time_ >= homing_timeout)
-         sprintf(message, "%c Homing timed out", axisName_);
-      else
-         sprintf(message, "%c Homing violated soft limits", axisName_);
-      //Set controller error mesg monitor
-	  pC_->setCtrlError(message);
+            //Cancel home
+            pollRequest_.send((void*)&MOTOR_CANCEL_HOME, sizeof(int));
+            //Flag home has been cancelled
+            cancelHomeSent_ = true;
+            //Inform user
+            if (stopped_time_ >= homing_timeout)
+               sprintf(message, "%c Homing timed out", axisName_);
+            else
+               sprintf(message, "%c Homing violated soft limits", axisName_);
+            //Set controller error mesg monitor
+	        pC_->setCtrlError(message);
+        }
       }
 }
 
