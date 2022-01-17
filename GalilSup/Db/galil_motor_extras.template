@@ -1277,22 +1277,22 @@ record(compress, "$(P):$(M):EPOS_AV")
 }
 
 ## if URIP is enabled, sync positions
-record(calcout, "$(P)$(M):_EPOS_INIT")
+record(calcout, "$(P):$(M):_EPOS_INIT")
 {
-    field(INPA, "$(P)$(M).URIP CP")
+    field(INPA, "$(P):$(M).URIP CP")
     field(CALC, "A")
     field(OOPT, "When Non-zero")
     field(SCAN, "Passive")
     field(VAL, "1")
-    field(OUT, "$(P)$(M):_EPOS_SYNC.PROC CA")
+    field(OUT, "$(P):$(M):_EPOS_SYNC.PROC CA")
 }
 
 ## delay sync to allow startup to finish
-record(seq, "$(P)$(M):_EPOS_SYNC")
+record(seq, "$(P):$(M):_EPOS_SYNC")
 {
     field(DO0, "1")
     field(DLY0, "8")
-    field(LNK0, "$(P)$(M).SYNC CA")
+    field(LNK0, "$(P):$(M).SYNC CA")
 }
 
 ## listen for motor disable event signalled from controller PV
