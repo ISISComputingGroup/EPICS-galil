@@ -563,7 +563,7 @@ record(ao,"$(P)PWRDET:SP") {
     field(DTYP, "asynFloat64")
     field(OUT, "@asyn($(PORT),0)USER_VAR pwrdet")
 	field(SCAN, "Passive")
-    info(autosaveFields0, "VAL")
+    info(autosaveFields_pass0, "VAL")
 }
 
 record(ai,"$(P)PWRDET") {
@@ -594,10 +594,10 @@ record(bo,"$(P)PWRDET:RESET:SP") {
 }
 
 ## how often we should set a new test value
-## A % 30 means 300 seconds as we are on 10 second scan link
+## A % 360 means 3600 seconds as we are on 10 second scan link
 record(calcout, "$(P)PWRDET:TIMER") {
 	field(DESC, "Set new PWRDET test value")
-	field(CALC, "A % 30; A := A + 1")
+	field(CALC, "A % 360; A := A + 1")
 	field(INPA, "0")
 	field(OOPT, "When Zero")
 	field(DOPT, "Use OCAL")
