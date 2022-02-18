@@ -2,7 +2,7 @@
 '***********************************
 'DETERMINE INITIAL POSITION
 '***********************************
-#StartORC
+#ORC
 '*******STEP 1 - Retract Motor******
 mode=0
 count=0
