@@ -92,6 +92,14 @@ record(ao,"$(P):$(M)_ERES_SP") {
     field(PREC, "$(PREC)")
 }
 
+record(longout,"$(P):$(M)_URIP_SP") {
+    field(DESC, "Motor record URIP")
+    field(DOL,  "$(P):$(M).URIP CP MS")
+    field(OMSL, "closed_loop")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_URIP")
+}
+
 record(ao,"$(P):$(M)_MOT_ENC_SYNC_TOL_SP") {
     field(DESC, "Motor encoder sync tol")
     field(DTYP, "asynFloat64")
@@ -100,6 +108,26 @@ record(ao,"$(P):$(M)_MOT_ENC_SYNC_TOL_SP") {
 	field(EGU, "$(EGU)")
 	field(VAL, "0")
 	field(PINI, "YES")
+}
+
+record(ao,"$(P):$(M)_ENC_SMOO_SP") {
+    field(DESC, "Encoder smooth")
+    field(DTYP, "asynFloat64")
+    field(OUT,  "@asyn($(PORT),$(ADDR))ENCODER_SMOOTH")
+    field(PREC, "$(PREC)")
+    field(EGU, "$(EGU)")
+    field(VAL, "0")
+    field(PINI, "YES")
+}
+
+record(ao,"$(P):$(M)_DLY_SP") {
+    field(DESC, "Motor record DLY")
+    field(DTYP, "asynFloat64")
+    field(DOL,  "$(P):$(M).DLY CP MS")
+    field(OMSL, "closed_loop")
+    field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_DLY")
+    field(PREC, "$(PREC)")
+    field(EGU, "$(EGU)")
 }
 
 record(bo,"$(P):$(M)_DIR_SP") {
@@ -1252,10 +1280,9 @@ record(mbbo,"$(P):$(M)_HOMEALLOWED_CMD")
 record(calcout, "$(P):$(M):_EPOS_CALC")
 {
     field(INPA, "$(P):$(M).REP CP MS")
-    field(INPB, "$(P):$(M).ERES CP MS")
+    field(INPB, "$(P):$(M).ERES")
+    field(PINI, "YES")
     field(CALC, "A * B")
-    field(SCAN, "$(ENCAVSCAN=Passive)")
-    field(FLNK, "$(P):$(M):_EPOS_CB")
 }
 
 record(compress, "$(P):$(M):_EPOS_CB")
@@ -1263,37 +1290,54 @@ record(compress, "$(P):$(M):_EPOS_CB")
     field(ALG, "Circular Buffer")
     field(INP, "$(P):$(M):_EPOS_CALC NPP MS")
     field(NSAM, "$(ENCAVNSAMP=10)")
-    field(FLNK, "$(P):$(M):EPOS_AV")
+    field(SCAN, "$(ENCAVSCAN=.1 second)")
+    field(FLNK, "$(P):$(M):_EPOS_NCALC")
+}
+
+record(longout, "$(P):$(M):_EPOS_NCALC")
+{
+    field(OMSL, "closed_loop")
+    field(DOL, "$(P):$(M):_EPOS_CB.NUSE")
+    field(OUT, "$(P):$(M):_EPOS_AV.N")
+    field(FLNK, "$(P):$(M):_EPOS_AV")
 }
 
 ## average encoder dial position
-record(compress, "$(P):$(M):EPOS_AV")
+record(compress, "$(P):$(M):_EPOS_AV")
 {
     field(DESC, "Averaged encoder dial pos")
     field(ALG, "N to 1 Average")
     field(INP, "$(P):$(M):_EPOS_CB NPP MS")
     field(NSAM, "1")
     field(N, "$(ENCAVNSAMP=10)")
+    field(FLNK, "$(P):$(M):EPOS_AV")
+}
+
+record(ai, "$(P):$(M):EPOS_AV")
+{
+    field(DESC, "Averaged encoder dial pos")
+    field(INP, "$(P):$(M):_EPOS_AV NPP MS")
 }
 
 ## if URIP is enabled, sync positions
-record(calcout, "$(P):$(M):_EPOS_INIT")
-{
-    field(INPA, "$(P):$(M).URIP CP")
-    field(CALC, "A")
-    field(OOPT, "When Non-zero")
-    field(SCAN, "Passive")
-    field(VAL, "1")
-    field(OUT, "$(P):$(M):_EPOS_SYNC.PROC CA")
-}
+#record(calcout, "$(P):$(M):_EPOS_INIT")
+#{
+#    field(INPA, "$(P):$(M).URIP CP")
+#    field(CALC, "A")
+#     field(PINI, "YES")
+#    field(OOPT, "When Non-zero")
+#    field(SCAN, "Passive")
+#    field(VAL, "0")
+#    field(OUT, "$(P):$(M):_EPOS_SYNC.PROC CA")
+#}
 
 ## delay sync to allow startup to finish
-record(seq, "$(P):$(M):_EPOS_SYNC")
-{
-    field(DO0, "1")
-    field(DLY0, "8")
-    field(LNK0, "$(P):$(M).SYNC CA")
-}
+#record(seq, "$(P):$(M):_EPOS_SYNC")
+#{
+#    field(DO0, "1")
+#    field(DLY0, "8")
+#    field(LNK0, "$(P):$(M).SYNC CA")
+#}
 
 ## listen for motor disable event signalled from controller PV
 record(bo, "$(P):$(M):_ctrl_disable")

@@ -159,8 +159,10 @@ private:
   int motorType_;			//MotorType set for this poll cycle
   double motor_position_;		//aux encoder or step count register
   double encoder_position_;		//main encoder register
+  double smoothed_encoder_position_;		//main encoder register
   double last_motor_position_;		//aux encoder or step count register stored from previous poll.  Used to detect movement.
   double last_encoder_position_;	//main encoder register stored from previous poll.  Used to detect movement.
+  double encoder_smooth_factor_;
   int direction_;			//Movement direction
   bool inmotion_;			//Axis in motion status from controller
   bool fwd_;				//Forward limit status
@@ -187,7 +189,9 @@ private:
   bool homedSent_;			//Homed message sent to pollServices
   bool homedExecuted_;			//Homed message has been executed by pollServices
   bool cancelHomeSent_;			//Cancel home process message sent to pollServices
-
+  double motor_dly_;
+  bool first_poll_;
+  
 friend class GalilController;
 };
 

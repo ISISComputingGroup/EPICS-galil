@@ -193,6 +193,7 @@ GalilController::GalilController(const char *portName, const char *address, doub
   createParam(GalilUserOffsetString, asynParamFloat64, &GalilUserOffset_);
   createParam(GalilEncoderResolutionString, asynParamFloat64, &GalilEncoderResolution_);
   createParam(GalilUseEncoderString, asynParamInt32, &GalilUseEncoder_);
+  createParam(GalilUseReadbackString, asynParamInt32, &GalilUseReadback_);
 
   createParam(GalilPremString, asynParamOctet, &GalilPrem_);
   createParam(GalilPostString, asynParamOctet, &GalilPost_);
@@ -249,6 +250,9 @@ GalilController::GalilController(const char *portName, const char *address, doub
   createParam(GalilITCSmoothString, asynParamFloat64, &GalilITCSmooth_);
   createParam(GalilBiasVoltageString, asynParamFloat64, &GalilBiasVoltage_);
   createParam(GalilPoleString, asynParamFloat64, &GalilPole_);
+  
+  createParam(GalilEncoderSmoothString, asynParamFloat64, &GalilEncoderSmooth_);
+  createParam(GalilMotorDlyString, asynParamFloat64, &GalilMotorDly_);
 
   createParam(GalilCommunicationErrorString, asynParamInt32, &GalilCommunicationError_);
 
@@ -2598,6 +2602,20 @@ asynStatus GalilController::writeFloat64(asynUser *pasynUser, epicsFloat64 value
      epicsSnprintf(cmd_, sizeof(cmd_), "%s=%lf", (const char*)pasynUser->userData, value);
      status = writeReadController(functionName);
      }
+  else if (function == GalilEncoderSmooth_)
+  {
+	  if (pAxis)
+	  {
+		  pAxis->encoder_smooth_factor_ = value;
+	  }
+  }
+  else if (function == GalilMotorDly_)
+  {
+	  if (pAxis)
+	  {
+		  pAxis->motor_dly_ = value;
+	  }
+  }
   else
      {
      /* Call base class method */
