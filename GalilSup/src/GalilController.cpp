@@ -3981,7 +3981,7 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
      if (fabs(oldmotor) <= 1.5 && value > 1 && value < 6) {
         getDoubleParam(pAxis->axisNo_, GalilEncoderResolution_, &eres);
         getDoubleParam(pAxis->axisNo_, motorResolution_, &mres);
-        if (mres != 0.000000) {
+        if (false /*mres != 0.000000*/) { // dangerous to do as may have had autosave corruption
             //Calculate step count from existing encoder_position, construct mesg to controller_
             double newpos = pAxis->encoder_position_ * (eres/mres);
             std::cerr << "Detected motor type change from servo to stepper, redefining position to " << newpos << " for axis " << pAxis->axisName_ << std::endl;
@@ -3997,11 +3997,13 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
      //IF motor was stepper, and now servo
      //Set reference position equal to main encoder, which sets initial error to 0
      if (fabs(oldmotor) > 1.5 && (value < 2 || (value > 5 && value < 8))) {
+        std::cerr << "Detected motor type change from stepper to servo, position may be wrong on axis " << pAxis->axisName_ << std::endl;
+        // dangerous to do as may have had autosave corruption
         //Calculate step count from existing encoder_position, construct mesg to controller_
-        sprintf(cmd_, "DP%c=%.0lf", pAxis->axisName_, pAxis->encoder_position_);
-        std::cerr << "Detected motor type change from stepper to servo, redefining position to " << pAxis->encoder_position_ << " for axis " << pAxis->axisName_ << std::endl;
+        //sprintf(cmd_, "DP%c=%.0lf", pAxis->axisName_, pAxis->encoder_position_);
+        //std::cerr << "Detected motor type change from stepper to servo, redefining position to " << pAxis->encoder_position_ << " for axis " << pAxis->axisName_ << std::endl;
         //Write setting to controller
-        status = sync_writeReadController();
+        //status = sync_writeReadController();
      }
 
      //Changing motor polarity will change motor limits direction consistency
