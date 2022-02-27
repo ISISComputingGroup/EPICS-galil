@@ -2388,15 +2388,17 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
 		//Calculate step count from existing encoder_position, construct mesg to controller_
 		if (mres != 0.0) {
 			double newpos = pAxis->encoder_position_ * (eres / mres);
-			std::cerr << "Detected motor type change from servo to stepper, redefining position to " << newpos << " for axis " << pAxis->axisName_ << std::endl;
-			sprintf(cmd_, "DP%c=%.0f", pAxis->axisName_, newpos);
+			std::cerr << "Detected motor type change from servo to stepper, position may be wrong on axis " << pAxis->axisName_ << std::endl;
+			//redefine is dangerous, may have had an error talking to controller
+			//std::cerr << "Detected motor type change from servo to stepper, redefining position to " << newpos << " for axis " << pAxis->axisName_ << std::endl;
+			//sprintf(cmd_, "DP%c=%.0f", pAxis->axisName_, newpos);
 		}
 		else {
 			std::cerr << "Detected motor type change from servo to stepper, position may be wrong on axis " << pAxis->axisName_ << std::endl;
 		}
 
 		//Write setting to controller
-		status = writeReadController(functionName);
+		//status = writeReadController(functionName);
 		}
 
 	//IF motor was stepper, and now servo
@@ -2404,10 +2406,12 @@ asynStatus GalilController::writeInt32(asynUser *pasynUser, epicsInt32 value)
 	if (fabs(oldmotor) > 1.0 && value < 2)
 		{
 		//Calculate step count from existing encoder_position, construct mesg to controller_
-		std::cerr << "Detected motor type change from stepper to servo, redefining position to " << pAxis->encoder_position_ << " for axis " << pAxis->axisName_ << std::endl;
-		sprintf(cmd_, "DP%c=%.0f", pAxis->axisName_, pAxis->encoder_position_);
+	    //redefine is dangerous, may have had an error talking to controller
+		//std::cerr << "Detected motor type change from stepper to servo, redefining position to " << pAxis->encoder_position_ << " for axis " << pAxis->axisName_ << std::endl;
+		//sprintf(cmd_, "DP%c=%.0f", pAxis->axisName_, pAxis->encoder_position_);
 		//Write setting to controller
-		status = writeReadController(functionName);
+		//status = writeReadController(functionName);
+		std::cerr << "Detected motor type change from stepper to servo, position may be wrong on axis " << pAxis->axisName_ << std::endl;
 		}
 	}
   else if (function == GalilUseEncoder_)
