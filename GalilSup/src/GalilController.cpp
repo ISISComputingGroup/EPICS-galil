@@ -3309,6 +3309,7 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
 		{
 			if (code_changed)
 			{
+				printf("\nWARNING: Control code has changed, quiet start requested but threads will be restarted\n");
 				stopThreads();
 				stopAxes();
 			}
