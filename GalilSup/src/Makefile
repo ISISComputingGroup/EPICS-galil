@@ -27,6 +27,8 @@ BIN_INSTALLS_WIN32 += $(wildcard $(LIBGALIL)/bin/$(EPICS_HOST_ARCH)/*.pdb)
 LIB_INSTALLS_WIN32 += $(wildcard $(LIBGALIL)/lib/$(EPICS_HOST_ARCH)/*.lib)
 GalilSupport_SYS_LIBS_WIN32 += delayimp
 GalilSupport_LDFLAGS_WIN32 += /DELAYLOAD:Galil1.dll
+GalilInterface_SYS_LIBS_WIN32 += delayimp
+GalilInterface_LDFLAGS_WIN32 += /DELAYLOAD:Galil1.dll
 GALILDLL=Galil1
 else
 # use galil c library (gclib) 
@@ -45,7 +47,7 @@ endif
 #==================================================
 # Build an IOC support library
 
-LIBRARY_IOC += GalilSupport
+LIBRARY_IOC += GalilSupport GalilInterface
 
 # For sCalcPostfix.h
 USR_INCLUDES += -I$(CALC)/calcApp/src
@@ -69,13 +71,19 @@ Galil_DIR = $(LIBGALIL)/lib/$(EPICS_HOST_ARCH)
 GalilSupport_SYS_LIBS_Linux += Galil
 BIN_INSTALLS_Linux += $(wildcard $(LIBGALIL)/lib/$(EPICS_HOST_ARCH)/*.so.*)
 
-PROD_IOC += GalilDumpPos
+GalilInterface_SRCS += GalilInterface.cpp
+GalilInterface_LIBS_WIN32 += $(GALILDLL)
+
+PROD_IOC += GalilDumpPos GalilInterfaceTest
 GalilDumpPos_SRCS += GalilDumpPos.cpp
 GalilDumpPos_LIBS_WIN32 += $(GALILDLL)
 GalilDumpPos_SYS_LIBS_WIN32 += delayimp
 GalilDumpPos_LDFLAGS_WIN32 += /DELAYLOAD:$(GALILDLL).dll
 GalilDumpPos_LIBS += $(EPICS_BASE_IOC_LIBS)
 GalilDumpPos_SYS_LIBS_Linux += Galil
+
+GalilInterfaceTest_SRCS += GalilInterfaceTest.cpp
+GalilInterfaceTest_LIBS += GalilInterface
 
 include $(TOP)/configure/RULES
 #----------------------------------------
