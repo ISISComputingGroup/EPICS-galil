@@ -1,3 +1,6 @@
+#ifndef GALIL_INTERFACE_H
+#define GALIL_INTERFACE_H
+
 #include <shareLib.h>
 epicsShareExtern void* IGalilCreate(const char* address, char** error);
 epicsShareExtern void IGalilDestroy(void* galil);
@@ -18,3 +21,5 @@ epicsShareExtern void IGalilRecordsStart(void* galil, char** error, double perio
 epicsShareExtern char* IGalilRecord(void* galil, int* n, char** error, const char* method = "QR");
 epicsShareExtern double IGalilSourceValue(void* galil, const char* record, const int* n, char** error, const char* source = "TIME");
 epicsShareExtern char* IGalilSource(void* galil, char** error, const char* field = "Description", const char* source = "TIME");
+
+#endif /* GALIL_INTERFACE_H */

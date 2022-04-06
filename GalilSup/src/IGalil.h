@@ -1,5 +1,10 @@
-#ifndef GALIL_H
-  #define GALIL_H
+#if defined(GALIL_H) && !defined(IGALIL_H)
+#error Cannot include both vendor Galil.h and IGalil.handleError
+#endif
+
+#ifndef IGALIL_H
+  #define IGALIL_H
+  #define GALIL_H /* to stop any future include of Galil.h */
 
   #include <string>
   #include <vector>
@@ -168,4 +173,4 @@
 
   };
 
-#endif
+#endif /* IGALIL_H */
