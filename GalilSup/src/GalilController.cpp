@@ -2603,8 +2603,14 @@ asynStatus GalilController::writeFloat64(asynUser *pasynUser, epicsFloat64 value
      }
   else if (function == GalilUserVar_)
      {
-     epicsSnprintf(cmd_, sizeof(cmd_), "%s=%lf", (const char*)pasynUser->userData, value);
-     status = writeReadController(functionName);
+     //Set user variable value on controller
+     epicsFloat64 old_value;
+     epicsSnprintf(cmd_, sizeof(cmd_), "%s=?", (const char*)pasynUser->userData);
+     status = get_double(GalilUserVar_, &old_value);
+     if (status != asynSuccess || old_value != value) {
+         epicsSnprintf(cmd_, sizeof(cmd_), "%s=%lf", (const char*)pasynUser->userData, value);
+         status = writeReadController(functionName);
+     }
      }
   else if (function == GalilEncoderSmooth_)
   {
