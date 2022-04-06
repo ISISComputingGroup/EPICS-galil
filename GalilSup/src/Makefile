@@ -71,10 +71,14 @@ Galil_DIR = $(LIBGALIL)/lib/$(EPICS_HOST_ARCH)
 GalilSupport_SYS_LIBS_Linux += Galil
 BIN_INSTALLS_Linux += $(wildcard $(LIBGALIL)/lib/$(EPICS_HOST_ARCH)/*.so.*)
 
+ifneq ($(findstring 10.0,$(VCVERSION)),)
 GalilInterface_SRCS += GalilInterface.cpp
 GalilInterface_LIBS_WIN32 += $(GALILDLL)
+INC += IGalil.h GalilInterface.h
+PROD_IOC += GalilInterfaceTest
+endif
 
-PROD_IOC += GalilDumpPos GalilInterfaceTest
+PROD_IOC += GalilDumpPos
 GalilDumpPos_SRCS += GalilDumpPos.cpp
 GalilDumpPos_LIBS_WIN32 += $(GALILDLL)
 GalilDumpPos_SYS_LIBS_WIN32 += delayimp
