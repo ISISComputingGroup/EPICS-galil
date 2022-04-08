@@ -31,23 +31,31 @@ GalilInterface_SYS_LIBS_WIN32 += delayimp
 GalilInterface_LDFLAGS_WIN32 += /DELAYLOAD:Galil1.dll
 GALILDLL=Galil1
 else
-# use galil c library (gclib) 
-LIBGALIL = $(ICPBINARYDIR)/galil_glibc
-LIBRARY_IOC += Galil2
-SRC_DIRS += $(LIBGALIL)/source/wrappers/gcl
-Galil2_SRCS += gcl_galil.cpp gcl_datarecord.cpp
-Galil2_LIBS_WIN32 += gclib gclibo $(EPICS_BASE_IOC_LIBS)
-gclib_DIR = $(LIBGALIL)/lib/dynamic/$(GCLIB_ARCH)
-gclibo_DIR = $(LIBGALIL)/lib/dynamic/$(GCLIB_ARCH)
-BIN_INSTALLS_WIN32 += $(wildcard $(LIBGALIL)/dll/$(GCLIB_ARCH)/*.dll)
-LIB_INSTALLS_WIN32 += $(wildcard $(LIBGALIL)/lib/dynamic/$(GCLIB_ARCH)/*.lib)
-GALILDLL=Galil2
+### use galil c library (gclib) 
+##LIBGALIL = $(ICPBINARYDIR)/galil_glibc
+##LIBRARY_IOC += Galil2
+##SRC_DIRS += $(LIBGALIL)/source/wrappers/gcl
+##Galil2_SRCS += gcl_galil.cpp gcl_datarecord.cpp
+##Galil2_LIBS_WIN32 += gclib gclibo $(EPICS_BASE_IOC_LIBS)
+##gclib_DIR = $(LIBGALIL)/lib/dynamic/$(GCLIB_ARCH)
+##gclibo_DIR = $(LIBGALIL)/lib/dynamic/$(GCLIB_ARCH)
+##BIN_INSTALLS_WIN32 += $(wildcard $(LIBGALIL)/dll/$(GCLIB_ARCH)/*.dll)
+##LIB_INSTALLS_WIN32 += $(wildcard $(LIBGALIL)/lib/dynamic/$(GCLIB_ARCH)/*.lib)
+##GALILDLL=Galil2
+
+# use vs2010 built galil interface library
+LIBGALIL = $(ICPBINARYDIR)/LibGalil/Interface
+GalilInterface_DIR = $(LIBGALIL)/lib/$(EPICS_HOST_ARCH)
+BIN_INSTALLS_WIN32 += $(wildcard $(LIBGALIL)/bin/$(EPICS_HOST_ARCH)/*.dll)
+BIN_INSTALLS_WIN32 += $(wildcard $(LIBGALIL)/bin/$(EPICS_HOST_ARCH)/*.pdb)
+LIB_INSTALLS_WIN32 += $(wildcard $(LIBGALIL)/lib/$(EPICS_HOST_ARCH)/*.lib)
+GALILDLL=GalilInterface
 endif
 
 #==================================================
 # Build an IOC support library
 
-LIBRARY_IOC += GalilSupport GalilInterface
+LIBRARY_IOC += GalilSupport
 
 # For sCalcPostfix.h
 USR_INCLUDES += -I$(CALC)/calcApp/src
@@ -72,10 +80,13 @@ GalilSupport_SYS_LIBS_Linux += Galil
 BIN_INSTALLS_Linux += $(wildcard $(LIBGALIL)/lib/$(EPICS_HOST_ARCH)/*.so.*)
 
 ifneq ($(findstring 10.0,$(VCVERSION)),)
+LIBRARY_IOC += GalilInterface
 GalilInterface_SRCS += GalilInterface.cpp
 GalilInterface_LIBS_WIN32 += $(GALILDLL)
 INC += IGalil.h GalilInterface.h
 PROD_IOC += GalilInterfaceTest
+GalilInterfaceTest_SRCS += GalilInterfaceTest.cpp
+GalilInterfaceTest_LIBS += GalilInterface
 endif
 
 PROD_IOC += GalilDumpPos
@@ -85,9 +96,6 @@ GalilDumpPos_SYS_LIBS_WIN32 += delayimp
 GalilDumpPos_LDFLAGS_WIN32 += /DELAYLOAD:$(GALILDLL).dll
 GalilDumpPos_LIBS += $(EPICS_BASE_IOC_LIBS)
 GalilDumpPos_SYS_LIBS_Linux += Galil
-
-GalilInterfaceTest_SRCS += GalilInterfaceTest.cpp
-GalilInterfaceTest_LIBS += GalilInterface
 
 include $(TOP)/configure/RULES
 #----------------------------------------

@@ -1,5 +1,5 @@
 #if defined(GALIL_H) && !defined(IGALIL_H)
-#error Cannot include both vendor Galil.h and IGalil.handleError
+#error Cannot include both vendor Galil.h and IGalil.h
 #endif
 
 #ifndef IGALIL_H
@@ -10,13 +10,12 @@
   #include <vector>
   #include "GalilInterface.h"
   
-  class Galil
-  { 
-  private:
-      void* m_galil;
-	  
-  public:
-  
+  class GalilBase
+  {
+      protected:
+          void* m_galil;
+
+    public:
      static void handleError(char* error)
 	 {
 		 if (error != NULL) {
@@ -26,6 +25,23 @@
 		 }		 
 	 }	 
 
+     GalilBase(std::string address = "")
+	 {
+		 char* error = NULL;
+		 m_galil = IGalilCreate(address.c_str(), &error);
+		 handleError(error); 
+	 }
+
+  };
+
+  class Galil : public GalilBase
+  { 
+  private:
+      char* m_error; // just for use in constructor
+	  
+  public:
+      int& timeout_ms;
+  
 	 static std::string handleErrorAndReturnString(char* error, char* str)
 	 {
 		 handleError(error); 
@@ -34,11 +50,10 @@
 		 return s;
 	 }
 
-     Galil(std::string address = "") : m_galil(NULL)
+     Galil(std::string address = "") : GalilBase(address), m_error(NULL),
+               timeout_ms(*IGalilTimeout(m_galil, &m_error))
 	 {
-		 char* error = NULL;
-		 m_galil = IGalilCreate(address.c_str(), &error);
-		 handleError(error); 
+		 handleError(m_error); 
 	 }
 
      ~Galil()
@@ -57,14 +72,6 @@
 		 char* error = NULL;
 		 char* conn = IGalilConnection(m_galil, &error);
 		 return handleErrorAndReturnString(error, conn);
-	 }
-
-     int& timeout_ms()
-	 {
-		 char* error = NULL;
-		 int* tmout = IGalilTimeout(m_galil, &error);
-		 handleError(error); 
-		 return *tmout;		 
 	 }
 
      std::string command(

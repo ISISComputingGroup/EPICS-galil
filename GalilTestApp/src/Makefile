@@ -45,7 +45,8 @@ GalilTest_LIBS_WIN32 += Galil1
 GalilTest_SYS_LIBS_WIN32 += delayimp
 GalilTest_LDFLAGS_WIN32 += /DELAYLOAD:Galil1.dll
 else
-GalilTest_LIBS_WIN32 += Galil2
+#GalilTest_LIBS_WIN32 += Galil2
+GalilTest_LIBS_WIN32 += GalilInterface
 endif
 endif
 
