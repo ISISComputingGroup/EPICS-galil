@@ -1303,6 +1303,7 @@ asynStatus GalilAxis::syncPosition(void)
       sprintf(pC_->cmd_, "DP%c=%.0lf", axisName_, encoder_position_ * (eres/mres));
       //Write command to controller
       status = pC_->sync_writeReadController();
+      std::cerr << "syncPosition " << axisName_ << std::endl;
       }
    //Status
    return (asynStatus)status;
@@ -2615,6 +2616,7 @@ asynStatus GalilAxis::jogAfterHome(void) {
       //Position registers always set to 0 in dial coordinates
       //Use OFF to give correct user position
       //Program motor position register
+      std::cerr << "JogAfterHome:  redefine position to 0 for " << axisName_ << std::endl; 
       sprintf(pC_->cmd_, "DP%c=0", axisName_);
       pC_->sync_writeReadController();
       //Program encoder position register
