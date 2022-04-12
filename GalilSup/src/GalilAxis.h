@@ -165,6 +165,7 @@ private:
   double encoder_smooth_factor_;
   int direction_;			//Movement direction
   bool inmotion_;			//Axis in motion status from controller
+  int stopcode_;			//Axis stop code from controller
   bool fwd_;				//Forward limit status
   bool rev_;				//Reverse limit status
   bool home_;				//Home switch raw status direct from data record

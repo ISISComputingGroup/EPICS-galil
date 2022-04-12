@@ -1104,6 +1104,10 @@ asynStatus GalilAxis::getStatus(void)
 			sprintf(src, "_TP%c", axisName_);
 			encoder_position_ = pC_->gco_->sourceValue(pC_->recdata_, src);
 
+			//stop code
+			sprintf(src, "_SC%c", axisName_);
+			stopcode_ = (int)pC_->gco_->sourceValue(pC_->recdata_, src);
+
 			//moving status
 			sprintf(src, "_BG%c", axisName_);
 			inmotion_ = (bool)(pC_->gco_->sourceValue(pC_->recdata_, src) == 1) ? 1 : 0;
@@ -1639,6 +1643,7 @@ void GalilAxis::executePost(void)
   if (!homing_ && !homedSent_ && done_ && premExecuted_ && !postSent_)
   {
       premExecuted_ = false;
+      std::cerr << "Motion Complete: _SC" << axisName_ << "=" << stopcode_ << " [" << lookupStopCode(stopcode_) << "]" << std::endl;
       //Process motor record post field
       if ( (pC_->getStringParam(axisNo_, pC_->GalilPost_, (int)sizeof(post), post) == asynSuccess) && strcmp(post, "") )
       {
@@ -1686,6 +1691,7 @@ asynStatus GalilAxis::beginMotion(const char *caller)
    sprintf(pC_->cmd_, "BG%c", axisName_);
    if (pC_->writeReadController(functionName) == asynSuccess)
       {
+      pC_->motion_started_.signal(); // to catch a very small move
       while (!inmotion_) //Allow time for motion to begin
          {
          epicsThreadSleep(.001);
@@ -1703,13 +1709,17 @@ asynStatus GalilAxis::beginMotion(const char *caller)
             double tp = getGalilAxisVal("_TP"); // current position (from encoder if present)
             double td = getGalilAxisVal("_TD"); // current position (motor steps)
             double rp = getGalilAxisVal("_RP"); // commanded position (motor steps)
-            epicsSnprintf(mesg, sizeof(mesg), "%s begin failure axis %c after %f seconds: _BG%c=%f _SC%c=%f [%s] _BL%c=%f _FL%c=%f _TP%c=%f _TD%c=%f _RP%c=%f", caller, axisName_, begin_time, axisName_, bg_code, axisName_, sc_code, lookupStopCode((int)sc_code), axisName_, bl, axisName_, fl, axisName_, tp, axisName_, td, axisName_, rp);
+            if (sc_code == 1) {
+                epicsSnprintf(mesg, sizeof(mesg), "%s begin timeout axis %c after %f seconds, however this may be an artifact of a very small move as _SC%c=1: _BG%c=%f  _BL%c=%f _FL%c=%f _TP%c=%f _TD%c=%f _RP%c=%f", caller, axisName_, begin_time, axisName_, axisName_, bg_code, axisName_, bl, axisName_, fl, axisName_, tp, axisName_, td, axisName_, rp);
+            } else {
+                epicsSnprintf(mesg, sizeof(mesg), "%s begin failure axis %c after %f seconds: _BG%c=%f _SC%c=%f [%s] _BL%c=%f _FL%c=%f _TP%c=%f _TD%c=%f _RP%c=%f", caller, axisName_, begin_time, axisName_, bg_code, axisName_, sc_code, lookupStopCode((int)sc_code), axisName_, bl, axisName_, fl, axisName_, tp, axisName_, td, axisName_, rp);
+            }
 			// getting these a lot, it it moving to somewhere very near current position?
 			// comment out sending to errlog for now and send to cerr instead
             //Set controller error mesg monitor
 //            pC_->setCtrlError(mesg);
 			std::cerr << mesg << std::endl;
-            return asynError;
+            return (sc_code == 1 ? asynSuccess : asynError);
             }
          }
       }
