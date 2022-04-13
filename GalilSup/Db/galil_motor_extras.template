@@ -1544,13 +1544,30 @@ record(bi,"$(P)$(M)_ON_STATUS")
 record(mbbo,"$(P)$(M)_ON_CMD")
 {
 	field(DESC, "Motor on cmd")
-	field(DTYP, "asynInt32")
 	field(ZRST, "Off")
 	field(ONST, "On")
+	field(TWST, "As is")
 	field(ZRVL, "0")
 	field(ONVL, "1")
+	field(TWVL, "2")
 	field(PINI, "YES")
 	field(VAL,  "$(MTRON)")
+	field(FLNK, "$(P)$(M)_ON_CMD_CALC")
+}
+
+record(calcout,"$(P)$(M)_ON_CMD_CALC")
+{
+	field(INPA, "$(P)$(M)_ON_CMD NPP")
+	field(OUT,  "$(P)$(M)_ON_CMD_DO PP")
+	field(CALC, "A < 2")
+	field(OCAL, "A")
+	field(DOPT, "Use OCAL")
+	field(OOPT, "When Non-zero")
+}
+
+record(longout,"$(P)$(M)_ON_CMD_DO")
+{
+	field(DTYP, "asynInt32")
 	field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_CLOSED_LOOP")
 	field(FLNK, "$(P)$(M)_ON_STATUS")
 }
