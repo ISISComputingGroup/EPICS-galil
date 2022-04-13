@@ -2603,8 +2603,20 @@ asynStatus GalilController::writeFloat64(asynUser *pasynUser, epicsFloat64 value
      }
   else if (function == GalilUserVar_)
      {
-     epicsSnprintf(cmd_, sizeof(cmd_), "%s=%lf", (const char*)pasynUser->userData, value);
-     status = writeReadController(functionName);
+     epicsFloat64 old_value;
+     epicsSnprintf(cmd_, sizeof(cmd_), "%s=?", (const char*)pasynUser->userData);
+     status = get_double(GalilUserVar_, &old_value);
+     if (status != asynSuccess) {
+		 std::cerr << "USERVAR: Creating " << (const char*)pasynUser->userData << std::endl;
+	 } else if (old_value != value) {
+		 std::cerr << "USERVAR: Updating " << (const char*)pasynUser->userData << std::endl;
+	 } else {
+		 std::cerr << "USERVAR: Skipping " << (const char*)pasynUser->userData << std::endl;
+	 }
+     if (status != asynSuccess || old_value != value) {
+         epicsSnprintf(cmd_, sizeof(cmd_), "%s=%lf", (const char*)pasynUser->userData, value);
+         status = writeReadController(functionName);
+     }
      }
   else if (function == GalilEncoderSmooth_)
   {
