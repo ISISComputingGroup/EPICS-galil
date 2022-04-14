@@ -2519,6 +2519,7 @@ asynStatus GalilController::writeFloat64(asynUser *pasynUser, epicsFloat64 value
   const char *functionName = "GalilController::writeFloat64";
   bool reqd_comms;				//Check for comms error only when function reqd comms
   int addr=0;					//Address requested
+  static int debug_uservar = (getenv("GALIL_DEBUG_USERVAR") != NULL ? atol(getenv("GALIL_DEBUG_USERVAR")) : 0);
 
   //Retrieve address.  Used for analog IO
   status = getAddress(pasynUser, &addr); 
@@ -2607,13 +2608,15 @@ asynStatus GalilController::writeFloat64(asynUser *pasynUser, epicsFloat64 value
      epicsFloat64 old_value;
      epicsSnprintf(cmd_, sizeof(cmd_), "%s=?", (const char*)pasynUser->userData);
      status = get_double(GalilUserVar_, &old_value);
-     if (status != asynSuccess) {
-		 std::cerr << "USERVAR: Creating " << (const char*)pasynUser->userData << std::endl;
-	 } else if (old_value != value) {
-		 std::cerr << "USERVAR: Updating " << (const char*)pasynUser->userData << std::endl;
-	 } else {
-		 std::cerr << "USERVAR: Skipping " << (const char*)pasynUser->userData << std::endl;
-	 }
+     if (debug_uservar) {
+         if (status != asynSuccess) {
+		     std::cerr << "USERVAR: Creating " << (const char*)pasynUser->userData << " with value " << value << std::endl;
+	     } else if (old_value != value) {
+		     std::cerr << "USERVAR: Updating " << (const char*)pasynUser->userData << " with " << old_value << " -> " << value << std::endl;
+	     } else {
+		     std::cerr << "USERVAR: Skipping " << (const char*)pasynUser->userData << " unchanged " << old_value << std::endl;
+	     }
+     }
      if (status != asynSuccess || old_value != value) {
          epicsSnprintf(cmd_, sizeof(cmd_), "%s=%lf", (const char*)pasynUser->userData, value);
          status = writeReadController(functionName);
