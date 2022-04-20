@@ -4225,6 +4225,7 @@ asynStatus GalilController::writeFloat64(asynUser *pasynUser, epicsFloat64 value
   asynStatus status;				//Used to work out communication_error_ status.  asynSuccess always returned
   GalilAxis *pAxis = getAxis(pasynUser);	//Retrieve the axis instance
   int addr=0;					//Address requested
+  static int debug_uservar = (getenv("GALIL_DEBUG_USERVAR") != NULL ? atol(getenv("GALIL_DEBUG_USERVAR")) : 0);
 
   //Just return if shutting down
   if (shuttingDown_)
@@ -4323,8 +4324,22 @@ asynStatus GalilController::writeFloat64(asynUser *pasynUser, epicsFloat64 value
         userVariableAddresses_.push_back(addr);
         }
      //Set user variable value on controller
-     epicsSnprintf(cmd_, sizeof(cmd_), "%s=%lf", (const char*)pasynUser->userData, value);
-     status = sync_writeReadController();
+     epicsFloat64 old_value;
+     epicsSnprintf(cmd_, sizeof(cmd_), "%s=?", (const char*)pasynUser->userData);
+     status = get_double(GalilUserVar_, &old_value);
+     if (debug_uservar) {
+         if (status != asynSuccess) {
+		     std::cerr << "USERVAR: Creating " << (const char*)pasynUser->userData << " with value " << value << std::endl;
+	     } else if (old_value != value) {
+		     std::cerr << "USERVAR: Updating " << (const char*)pasynUser->userData << " with " << old_value << " -> " << value << std::endl;
+	     } else {
+		     std::cerr << "USERVAR: Skipping " << (const char*)pasynUser->userData << " unchanged " << old_value << std::endl;
+	     }
+     }
+     if (status != asynSuccess || old_value != value) {
+         epicsSnprintf(cmd_, sizeof(cmd_), "%s=%lf", (const char*)pasynUser->userData, value);
+         status = sync_writeReadController();
+     }
      }
   else
      {
