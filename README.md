@@ -1,7 +1,7 @@
 Galil-3-6
 =========
 
-ASYN based EPICS driver for Galil products
+ASYN based EPICS driver for Galil products - see https://github.com/motorapp/Galil-3-0
 
 Notes
 =====
