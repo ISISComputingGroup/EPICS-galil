@@ -1764,6 +1764,11 @@ record(ai,"$(P)$(M):DMOV")
     field(INP, "$(P)$(M).DMOV CP")
 }
 
+record(stringin, "$(P)$(M)_IOCNAME){
+    field(DESC, "IOC name eg GALIL_01 for mtr rec")
+    field(VAL, "$(IOCNAME="UNKNOWN"))
+}
+
 record(scalcout, "$(P)$(M):MANAGERMODE")
 {
     field(ASG, "READONLY")
