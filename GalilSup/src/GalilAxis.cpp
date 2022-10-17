@@ -1446,6 +1446,7 @@ void GalilAxis::pollServices(void)
   double position;			//Absolute position Units=steps
   double readback;			//Controller positioning readback
   int status = asynSuccess;		//Asyn param status
+  static bool apply_home = ( (getenv("NO_APPLY_HOMEPOS") != NULL ? atoi(getenv("NO_APPLY_HOMEPOS")) : 0) == 0 );
 
   while (true)
      {
@@ -1522,16 +1523,23 @@ void GalilAxis::pollServices(void)
                             // normally tp encoder, td motor i think; but if open loop is tp motor? And what is td?
                             errlogSevPrintf(errlogInfo, "Poll services: current positions: _TD%c=%.0f _TP%c=%.0f\n", axisName_, td, axisName_, tp);
                             //Program motor position register
-						    errlogSevPrintf(errlogInfo, "Poll services: applying motor %c raw home position %.0f\n", axisName_, mrhmval);
-                            sprintf(pC_->cmd_, "DP%c=%.0f\n", axisName_, mrhmval);
-                            pC_->writeReadController(functionName);
-                            //Program encoder position register
-                            if (ueip)
-                               {
-						       errlogSevPrintf(errlogInfo, "Poll services: applying encoder %c raw home position %.0f\n", axisName_, enhmval);
-                               sprintf(pC_->cmd_, "DE%c=%.0f\n", axisName_, enhmval);
-                               pC_->writeReadController(functionName);
-                               }
+                            if (apply_home)
+                            {
+						        errlogSevPrintf(errlogInfo, "Poll services: applying motor %c raw home position %.0f\n", axisName_, mrhmval);
+                                sprintf(pC_->cmd_, "DP%c=%.0f\n", axisName_, mrhmval);
+                                pC_->writeReadController(functionName);
+                                //Program encoder position register
+                                if (ueip)
+                                   {
+						           errlogSevPrintf(errlogInfo, "Poll services: applying encoder %c raw home position %.0f\n", axisName_, enhmval);
+                                   sprintf(pC_->cmd_, "DE%c=%.0f\n", axisName_, enhmval);
+                                   pC_->writeReadController(functionName);
+                                   }
+                            }
+                            else
+                            {
+                                    errlogSevPrintf(errlogInfo, "Poll services: NOT applying home positions on axis %c as NO_APPLY_HOMEPOS defined\n", axisName_);
+                            }
                             //Give ample time for position register updates to complete
                             epicsThreadSleep(.2);
                             }
