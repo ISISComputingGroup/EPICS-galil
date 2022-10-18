@@ -61,7 +61,6 @@ LIBRARY_IOC += GalilSupport
 USR_INCLUDES += -I$(CALC)/calcApp/src
 
 USR_CXXFLAGS += -I$(LIBGALIL)/include
-USR_LDFLAGS_WIN32 += /PROFILE
 
 # motorRecord.h will be created from motorRecord.dbd
 # install devMotorSoft.dbd into <top>/dbd
