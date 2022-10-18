@@ -1651,7 +1651,12 @@ void GalilAxis::executePost(void)
   if (!homing_ && !homedSent_ && done_ && premExecuted_ && !postSent_)
   {
       premExecuted_ = false;
-      std::cerr << "Motion Complete: _SC" << axisName_ << "=" << stopcode_ << " [" << lookupStopCode(stopcode_) << "]" << std::endl;
+      double lf = getGalilAxisVal("_LF");
+      double lr = getGalilAxisVal("_LR");
+
+      std::cerr << "Motion Complete: _SC" << axisName_ << "=" << stopcode_ << " [" << lookupStopCode(stopcode_) << "] " <<
+                   "fwdLimit=" << (lf == 0.0 ? "ENGAGED" : "not engaged") << " revLimit=" << (lr == 0.0 ? "ENGAGED" : "not engaged") << std::endl;
+      
       //Process motor record post field
       if ( (pC_->getStringParam(axisNo_, pC_->GalilPost_, (int)sizeof(post), post) == asynSuccess) && strcmp(post, "") )
       {
