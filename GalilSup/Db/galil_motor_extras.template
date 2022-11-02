@@ -290,6 +290,12 @@ record(ai,"$(P):$(M):DMOV")
     field(INP, "$(P):$(M).DMOV CP")
 }
 
+record(stringin, "$(P)$(M)_IOCNAME")
+{
+    field(DESC, "IOC name eg GALIL_01")
+    field(VAL, "$(IOCNAME=)")
+}
+
 # Allow setting MRES/ERES as inverse
 
 record(ao, "$(P):$(M):INV_MRES")
