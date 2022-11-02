@@ -2606,6 +2606,7 @@ asynStatus GalilAxis::jogAfterHome(void) {
    int j = 0;				//Ensure while loop doesnt get stuck
    string mesg;				//Controller mesg
    int dmov;				//Axis motor record dmov
+   static bool apply_home = ( (getenv("NO_APPLY_HOMEPOS") != NULL ? atoi(getenv("NO_APPLY_HOMEPOS")) : 0) == 0 );
 
    //Retrieve needed params
    status = pC_->getDoubleParam(axisNo_, pC_->GalilJogAfterHomeValue_, &jahv);
@@ -2623,13 +2624,17 @@ asynStatus GalilAxis::jogAfterHome(void) {
       //Position registers always set to 0 in dial coordinates
       //Use OFF to give correct user position
       //Program motor position register
-      std::cerr << "JogAfterHome:  redefine position to 0 for " << axisName_ << std::endl; 
-      sprintf(pC_->cmd_, "DP%c=0", axisName_);
-      pC_->sync_writeReadController();
-      //Program encoder position register
-      if (ueip_ || ctrlUseMain_) {
-         sprintf(pC_->cmd_, "DE%c=0", axisName_);
-         pC_->sync_writeReadController();
+      if (apply_home) {
+          std::cerr << "JogAfterHome:  redefine position to 0 for " << axisName_ << std::endl; 
+          sprintf(pC_->cmd_, "DP%c=0", axisName_);
+          pC_->sync_writeReadController();
+          //Program encoder position register
+          if (ueip_ || ctrlUseMain_) {
+             sprintf(pC_->cmd_, "DE%c=0", axisName_);
+             pC_->sync_writeReadController();
+          }
+      } else {
+          std::cerr << "JogAfterHome:  not applying home positon for " << axisName_ << std::endl; 
       }
       
       //Give ample time for position register updates to complete
