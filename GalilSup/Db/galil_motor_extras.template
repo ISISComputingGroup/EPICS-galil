@@ -1765,8 +1765,8 @@ record(ai,"$(P)$(M):DMOV")
 }
 
 record(stringin, "$(P)$(M)_IOCNAME"){
-    field(DESC, "IOC name eg GALIL_01 for mtr rec")
-    field(VAL, "$(IOCNAME)")
+    field(DESC, "IOC name eg GALIL_01")
+    field(VAL, "$(IOCNAME=)")
 }
 
 record(scalcout, "$(P)$(M):MANAGERMODE")
