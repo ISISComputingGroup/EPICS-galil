@@ -2561,6 +2561,7 @@ asynStatus GalilAxis::beginMotion(const char *caller, double position, bool rela
    sprintf(pC_->cmd_, "BG%c", axisName_);
    if (pC_->sync_writeReadController() == asynSuccess) {
       //Wait until axis moving true status delivered to mr, or timeout
+      pC_->motion_started_.signal(); // to catch a very small move
       axisEventMonitor(beginEvent_);
    }
    else {
@@ -2575,13 +2576,17 @@ asynStatus GalilAxis::beginMotion(const char *caller, double position, bool rela
       double td = getGalilAxisVal("_TD"); // current position (motor steps)
       double rp = getGalilAxisVal("_RP"); // commanded position (motor steps)
       // need to check signal of event? need to check how axisEventMonitor above works
+      if (sc_code == 1) {
+      epicsSnprintf(mesg, sizeof(mesg), "%s begin timeout axis %c after %f seconds, however this may be an artifact of a very small move as _SC%c=1: _BG%c=%.0f _SC%c=%.0f [%s] _BL%c=%f _FL%c=%f _TP%c=%f _TD%c=%f _RP%c=%f", caller, axisName_, begin_timeout, axisName_, axisName_, bg_code, axisName_, sc_code, lookupStopCode((int)sc_code), axisName_, bl, axisName_, fl, axisName_, tp, axisName_, td, axisName_, rp);
+      } else {
       epicsSnprintf(mesg, sizeof(mesg), "%s begin failure axis %c after %f seconds: _BG%c=%.0f _SC%c=%.0f [%s] _BL%c=%f _FL%c=%f _TP%c=%f _TD%c=%f _RP%c=%f", caller, axisName_, begin_timeout, axisName_, bg_code, axisName_, sc_code, lookupStopCode((int)sc_code), axisName_, bl, axisName_, fl, axisName_, tp, axisName_, td, axisName_, rp);
       // getting these a lot, it it moving to somewhere very near current position?
       // comment out sending to errlog for now and send to cerr instead
       //Set controller error mesg monitor
       //pC_->setCtrlError(mesg);
+      }
       std::cerr << mesg << std::endl;
-      return asynError;
+      return (sc_code == 1 ? asynSuccess : asynError);
    }
 
    //Success
