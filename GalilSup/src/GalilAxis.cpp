@@ -2252,6 +2252,13 @@ void GalilAxis::pollServices(void)
                             std::cerr << "Poll services: POST " << axisName_ << " " << post << std::endl;
                             }
                          //Motor post complete
+                         {
+                         double lf = getGalilAxisVal("_LF");
+                         double lr = getGalilAxisVal("_LR");
+                         double sc_code = getGalilAxisVal("_SC");
+                         std::cerr << "Motion Complete: _SC" << axisName_ << "=" << sc_code << " [" << lookupStopCode((int)sc_code) << "] " <<
+                                 "fwdLimit=" << (lf == 0.0 ? "ENGAGED" : "not engaged") << " revLimit=" << (lr == 0.0 ? "ENGAGED" : "not engaged") << std::endl;
+                         }
                          postExecuted_ = true;
                          break;
         case MOTOR_OFF:  //Block auto motor off if again inmotion_
