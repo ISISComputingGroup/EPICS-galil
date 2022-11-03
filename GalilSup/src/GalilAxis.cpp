@@ -2171,7 +2171,7 @@ void GalilAxis::checkHoming(void)
 
 
       epicsSnprintf(message, sizeof(message), "Homing timed out after %f seconds: _BG%c=%.0f _SC%c=%.0f [%s] hjog%c=%.0f homed%c=%.0f",
-                  homing_timeout, axisName_, bg_code, axisName_, sc_code, lookupStopCode((int)sc_code), axisName_, hjog, homed);
+                  homing_timeout, axisName_, bg_code, axisName_, sc_code, lookupStopCode((int)sc_code), axisName_, hjog, axisName_, homed);
       pC_->setCtrlError(message);
 
       //Cancel home
