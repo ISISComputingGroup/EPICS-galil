@@ -915,8 +915,8 @@ void GalilController::connect(void)
          // but here it seems to lead to parts of the data record being interpreted as XOFF and getting dropped
          // from the readback particularly when a motor is moving. It was only enabled in the old version as otherwise
          // download of the homing programs timed out, but that doesn't seem to be an issue here
-         asynSetOption(syncPort_, 0, "xon", "N");
-         asynSetOption(syncPort_, 0, "xoff", "N");
+         asynSetOption(syncPort_, 0, "ixon", "N");
+         asynSetOption(syncPort_, 0, "ixoff", "N");
      }
      //Flag try_async_ records false for serial connections
      try_async_ = false;
