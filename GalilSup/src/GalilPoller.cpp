@@ -30,7 +30,7 @@
 
 using namespace std; //cout ostringstream vector string
 
-static const double NO_MOTION_POLLING_FACTOR = 10.0; // factor to reduce polling rate by when no motion is occurring
+static const double NO_MOTION_POLLING_FACTOR = 5.0; // factor to reduce polling rate by when no motion is occurring
 
 #include "GalilController.h"
 

@@ -274,6 +274,8 @@ private:
   double motor_position_;		//aux encoder or step count register
   double encoder_position_;		//main encoder register
   double last_encoder_position_;	//main encoder register stored from previous poll.  Used to detect movement.
+  double smoothed_encoder_position_;	// smoothed encoder value
+  double encoder_smooth_factor_;
   double velocity_;			//Motor velocity readback
   double error_;			//Position error readback
   int direction_;			//Movement direction
@@ -332,7 +334,8 @@ private:
   bool syncEncodedStepperAtStopExecuted_;//Synchronize stepper with encoder at stop execution complete
   bool syncEncodedStepperAtEncSent_;	//Synchronize stepper with encoder at encoder move message sent
   bool encoderSwapped_;			//Have the main, and auxiliary encoders been swapped by DFx=1
-
+  double motor_dly_;
+  bool first_poll_;
   bool restoreProfile_;			//Should profileBackupPositions_ be copied into profilePositions_ after orofile built complete? 
                                 	//True for all GalilAxis involved in CSAxis profile build, set false at built end
   double *profileBackupPositions_;	//Profile positions backup for this axis, restored after profile is built

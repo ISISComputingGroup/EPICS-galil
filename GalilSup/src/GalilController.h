@@ -153,6 +153,7 @@
 #define GalilDirectionString		"MOTOR_DIR"
 #define GalilDmovString			"MOTOR_DMOV"
 #define GalilUseEncoderString		"MOTOR_UEIP"
+#define GalilUseReadbackString		"MOTOR_URIP"
 #define GalilStopPauseMoveGoString	"MOTOR_SPMG"
 #define GalilPremString			"MOTOR_PREM"
 #define GalilPostString			"MOTOR_POST"
@@ -238,6 +239,8 @@
 #define GalilSerialNumString	  	"CONTROLLER_SERIALNUM"
 #define GalilMoveCommandString	"MOVE_COMMAND"
 #define GalilMotorEncoderSyncTolString	"MOTOR_ENC_TOL"
+#define GalilEncoderSmoothString	"ENCODER_SMOOTH"
+#define GalilMotorDlyString			"MOTOR_DLY"
 
 #define GalilStatusPollDelayString	"MOTOR_STATUS_POLL_DELAY"
 
@@ -565,7 +568,10 @@ protected:
   int GalilITCSmooth_;
   int GalilBiasVoltage_;
   int GalilPole_;
-  
+  int GalilUseReadback_;
+  int GalilEncoderSmooth_;
+  int GalilMotorDly_;
+
   int GalilCommunicationError_;
   #define LAST_GALIL_PARAM GalilCommunicationError_
 

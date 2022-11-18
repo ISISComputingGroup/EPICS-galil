@@ -64,7 +64,8 @@ GalilAxis::GalilAxis(class GalilController *pC, //Pointer to controller instance
 		     char *enables_string,	//digital input(s) to use for motor enable/disable function
 		     int switch_type)		//motor enable/disable switch type
   : asynMotorAxis(pC, (toupper(axisname[0]) - AASCII)),
-    pC_(pC), last_encoder_position_(0), encDirOk_(true), pollRequest_(10, sizeof(int))
+    pC_(pC), last_encoder_position_(0), smoothed_encoder_position_(0), encoder_smooth_factor_(0.0), motor_dly_(0.0),
+    first_poll_(true),encDirOk_(true), pollRequest_(10, sizeof(int))
 {
   string limit_code;				//Code generated for limits interrupt on this axis
   string digital_code;				//Code generated for digital interrupt related to this axis
@@ -678,6 +679,7 @@ asynStatus GalilAxis::move(double position, int relative, double minVelocity, do
   }
 
   std::cerr << "MOVE: axis " << axisName_ << " to " << position << (relative != 0 ? " (relative) " : " (absolute)") << " current readback " << readback << std::endl;
+  std::cerr << "MOVE: axis " << axisName_ << " motor readback " << motor_position_ << " encoder readback " << encoder_position_ << std::endl;
   //Check for move thru motor record
   if (moveThruRecord_) {
      //Set flag false
@@ -1887,10 +1889,12 @@ asynStatus GalilAxis::getStatus(void)
 void GalilAxis::setStatus(bool *moving)
 {
   int encoder_direction = -1;	//Determined encoder move direction
-
+  int urip = 0;
+  double mres, eres;
+  pC_->getIntegerParam(axisNo_, pC_->GalilUseReadback_, &urip);
   //Encoder move status
   encoderMove_ = false;
-  if (ueip_ || ctrlUseMain_)
+  if (ueip_ || urip || ctrlUseMain_)
      {
      //Check encoder move
      if (last_encoder_position_ > (encoder_position_ + enc_tol_))
@@ -1910,7 +1914,12 @@ void GalilAxis::setStatus(bool *moving)
      //Encoder direction ok flag
      encDirOk_ = (encoder_direction == direction_) ? true : false;
      }
-
+  if (urip)
+  {
+	  pC_->getDoubleParam(axisNo_, pC_->motorResolution_, &mres);
+      pC_->getDoubleParam(axisNo_, pC_->GalilEncoderResolution_, &eres);
+	  motor_position_ = (encoder_position_ * eres)/mres;
+  }
    //Determine move status
    //Motors with deferred moves pending set to status moving
    if (inmotion_ || deferredMove_)
@@ -2816,6 +2825,7 @@ asynStatus GalilAxis::poller(bool& moving)
    int home;			//Home status to give to motorRecord
    int status;			//Communication status with controller
    double stopDelay;		//Delay stop reporting
+   int urip = 0;
 
    //Default communication status
    status = asynError;
@@ -2830,6 +2840,7 @@ asynStatus GalilAxis::poller(bool& moving)
    status |= pC_->getIntegerParam(axisNo_, pC_->GalilEncoderTolerance_, &enc_tol_);
    status |= pC_->getIntegerParam(axisNo_, pC_->GalilDmov_, &dmov);
    status |= pC_->getDoubleParam(axisNo_, pC_->GalilStopDelay_, &stopDelay);
+   status |= pC_->getIntegerParam(axisNo_, pC_->GalilUseReadback_, &urip);
 
    //Are all related CSAxis done (includes retries, backlash)
    //Used for auto amp off, and auto brake on for this axis
@@ -2900,16 +2911,46 @@ asynStatus GalilAxis::poller(bool& moving)
       stop_reason_ = MOTOR_OKAY;
    }
 
+    if (first_poll_)
+   {
+	   smoothed_encoder_position_ = encoder_position_;
+	   first_poll_ = false;
+   }
+   else
+   {
+       smoothed_encoder_position_ = (1.0 - encoder_smooth_factor_) * encoder_position_ +
+                               encoder_smooth_factor_ * smoothed_encoder_position_;
+   }
 skip:
    //Save encoder position, and done for next poll cycle
    last_encoder_position_ = encoder_position_;
    last_done_ = done_;
 
    //Set status
-   //Pass step count/aux encoder info to motorRecord
-   setDoubleParam(pC_->motorPosition_, motor_position_);
-   //Pass encoder value to motorRecord
-   setDoubleParam(pC_->motorEncoderPosition_, encoder_position_);
+   if (encoder_smooth_factor_ != 0.0)
+   {
+       //Pass step count/aux encoder info to motorRecord
+       setDoubleParam(pC_->motorPosition_, motor_position_);
+       //Pass encoder value to motorRecord
+	   if (moving)
+	   {
+           setDoubleParam(pC_->motorEncoderPosition_, encoder_position_);
+		   smoothed_encoder_position_ = encoder_position_; // no smoothing during moves, reset series
+	   }
+	   else if (stoppedTime_ < motor_dly_ || encoderMove_)
+	   {
+//		   if (!encoderMove_) {
+//		       std::cerr << axisName_ << " raw " << encoder_position_ << " smoothed " << smoothed_encoder_position_ << " (" << stopped_time_ << "," << motor_dly_ << "," << encoderMove_ << ")" << std::endl;
+//	       }
+           setDoubleParam(pC_->motorEncoderPosition_, smoothed_encoder_position_);
+	   }
+   }
+   else if ( !urip || (moving || encoderMove_) ) {
+       //Pass step count/aux encoder info to motorRecord
+       setDoubleParam(pC_->motorPosition_, motor_position_);
+       //Pass encoder value to motorRecord
+       setDoubleParam(pC_->motorEncoderPosition_, encoder_position_);
+   }
    //Pass home status to motorRecord
    setIntegerParam(pC_->motorStatusAtHome_, home);
    setIntegerParam(pC_->motorStatusHome_, home);
