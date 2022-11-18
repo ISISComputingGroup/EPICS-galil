@@ -1305,7 +1305,7 @@ asynStatus GalilAxis::syncPosition(void)
       sprintf(pC_->cmd_, "DP%c=%.0lf", axisName_, encoder_position_ * (eres/mres));
       //Write command to controller
       status = pC_->sync_writeReadController();
-      std::cerr << "syncPosition " << axisName_ << std::endl;
+      std::cerr << "syncPosition " << axisName_ << " change " << motor_position_ << " with " << pC_->cmd_ << std::endl;
       }
    //Status
    return (asynStatus)status;
