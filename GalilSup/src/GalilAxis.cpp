@@ -1293,21 +1293,33 @@ asynStatus GalilAxis::stopMotorRecord(void) {
 */
 asynStatus GalilAxis::syncPosition(void)
 {
-   int status;
+   int status = 0;
    double eres, mres;	//Encoder, motor resolution
-
+   sprintf(pC_->cmd_, "MT%c=?", axisName_);
+   pC_->sync_writeReadController();
+   int motor_type = atoi(pC_->resp_); // servo is -1.5, -1, 1, or 1.5 so abs(int(motor)) is 1 
    //Retrieve needed params
    status = pC_->getDoubleParam(axisNo_, pC_->motorResolution_, &mres);
    status |= pC_->getDoubleParam(axisNo_, pC_->GalilEncoderResolution_, &eres);
-   if (!status)
-      {
-      //Calculate step count from existing encoder_position, construct mesg to controller
-      sprintf(pC_->cmd_, "DP%c=%.0lf", axisName_, encoder_position_ * (eres/mres));
-      //Write command to controller
-      status = pC_->sync_writeReadController();
-      std::cerr << "syncPosition " << axisName_ << " change " << motor_position_ << " with " << pC_->cmd_ << std::endl;
-      }
-   //Status
+   if (status || abs(motor_type) == 1 || !ueip_)
+   {
+       return asynSuccess;
+   }
+   //Calculate step count from existing encoder_position
+   double new_motor_pos = encoder_position_ * (eres/mres);
+
+   if (abs(motor_type) == 1) // currently servo branch should never get executed, not sure it ever should?
+   {
+       sprintf(pC_->cmd_, "DE%c=%.0lf", axisName_, new_motor_pos);  //Servo motor, use aux register for step count
+   }
+   else
+   {
+       sprintf(pC_->cmd_, "DP%c=%.0lf", axisName_, new_motor_pos);  //Stepper motor, main register for step count
+   }
+
+   //Write command to controller
+   status = pC_->sync_writeReadController();
+   std::cerr << "syncPosition axis " << axisName_ << " changed motor counter from " << motor_position_ << " to " << new_motor_pos << std::endl;
    return (asynStatus)status;
 }
 
@@ -2252,14 +2264,16 @@ void GalilAxis::pollServices(void)
                          std::cerr << "Poll services: STOP " << axisName_ << std::endl;
                          break;
         case MOTOR_POST: status = pC_->getStringParam(axisNo_, pC_->GalilPost_, (int)sizeof(post), post);
-                         if (!status) 
-                            {
+                         if (!status) { 
                             //Copy post field into cmd 
-                            strcpy(pC_->cmd_, post);
-                            //Write command to controller
-                            pC_->sync_writeReadController();
-                            std::cerr << "Poll services: POST " << axisName_ << " " << post << std::endl;
+                            if (strcmp(post, ""))
+                            {                                
+                                strcpy(pC_->cmd_, post);
+                                //Write command to controller
+                                pC_->sync_writeReadController();
+                                std::cerr << "Poll services: POST " << axisName_ << " " << post << std::endl;
                             }
+                         }
                          //Motor post complete
                          {
                          double lf = getGalilAxisVal("_LF");
@@ -2408,16 +2422,13 @@ void GalilAxis::executeAutoOnDelay(void)
 void GalilAxis::executePost(int dmov)
 {
   int homing;				//Homing status that includes JAH
-  char post[MAX_GALIL_STRING_SIZE];	//Motor record post field
-  int status;				//Asyn paramlist status
+  int status = 0;				//Asyn paramlist status
 
-  //Retrieve required params
-  status = pC_->getStringParam(axisNo_, pC_->GalilPost_, (int)sizeof(post), post);
   //Homing status that includes JAH
   status |= pC_->getIntegerParam(axisNo_, pC_->GalilHoming_, &homing);
 
   //Execute post when required
-  if (strcmp(post, "") && dmov && !status && !homing_ && !homing && !homedSent_ && !postSent_) {
+  if (dmov && !status && !homing_ && !homing && !homedSent_ && !postSent_) {
      //Send the post command
      pollRequest_.send((void*)&MOTOR_POST, sizeof(int));
      //Set post flags
