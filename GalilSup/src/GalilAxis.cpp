@@ -800,8 +800,11 @@ asynStatus GalilAxis::setupHome(double maxVelocity, int forwards)
    //Homed is not part of Galil data record, we support it using Galil code and unsolicited messages instead
    //We must use asynMotorAxis version of setIntegerParam to set MSTA bits for this MotorAxis
    setIntegerParam(pC_->motorStatusHomed_, 0);
-
-   if (useSwitch) {
+   if (customHome_) {
+       // have separate branch here as we do not want to change hjog, it needs to be left at 0 at start for custom home code
+       std::cerr << "Using custom home code" << std::endl;
+   }
+   else if (useSwitch) {
      //Driver will start jog toward switch
      //Then controller home program will be called by setting home%c=1
      //calculate jog toward switch speed, direction
@@ -1232,7 +1235,13 @@ asynStatus GalilAxis::stop(double acceleration)
   else {
      //Stop this axis independently
      //cancel any home, and home switch jog off operations that may be underway
-     sprintf(pC_->cmd_, "home%c=0;hjog%c=0", axisName_, axisName_);
+     if (customHome_) {
+          // hjog=0 not needed, might be a race condition if it is set (reexecute hjog==0 section)
+         sprintf(pC_->cmd_, "home%c=0", axisName_);
+     }
+     else {
+         sprintf(pC_->cmd_, "home%c=0;hjog%c=0", axisName_, axisName_);
+     }
      pC_->sync_writeReadController();
      //Set homing flag false
      //This flag does not include JAH
@@ -2280,7 +2289,7 @@ void GalilAxis::pollServices(void)
                          double lr = getGalilAxisVal("_LR");
                          double sc_code = getGalilAxisVal("_SC");
                          std::cerr << "Motion Complete: _SC" << axisName_ << "=" << sc_code << " [" << lookupStopCode((int)sc_code) << "] " <<
-                                 "fwdLimit=" << (lf == 0.0 ? "ENGAGED" : "not engaged") << " revLimit=" << (lr == 0.0 ? "ENGAGED" : "not engaged") << std::endl;
+                                 "fwdLS=" << (lf == 0.0 ? "ENGAGED" : "OK") << " revLS=" << (lr == 0.0 ? "ENGAGED" : "OK") << std::endl;
                          }
                          postExecuted_ = true;
                          break;
