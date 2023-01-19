@@ -293,7 +293,7 @@ record(ai,"$(P):$(M):DMOV")
 record(stringin, "$(P)$(M)_IOCNAME")
 {
     field(DESC, "IOC name eg GALIL_01")
-    field(VAL, "$(IOCNAME=)")
+    field(VAL, "$(IOCNAME=UNKNOWN)")
 }
 
 # Allow setting MRES/ERES as inverse
