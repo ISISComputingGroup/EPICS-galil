@@ -48,6 +48,7 @@ GMC += galil_Home_ForwLimit+FIneg_sans2d_apertures.gmc
 
 # Dummy routines mainly used for testing
 GMC += galil_Home_Dummy_Do_Nothing.gmc galil_Home_Dummy_Power_Light.gmc galil_Home_No_Home.gmc
+GMC += galil_Oscillating_Collimator_Wish.gmc
 
 include $(TOP)/configure/RULES
 #----------------------------------------
