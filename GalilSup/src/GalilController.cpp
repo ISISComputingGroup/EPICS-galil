@@ -6123,6 +6123,29 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
    burn_program_ = burn_program;
    thread_mask_ = thread_mask;
 
+   std::string delimiter = "!";
+   size_t pos_start = 0, pos_end, delim_len = delimiter.length();
+   std::string token;
+   std::vector<std::string> homingRoutineNames;
+   std::string code_str(code_file_);
+
+   size_t header_end_pos = code_str.find(";");
+   code_str.erase(0, header_end_pos+1);
+
+   code_str = code_str.substr(0, code_str.find(";"));
+
+   while ((pos_end = code_str.find(delimiter, pos_start)) != std::string::npos) {
+       token = code_str.substr(pos_start, pos_end - pos_start);
+       pos_start = pos_end + delim_len;
+       homingRoutineNames.push_back(token);
+   }
+
+   homingRoutineNames.push_back(code_str.substr(pos_start));
+
+   for (auto h : homingRoutineNames) {
+       std::cout << h << std::endl;
+   }
+
    //Assemble code for download to controller.  This is generated, or user specified code.
    if (!code_assembled_) {
       //Generate rio code if required
@@ -6279,6 +6302,8 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
             errlogPrintf("Code started successfully on model %s, address %s\n",model_.c_str(), address_.c_str());
       }
 
+
+
       //Limits motor direction consistency unknown at connect/reconnect
       for (i = 0; i < numAxes_; i++) {
          pAxis = getAxis(axisList_[i] - AASCII);
@@ -6286,6 +6311,8 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
          pAxis->limitsDirState_ = unknown;
          //Pass motor/limits consistency to paramList
          setIntegerParam(pAxis->axisNo_, GalilLimitConsistent_, pAxis->limitsDirState_);
+
+         pAxis->homingRoutineName = homingRoutineNames[i+1];
       }
 
       //Retrieve controller time base
