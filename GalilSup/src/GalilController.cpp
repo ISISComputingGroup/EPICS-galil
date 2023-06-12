@@ -6312,7 +6312,7 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
          //Pass motor/limits consistency to paramList
          setIntegerParam(pAxis->axisNo_, GalilLimitConsistent_, pAxis->limitsDirState_);
 
-         pAxis->homingRoutineName = homingRoutineNames[i+1];
+         pAxis->homingRoutineName = homingRoutineNames[i];
       }
 
       //Retrieve controller time base
