@@ -1,0 +1,77 @@
+# P    - PV prefix
+# M    - CSMotor Name
+# PORT - Asyn port name
+# ADDR - CS motor (8-15)
+
+#Reverse kinematic transforms
+record(stringout,"$(P)$(M)HMRNAM_A")
+{
+	field(DESC, "$(M) Homing routine axis A")
+	field(PINI, "YES")
+	field(OMSL, "supervisory")
+	field(DTYP, "asynOctetWrite")
+	field(OUT,  "@asyn($(PORT),$(ADDR))HMRNAM_A")
+}
+
+record(stringout,"$(P)$(M)HMRNAM_B")
+{
+	field(DESC, "$(M) Homing routine axis B")
+	field(PINI, "YES")
+	field(OMSL, "supervisory")
+	field(DTYP, "asynOctetWrite")
+	field(OUT,  "@asyn($(PORT),$(ADDR))HMRNAM_B")
+}
+
+record(stringout,"$(P)$(M)HMRNAM_C")
+{
+	field(DESC, "$(M) Homing routine axis C")
+	field(PINI, "YES")
+	field(OMSL, "supervisory")
+	field(DTYP, "asynOctetWrite")
+	field(OUT,  "@asyn($(PORT),$(ADDR))HMRNAM_C")
+}
+
+record(stringout,"$(P)$(M)HMRNAM_D")
+{
+	field(DESC, "$(M) Homing routine axis D")
+	field(PINI, "YES")
+	field(OMSL, "supervisory")
+	field(DTYP, "asynOctetWrite")
+	field(OUT,  "@asyn($(PORT),$(ADDR))HMRNAM_D")
+}
+
+record(stringout,"$(P)$(M)HMRNAM_E")
+{
+	field(DESC, "$(M) Homing routine axis E")
+	field(PINI, "YES")
+	field(OMSL, "supervisory")
+	field(DTYP, "asynOctetWrite")
+	field(OUT,  "@asyn($(PORT),$(ADDR))HMRNAM_E")
+}
+
+record(stringout,"$(P)$(M)HMRNAM_F")
+{
+	field(DESC, "$(M) Homing routine axis F")
+	field(PINI, "YES")
+	field(OMSL, "supervisory")
+	field(DTYP, "asynOctetWrite")
+	field(OUT,  "@asyn($(PORT),$(ADDR))HMRNAM_F")
+}
+
+record(stringout,"$(P)$(M)HMRNAM_G")
+{
+	field(DESC, "$(M) Homing routine axis G")
+	field(PINI, "YES")
+	field(OMSL, "supervisory")
+	field(DTYP, "asynOctetWrite")
+	field(OUT,  "@asyn($(PORT),$(ADDR))HMRNAM_G")
+}
+
+record(stringout,"$(P)$(M)HMRNAM_H")
+{
+	field(DESC, "$(M) Homing routine axis H")
+	field(PINI, "YES")
+	field(OMSL, "supervisory")
+	field(DTYP, "asynOctetWrite")
+	field(OUT,  "@asyn($(PORT),$(ADDR))HMRNAM_H")
+}

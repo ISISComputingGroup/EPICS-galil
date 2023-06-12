@@ -136,6 +136,16 @@
 #define GalilStepSmoothString		"MOTOR_STEPSMOOTH"
 #define GalilITCSmoothString		"MOTOR_ITCSMOOTH"
 #define GalilMotorTypeString		"MOTOR_TYPE"
+#define GalilHomingRoutineNameString "MOTOR_HMRNAM"
+
+#define GalilHomingRoutineAString	"HMRNAM_A"
+#define GalilHomingRoutineBString	"HMRNAM_B"
+#define GalilHomingRoutineCString	"HMRNAM_C"
+#define GalilHomingRoutineDString	"HMRNAM_D"
+#define GalilHomingRoutineEString	"HMRNAM_E"
+#define GalilHomingRoutineFString	"HMRNAM_F"
+#define GalilHomingRoutineGString	"HMRNAM_G"
+#define GalilHomingRoutineHString	"HMRNAM_H"
 
 #define GalilEtherCatCapableString	"CONTROLLER_ECATCAPABLE"
 #define GalilEtherCatNetworkString	"CONTROLLER_ECAT_NETWORK"
@@ -303,6 +313,7 @@ public:
   asynStatus writeOctet(asynUser *pasynUser, const char*  value,  size_t  nChars,  size_t *  nActual);
   asynStatus readInt32(asynUser *pasynUser, epicsInt32 *value);
   asynStatus readFloat64(asynUser *pasynUser, epicsFloat64 *value);
+  asynStatus readOctet(asynUser *pasynUser, char *value, size_t maxChars, size_t *nActual, int *eomReason);
   asynStatus drvUserCreate(asynUser *pasynUser, const char* drvInfo, const char** pptypeName, size_t* psize); 
   asynStatus drvUserDestroy(asynUser *pasynUser);
   void report(FILE *fp, int level);
@@ -574,6 +585,14 @@ protected:
 
   int GalilCommunicationError_;
   #define LAST_GALIL_PARAM GalilCommunicationError_
+  int GalilHomingRoutineA_;
+  int GalilHomingRoutineB_;
+  int GalilHomingRoutineC_;
+  int GalilHomingRoutineD_;
+  int GalilHomingRoutineE_;
+  int GalilHomingRoutineF_;
+  int GalilHomingRoutineG_;
+  int GalilHomingRoutineH_;
 
 private:
 

@@ -602,6 +602,15 @@ GalilController::GalilController(const char *portName, const char *address, doub
   createParam(GalilStepSmoothString, asynParamFloat64, &GalilStepSmooth_);
   createParam(GalilMotorTypeString, asynParamInt32, &GalilMotorType_);
 
+  createParam(GalilHomingRoutineAString, asynParamOctet, &GalilHomingRoutineA_);
+  createParam(GalilHomingRoutineBString, asynParamOctet, &GalilHomingRoutineB_);
+  createParam(GalilHomingRoutineCString, asynParamOctet, &GalilHomingRoutineC_);
+  createParam(GalilHomingRoutineDString, asynParamOctet, &GalilHomingRoutineD_);
+  createParam(GalilHomingRoutineEString, asynParamOctet, &GalilHomingRoutineE_);
+  createParam(GalilHomingRoutineFString, asynParamOctet, &GalilHomingRoutineF_);
+  createParam(GalilHomingRoutineGString, asynParamOctet, &GalilHomingRoutineG_);
+  createParam(GalilHomingRoutineHString, asynParamOctet, &GalilHomingRoutineH_);
+
   createParam(GalilEtherCatCapableString, asynParamInt32, &GalilEtherCatCapable_);
   createParam(GalilEtherCatNetworkString, asynParamInt32, &GalilEtherCatNetwork_);
   createParam(GalilCtrlEtherCatFaultString, asynParamInt32, &GalilCtrlEtherCatFault_);
@@ -4424,7 +4433,9 @@ asynStatus GalilController::writeOctet(asynUser *pasynUser, const char*  value, 
   unsigned i;					//looping
   string mesg;					//Controller mesg
   GalilCSAxis *pCSAxis;				//Pointer to CSAxis instance
+  GalilAxis *pAxis = getAxis(pasynUser);	//Retrieve the axis instance
   int addr=0;					//Address requested
+  std::string homingRoutineName = pAxis->homingRoutineName;
 
   //Just return if shutting down
   if (shuttingDown_)
@@ -4469,6 +4480,38 @@ asynStatus GalilController::writeOctet(asynUser *pasynUser, const char*  value, 
         setStringParam(GalilUserOctet_, "error");
         }
      }
+  else if (function == GalilHomingRoutineA_)
+  {
+   setStringParam(GalilHomingRoutineA_, homingRoutineName);
+  }
+  else if (function == GalilHomingRoutineB_)
+  {
+   setStringParam(GalilHomingRoutineB_, homingRoutineName);
+  }
+  else if (function == GalilHomingRoutineC_)
+  {
+   setStringParam(GalilHomingRoutineC_, homingRoutineName);
+  }
+  else if (function == GalilHomingRoutineD_)
+  {
+   setStringParam(GalilHomingRoutineD_, homingRoutineName);
+  }
+  else if (function == GalilHomingRoutineE_)
+  {
+   setStringParam(GalilHomingRoutineE_, homingRoutineName);
+  }
+  else if (function == GalilHomingRoutineF_)
+  {
+   setStringParam(GalilHomingRoutineF_, homingRoutineName);
+  }
+  else if (function == GalilHomingRoutineG_)
+  {
+   setStringParam(GalilHomingRoutineG_, homingRoutineName);
+  }
+  else if (function == GalilHomingRoutineH_)
+  {
+   setStringParam(GalilHomingRoutineH_, homingRoutineName);
+  }
   else if (function >= GalilCSMotorForward_ && function <= GalilCSMotorReverseH_)
      {
      //User has entered a new kinematic transform equation
@@ -4505,6 +4548,23 @@ asynStatus GalilController::writeOctet(asynUser *pasynUser, const char*  value, 
   //Always return success. Dont need more error mesgs
   return asynSuccess;
 }
+
+// asynStatus GalilController::readOctet(asynUser *pasynUser, char *value, size_t maxChars, size_t *nActual, int *eomReason) {
+//    int function = pasynUser->reason;		//Reason this method was called
+//   GalilAxis *pAxis = getAxis(pasynUser);	//Retrieve the axis instance
+//   GalilCSAxis *pCSAxis = getCSAxis(pasynUser);	//Retrieve the CSAxis instance
+//   asynStatus status;				//Status
+//   int addr;					//address
+
+//   if (function == GalilHomingRoutineName_) {
+//    status = pAxis->homingRoutineName;
+//   }
+//   else {
+//    status = asynMotorController::readOctet(pasynUser, value, maxChars, nActual, eomReason)
+//   }
+  
+//   return asynSuccess;
+// }
 
 /*Enable/Disable EtherCat network
   * \param[in] Enable, or disable ethercat network
