@@ -4435,15 +4435,12 @@ asynStatus GalilController::writeOctet(asynUser *pasynUser, const char*  value, 
   GalilCSAxis *pCSAxis;				//Pointer to CSAxis instance
   GalilAxis *pAxis = getAxis(pasynUser);	//Retrieve the axis instance
   int addr=0;					//Address requested
-  //std::cout << pAxis->homingRoutineName;
   std::string homingRoutineName = "";
   if (function >= GalilHomingRoutineA_ && function <= GalilHomingRoutineH_) {
-
       if (pAxis != nullptr) {
           homingRoutineName = pAxis->homingRoutineName;
       }
   }
-  //std::string homingRoutineName(homingrn);
 
   //Just return if shutting down
   if (shuttingDown_)
@@ -6191,19 +6188,18 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
    burn_program_ = burn_program;
    thread_mask_ = thread_mask;
 
+
+   // Parse the homing routines from the code file string by splitting it up based on delimiters
    std::string delimiter = "!";
    size_t pos_start = 0, pos_end, delim_len = delimiter.length();
    std::string token;
    std::vector<std::string> homingRoutineNames;
    std::string code_str(code_file_);
-
    // remove all chars up to first ';' 
    size_t header_end_pos = code_str.find(";");
    code_str.erase(0, header_end_pos+1);
-
    // remove all chars after ';'
    code_str = code_str.substr(0, code_str.find(";"));
-
    // split by '!'
    while ((pos_end = code_str.find(delimiter, pos_start)) != std::string::npos) {
        token = code_str.substr(pos_start, pos_end - pos_start);
@@ -6216,11 +6212,6 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
    auto last = code_str.substr(pos_start);
    last.erase(0, last.find("_")+1);
    homingRoutineNames.push_back(last);
-
-   for (auto h : homingRoutineNames) {
-       std::cout << h << std::endl;
-   }
-
    for (i = 0; i < numAxes_; i++) {
        pAxis = getAxis(axisList_[i] - AASCII);
        if (!pAxis) continue;
