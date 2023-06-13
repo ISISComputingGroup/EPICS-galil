@@ -4554,23 +4554,6 @@ asynStatus GalilController::writeOctet(asynUser *pasynUser, const char*  value, 
   return asynSuccess;
 }
 
-// asynStatus GalilController::readOctet(asynUser *pasynUser, char *value, size_t maxChars, size_t *nActual, int *eomReason) {
-//    int function = pasynUser->reason;		//Reason this method was called
-//   GalilAxis *pAxis = getAxis(pasynUser);	//Retrieve the axis instance
-//   GalilCSAxis *pCSAxis = getCSAxis(pasynUser);	//Retrieve the CSAxis instance
-//   asynStatus status;				//Status
-//   int addr;					//address
-
-//   if (function == GalilHomingRoutineName_) {
-//    status = pAxis->homingRoutineName;
-//   }
-//   else {
-//    status = asynMotorController::readOctet(pasynUser, value, maxChars, nActual, eomReason)
-//   }
-  
-//   return asynSuccess;
-// }
-
 /*Enable/Disable EtherCat network
   * \param[in] Enable, or disable ethercat network
 */
