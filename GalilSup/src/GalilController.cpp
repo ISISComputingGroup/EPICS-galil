@@ -4433,14 +4433,9 @@ asynStatus GalilController::writeOctet(asynUser *pasynUser, const char*  value, 
   unsigned i;					//looping
   string mesg;					//Controller mesg
   GalilCSAxis *pCSAxis;				//Pointer to CSAxis instance
-  GalilAxis *pAxis = getAxis(pasynUser);	//Retrieve the axis instance
+
   int addr=0;					//Address requested
-  std::string homingRoutineName = "";
-  if (function >= GalilHomingRoutineA_ && function <= GalilHomingRoutineH_) {
-      if (pAxis != nullptr) {
-          homingRoutineName = pAxis->homingRoutineName;
-      }
-  }
+
 
   //Just return if shutting down
   if (shuttingDown_)
@@ -4485,37 +4480,13 @@ asynStatus GalilController::writeOctet(asynUser *pasynUser, const char*  value, 
         setStringParam(GalilUserOctet_, "error");
         }
      }
-  else if (function == GalilHomingRoutineA_)
-  {
-   setStringParam(GalilHomingRoutineA_, homingRoutineName);
-  }
-  else if (function == GalilHomingRoutineB_)
-  {
-   setStringParam(GalilHomingRoutineB_, homingRoutineName);
-  }
-  else if (function == GalilHomingRoutineC_)
-  {
-   setStringParam(GalilHomingRoutineC_, homingRoutineName);
-  }
-  else if (function == GalilHomingRoutineD_)
-  {
-   setStringParam(GalilHomingRoutineD_, homingRoutineName);
-  }
-  else if (function == GalilHomingRoutineE_)
-  {
-   setStringParam(GalilHomingRoutineE_, homingRoutineName);
-  }
-  else if (function == GalilHomingRoutineF_)
-  {
-   setStringParam(GalilHomingRoutineF_, homingRoutineName);
-  }
-  else if (function == GalilHomingRoutineG_)
-  {
-   setStringParam(GalilHomingRoutineG_, homingRoutineName);
-  }
-  else if (function == GalilHomingRoutineH_)
-  {
-   setStringParam(GalilHomingRoutineH_, homingRoutineName);
+  else   
+  if (function >= GalilHomingRoutineA_ && function <= GalilHomingRoutineH_) {
+      GalilAxis* pAxis = getAxis(pasynUser);	//Retrieve the axis instance
+      if (pAxis != nullptr) {
+          std::string homingRoutineName = pAxis->homingRoutineName;
+          setStringParam(function, homingRoutineName);
+      }
   }
   else if (function >= GalilCSMotorForward_ && function <= GalilCSMotorReverseH_)
      {
