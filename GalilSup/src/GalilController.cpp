@@ -4435,7 +4435,7 @@ asynStatus GalilController::writeOctet(asynUser *pasynUser, const char*  value, 
   GalilCSAxis *pCSAxis;				//Pointer to CSAxis instance
   GalilAxis *pAxis = getAxis(pasynUser);	//Retrieve the axis instance
   int addr=0;					//Address requested
-  std::string homingRoutineName = pAxis->homingRoutineName;
+  std::string homingRoutineName(pAxis->homingRoutineName);
 
   //Just return if shutting down
   if (shuttingDown_)
@@ -6204,6 +6204,12 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
 
    for (auto h : homingRoutineNames) {
        std::cout << h << std::endl;
+   }
+
+   for (i = 0; i < numAxes_; i++) {
+       pAxis = getAxis(axisList_[i] - AASCII);
+       if (!pAxis) continue;
+       pAxis->homingRoutineName = homingRoutineNames[i];
    }
 
    //Assemble code for download to controller.  This is generated, or user specified code.
