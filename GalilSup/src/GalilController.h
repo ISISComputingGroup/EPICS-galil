@@ -136,7 +136,6 @@
 #define GalilStepSmoothString		"MOTOR_STEPSMOOTH"
 #define GalilITCSmoothString		"MOTOR_ITCSMOOTH"
 #define GalilMotorTypeString		"MOTOR_TYPE"
-#define GalilHomingRoutineNameString "MOTOR_HMRNAM"
 
 #define GalilHomingRoutineAString	"HMRNAM_A"
 #define GalilHomingRoutineBString	"HMRNAM_B"
