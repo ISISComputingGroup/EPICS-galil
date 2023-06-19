@@ -2,140 +2,22 @@
 # M    - CSMotor Name
 # PORT - Asyn port name
 # ADDR - CS motor (8-15)
+# C    - Axis Character
 
 #Homing routine names
-record(stringout,"$(P)$(M)HMRNAM_1:SP")
+record(stringout,"$(P)$(M)HMRNAM:SP")
 {
-	field(DESC, "$(M) Homing routine axis A")
+	field(DESC, "$(M) Homing routine axis $(C)")
 	field(PINI, "YES")
 	field(DTYP, "asynOctetWrite")
-	field(OUT,  "@asyn($(PORT),$(ADDR))HMRNAM_A")
-	field(FLNK, "$(P)$(M)HMRNAM_1")
+	field(OUT,  "@asyn($(PORT),$(ADDR))HMRNAM_$(C)")
+	field(FLNK, "$(P)$(M)HMRNAM")
 }
 
-record(stringin,"$(P)$(M)HMRNAM_1")
+record(stringin,"$(P)$(M)HMRNAM")
 {
-	field(DESC, "$(M) Homing routine axis A")
+	field(DESC, "$(M) Homing routine axis $(C)")
 	field(PINI, "YES")
 	field(DTYP, "asynOctetRead")
-	field(INP,  "@asyn($(PORT),$(ADDR))HMRNAM_A")
-}
-
-record(stringout,"$(P)$(M)HMRNAM_2:SP")
-{
-	field(DESC, "$(M) Homing routine axis B")
-	field(PINI, "YES")
-	field(DTYP, "asynOctetWrite")
-	field(OUT,  "@asyn($(PORT),$(ADDR))HMRNAM_B")
-	field(FLNK, "$(P)$(M)HMRNAM_2")
-}
-
-record(stringin,"$(P)$(M)HMRNAM_2")
-{
-	field(DESC, "$(M) Homing routine axis B")
-	field(PINI, "YES")
-	field(DTYP, "asynOctetRead")
-	field(INP,  "@asyn($(PORT),$(ADDR))HMRNAM_B")
-}
-
-record(stringout,"$(P)$(M)HMRNAM_3:SP")
-{
-	field(DESC, "$(M) Homing routine axis C")
-	field(PINI, "YES")
-	field(DTYP, "asynOctetWrite")
-	field(OUT,  "@asyn($(PORT),$(ADDR))HMRNAM_C")
-	field(FLNK, "$(P)$(M)HMRNAM_3")
-}
-
-record(stringin,"$(P)$(M)HMRNAM_3")
-{
-	field(DESC, "$(M) Homing routine axis C")
-	field(PINI, "YES")
-	field(DTYP, "asynOctetRead")
-	field(INP,  "@asyn($(PORT),$(ADDR))HMRNAM_C")
-}
-
-record(stringout,"$(P)$(M)HMRNAM_4:SP")
-{
-	field(DESC, "$(M) Homing routine axis D")
-	field(PINI, "YES")
-	field(DTYP, "asynOctetWrite")
-	field(OUT,  "@asyn($(PORT),$(ADDR))HMRNAM_D")
-	field(FLNK, "$(P)$(M)HMRNAM_4")
-}
-
-record(stringin,"$(P)$(M)HMRNAM_4")
-{
-	field(DESC, "$(M) Homing routine axis D")
-	field(PINI, "YES")
-	field(DTYP, "asynOctetRead")
-	field(INP,  "@asyn($(PORT),$(ADDR))HMRNAM_D")
-}
-
-record(stringout,"$(P)$(M)HMRNAM_5:SP")
-{
-	field(DESC, "$(M) Homing routine axis E")
-	field(PINI, "YES")
-	field(DTYP, "asynOctetWrite")
-	field(OUT,  "@asyn($(PORT),$(ADDR))HMRNAM_E")
-	field(FLNK, "$(P)$(M)HMRNAM_5")
-}
-
-record(stringin,"$(P)$(M)HMRNAM_5")
-{
-	field(DESC, "$(M) Homing routine axis E")
-	field(PINI, "YES")
-	field(DTYP, "asynOctetRead")
-	field(INP,  "@asyn($(PORT),$(ADDR))HMRNAM_E")
-}
-
-record(stringout,"$(P)$(M)HMRNAM_6:SP")
-{
-	field(DESC, "$(M) Homing routine axis F")
-	field(PINI, "YES")
-	field(DTYP, "asynOctetWrite")
-	field(OUT,  "@asyn($(PORT),$(ADDR))HMRNAM_F")
-	field(FLNK, "$(P)$(M)HMRNAM_6")
-}
-
-record(stringin,"$(P)$(M)HMRNAM_6")
-{
-	field(DESC, "$(M) Homing routine axis F")
-	field(PINI, "YES")
-	field(DTYP, "asynOctetRead")
-	field(INP,  "@asyn($(PORT),$(ADDR))HMRNAM_F")
-}
-
-record(stringout,"$(P)$(M)HMRNAM_7:SP")
-{
-	field(DESC, "$(M) Homing routine axis G")
-	field(PINI, "YES")
-	field(DTYP, "asynOctetWrite")
-	field(OUT,  "@asyn($(PORT),$(ADDR))HMRNAM_G")
-	field(FLNK, "$(P)$(M)HMRNAM_7")
-}
-
-record(stringin,"$(P)$(M)HMRNAM_7")
-{
-	field(DESC, "$(M) Homing routine axis G")
-	field(PINI, "YES")
-	field(DTYP, "asynOctetRead")
-	field(INP,  "@asyn($(PORT),$(ADDR))HMRNAM_G")
-}
-
-record(stringout,"$(P)$(M)HMRNAM_8:SP")
-{
-	field(DESC, "$(M) Homing routine axis H")
-	field(PINI, "YES")
-	field(DTYP, "asynOctetWrite")
-	field(OUT,  "@asyn($(PORT),$(ADDR))HMRNAM_H")
-	field(FLNK, "$(P)$(M)HMRNAM_8")
-}
-
-record(stringin,"$(P)$(M)HMRNAM_8")
-{
-	field(DESC, "$(M) Homing routine axis H")
-	field(PINI, "YES")
-	field(DTYP, "asynOctetRead")
-	field(INP,  "@asyn($(PORT),$(ADDR))HMRNAM_H")
+	field(INP,  "@asyn($(PORT),$(ADDR))HMRNAM_$(C)")
 }
