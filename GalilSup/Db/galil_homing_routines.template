@@ -17,7 +17,6 @@ record(stringout,"$(P)$(M)HMRNAM:SP")
 record(stringin,"$(P)$(M)HMRNAM")
 {
 	field(DESC, "$(M) Homing routine axis $(C)")
-	field(PINI, "YES")
 	field(DTYP, "asynOctetRead")
 	field(INP,  "@asyn($(PORT),$(ADDR))HMRNAM_$(C)")
 }
