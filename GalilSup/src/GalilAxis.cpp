@@ -217,6 +217,8 @@ asynStatus GalilAxis::setDefaults(int limit_as_home, char *enables_string, int s
    //Default event timeout
    requestedTimeout_ = BEGIN_TIMEOUT * multiplier;
 
+   homingRoutineName = "";
+
    //Store limits as home setting						       
    limit_as_home_ = (limit_as_home > 0) ? 1 : 0;
 

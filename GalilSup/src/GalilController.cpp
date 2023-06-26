@@ -602,6 +602,15 @@ GalilController::GalilController(const char *portName, const char *address, doub
   createParam(GalilStepSmoothString, asynParamFloat64, &GalilStepSmooth_);
   createParam(GalilMotorTypeString, asynParamInt32, &GalilMotorType_);
 
+  createParam(GalilHomingRoutineAString, asynParamOctet, &GalilHomingRoutineA_);
+  createParam(GalilHomingRoutineBString, asynParamOctet, &GalilHomingRoutineB_);
+  createParam(GalilHomingRoutineCString, asynParamOctet, &GalilHomingRoutineC_);
+  createParam(GalilHomingRoutineDString, asynParamOctet, &GalilHomingRoutineD_);
+  createParam(GalilHomingRoutineEString, asynParamOctet, &GalilHomingRoutineE_);
+  createParam(GalilHomingRoutineFString, asynParamOctet, &GalilHomingRoutineF_);
+  createParam(GalilHomingRoutineGString, asynParamOctet, &GalilHomingRoutineG_);
+  createParam(GalilHomingRoutineHString, asynParamOctet, &GalilHomingRoutineH_);
+
   createParam(GalilEtherCatCapableString, asynParamInt32, &GalilEtherCatCapable_);
   createParam(GalilEtherCatNetworkString, asynParamInt32, &GalilEtherCatNetwork_);
   createParam(GalilCtrlEtherCatFaultString, asynParamInt32, &GalilCtrlEtherCatFault_);
@@ -4424,7 +4433,9 @@ asynStatus GalilController::writeOctet(asynUser *pasynUser, const char*  value, 
   unsigned i;					//looping
   string mesg;					//Controller mesg
   GalilCSAxis *pCSAxis;				//Pointer to CSAxis instance
+
   int addr=0;					//Address requested
+
 
   //Just return if shutting down
   if (shuttingDown_)
@@ -4469,6 +4480,14 @@ asynStatus GalilController::writeOctet(asynUser *pasynUser, const char*  value, 
         setStringParam(GalilUserOctet_, "error");
         }
      }
+  else   
+  if (function >= GalilHomingRoutineA_ && function <= GalilHomingRoutineH_) {
+      GalilAxis* pAxis = getAxis(pasynUser);	//Retrieve the axis instance
+      if (pAxis != nullptr) {
+          std::string homingRoutineName = pAxis->homingRoutineName;
+          setStringParam(function, homingRoutineName);
+      }
+  }
   else if (function >= GalilCSMotorForward_ && function <= GalilCSMotorReverseH_)
      {
      //User has entered a new kinematic transform equation
@@ -6123,6 +6142,36 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
    burn_program_ = burn_program;
    thread_mask_ = thread_mask;
 
+
+   // Parse the homing routines from the code file string by splitting it up based on delimiters
+   std::string delimiter = "!";
+   size_t pos_start = 0, pos_end, delim_len = delimiter.length();
+   std::string token;
+   std::vector<std::string> homingRoutineNames;
+   std::string code_str(code_file_);
+   // remove all chars up to first ';' 
+   size_t header_end_pos = code_str.find(";");
+   code_str.erase(0, header_end_pos+1);
+   // remove all chars after ';'
+   code_str = code_str.substr(0, code_str.find(";"));
+   // split by '!'
+   while ((pos_end = code_str.find(delimiter, pos_start)) != std::string::npos) {
+       token = code_str.substr(pos_start, pos_end - pos_start);
+       // remove everything before the actual name of the homing routine
+       size_t name_end_pos = token.find("_");
+       token.erase(0, name_end_pos + 1);
+       pos_start = pos_end + delim_len;
+       homingRoutineNames.push_back(token);
+   }
+   auto last = code_str.substr(pos_start);
+   last.erase(0, last.find("_")+1);
+   homingRoutineNames.push_back(last);
+   for (i = 0; i < numAxes_; i++) {
+       pAxis = getAxis(axisList_[i] - AASCII);
+       if (!pAxis) continue;
+       pAxis->homingRoutineName = homingRoutineNames[i];
+   }
+
    //Assemble code for download to controller.  This is generated, or user specified code.
    if (!code_assembled_) {
       //Generate rio code if required
@@ -6279,6 +6328,8 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
             errlogPrintf("Code started successfully on model %s, address %s\n",model_.c_str(), address_.c_str());
       }
 
+
+
       //Limits motor direction consistency unknown at connect/reconnect
       for (i = 0; i < numAxes_; i++) {
          pAxis = getAxis(axisList_[i] - AASCII);
@@ -6286,6 +6337,8 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
          pAxis->limitsDirState_ = unknown;
          //Pass motor/limits consistency to paramList
          setIntegerParam(pAxis->axisNo_, GalilLimitConsistent_, pAxis->limitsDirState_);
+
+         pAxis->homingRoutineName = homingRoutineNames[i];
       }
 
       //Retrieve controller time base
