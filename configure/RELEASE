@@ -3,6 +3,7 @@ ASUBFUNCTIONS=$(SUPPORT)/asubFunctions/master
 AUTOSAVE=$(SUPPORT)/autosave/master
 BUSY=$(SUPPORT)/busy/master
 MOTOR=$(SUPPORT)/motor/master
+MOTORSIM=$(MOTOR)/modules/motorMotorSim
 CALC=$(SUPPORT)/calc/master
 CAPUTLOG=$(SUPPORT)/caPutLog/master
 DEVIOCSTATS=$(SUPPORT)/devIocStats/master
