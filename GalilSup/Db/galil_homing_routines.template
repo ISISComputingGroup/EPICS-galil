@@ -8,16 +8,16 @@
 record(stringout,"$(P):$(M)HMRNAM:SP")
 {
 	field(DESC, "$(M) Homing routine axis $(C)")
-#	field(PINI, "YES")
-	field(DTYP, "asynOctetWrite")
-	field(OUT,  "@asyn($(PORT),$(ADDR))HMRNAM_$(C)")
+	field(PINI, "YES")
+#	field(DTYP, "asynOctetWrite")
+#	field(OUT,  "@asyn($(PORT),$(ADDR))HMRNAM_$(C)")
 	field(FLNK, "$(P)$(M)HMRNAM")
 }
 
 record(stringin,"$(P):$(M)HMRNAM")
 {
 	field(DESC, "$(M) Homing routine axis $(C)")
-	field(DTYP, "asynOctetRead")
-	field(INP,  "@asyn($(PORT),$(ADDR))HMRNAM_$(C)")
+#	field(DTYP, "asynOctetRead")
+#	field(INP,  "@asyn($(PORT),$(ADDR))HMRNAM_$(C)")
 }
 
