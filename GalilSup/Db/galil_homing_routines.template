@@ -11,7 +11,7 @@ record(stringout,"$(P):$(M)HMRNAM:SP")
 	field(PINI, "YES")
 #	field(DTYP, "asynOctetWrite")
 #	field(OUT,  "@asyn($(PORT),$(ADDR))HMRNAM_$(C)")
-	field(FLNK, "$(P)$(M)HMRNAM")
+	field(FLNK, "$(P):$(M)HMRNAM")
 }
 
 record(stringin,"$(P):$(M)HMRNAM")
