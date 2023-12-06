@@ -35,9 +35,9 @@
 
 record(bi,"$(P)$(R)_STATUS")
 {
-        $(IFNOTSIM) field(DTYP, "asynUInt32Digital")
-        $(IFNOTSIM) field(INP,  "@asynMask($(PORT) $(BYTE) $(MASK))BINARY_IN")
-        $(IFNOTSIM) field(SCAN, "I/O Intr")
+        $(IFNOTSIM=) field(DTYP, "asynUInt32Digital")
+        $(IFNOTSIM=) field(INP,  "@asynMask($(PORT) $(BYTE) $(MASK))BINARY_IN")
+        $(IFNOTSIM=) field(SCAN, "I/O Intr")
         field(ZNAM, "$(ZNAM=Off)")
         field(ONAM, "$(ONAM=On)")
         field(ZSV,  "$(ZSV=NO_ALARM)")
