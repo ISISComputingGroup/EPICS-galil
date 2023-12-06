@@ -5,16 +5,16 @@
 # C    - Axis Character
 
 #Homing routine names
-record(stringout,"$(P):$(M)HMRNAM:SP")
+record(stringout,"$(P):$(M)_HMRNAM:SP")
 {
 	field(DESC, "$(M) Homing routine axis $(C)")
 	field(PINI, "YES")
 #	field(DTYP, "asynOctetWrite")
 #	field(OUT,  "@asyn($(PORT),$(ADDR))HMRNAM_$(C)")
-	field(FLNK, "$(P):$(M)HMRNAM")
+	field(FLNK, "$(P):$(M)_HMRNAM")
 }
 
-record(stringin,"$(P):$(M)HMRNAM")
+record(stringin,"$(P):$(M)_HMRNAM")
 {
 	field(DESC, "$(M) Homing routine axis $(C)")
 #	field(DTYP, "asynOctetRead")
