@@ -192,33 +192,6 @@ record(ai,"$(P):$(M)_STOPGO_MON")
 #	field(OUT,  "$(P):$(M).SPMG CA")
 #}
 
-# monitor the motor status and update a string field with results
-record(aSub, "$(P):$(M):_MSTACALC")
-{
-    field(SNAM, "displayMotorMSTA")
-	field(INPA, "$(P):$(M).MSTA CP")
-	field(FTA, "ULONG")
-	field(OUTA, "$(P):$(M)_MSTA_STR PP")
-	field(FTVA, "CHAR")
-	field(NOVA, "512")	
-}
-
-record(waveform, "$(P):$(M)_MSTA_STR")
-{
-	field(NELM, "512")
-	field(FTVL, "CHAR")
-	field(DESC, "Text version of motor MSTA")
-}
-
-record(aSub, "$(P):$(M):_STATUSCALC")
-{
-    field(SNAM, "displayMotorMSTASimple")
-	field(INPA, "$(P):$(M).MSTA CP")
-	field(FTA, "ULONG")
-	field(OUTA, "$(P):$(M)_STATUS PP")
-	field(FTVA, "STRING")
-	field(NOVA, "1")	
-}
 
 # allow splitting out of MSTA
 record(mbbiDirect, "$(P):$(M):_MSTABITS")
@@ -232,11 +205,6 @@ record(bi, "$(P):$(M)_HOMED")
     field(ZNAM, "No")
     field(ONAM, "Yes")
     field(INP, "$(P):$(M):_MSTABITS.BE CP")
-}
-
-record(stringin, "$(P):$(M)_STATUS")
-{
-	field(DESC, "Simple Text version of motor MSTA")
 }
 
 record(stringin, "$(P):$(M)_MTR")
@@ -279,21 +247,6 @@ record(stringout, "$(P):$(M)_PERROR")
     field(DOL, "$(P):$(M)_ERRCALC_MESS CP")
     field(DTYP, "stdio")
     field(OUT, "@errlog")
-}
-
-# Expose the DMOV field as a PV record, so it can be access from a block
-record(ai,"$(P):$(M):DMOV")
-{
-	field(DESC, "Done move?")
-    field(SCAN, "Passive")
-    field(DTYP, "Soft Channel")
-    field(INP, "$(P):$(M).DMOV CP")
-}
-
-record(stringin, "$(P):$(M)_IOCNAME")
-{
-    field(DESC, "IOC name eg GALIL_01")
-    field(VAL, "$(IOCNAME=UNKNOWN)")
 }
 
 # Allow setting MRES/ERES as inverse
