@@ -1189,6 +1189,7 @@ record(ai,"$(P):$(M)_MTRENC_DRIFT")
 {
     field(DESC, "Encoder motor drift")
     field(EGU, "$(EGU)")
+    field(PREC, 3)
     info(archive, "VAL")
 }
 
@@ -1220,7 +1221,7 @@ record(calcout, "$(P):$(M)_DRIFT_THRESHOLD_CHECK")
     field(DESC, "Drift and threshold check")
     field(INPA, "$(P):$(M)_THRESHOLD.VAL CP")
     field(INPB, "$(P):$(M)_MTRENC_DRIFT.VAL CP")
-    field(CALC, "B>A")
+    field(CALC, "ABS(B)>A")
     
 }
 
