@@ -1627,7 +1627,7 @@ record(ai,"$(P)$(M)_MTRENC_DRIFT")
 {
     field(DESC, "Encoder motor drift")
     field(EGU, "$(EGU)")
-	field(PREC, 4)
+    field(PREC, 3)
     info(archive, "VAL")
 }
 
