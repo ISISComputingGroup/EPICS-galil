@@ -1,0 +1,129 @@
+#CHIPCOL
+' CHIPIR Collimator 
+' Jump to initialise subroutine
+JS#INIT
+'
+XQ #READ,7
+EN
+'
+#INIT
+' Initialise
+mode="IN"
+SP~a=4096
+AC~a=8192
+DC~a=8192
+' Steve's code -
+MT~a=-2.5                  ;'SET AXIS TO STEPPER MOTOR - ALWAYS DO FIRST
+CE~a=14                    ;'set main encoder to reversed quadrature
+CN -1,-1                   ;'SET LIMITS AND DATUM TO ACTIVE LOW
+mode="RE"
+EN
+'
+#READ
+' Read switches continuously
+IF @IN[1] = 1 ; curr_pos = 2 ; ELSE
+IF @IN[2] = 1 ; curr_pos = 4 ; ELSE
+IF @IN[3] = 1 ; curr_pos = 3 ; ELSE
+IF @IN[4] = 1 ; curr_pos = 0 ; ELSE
+IF @IN[5] = 1 ; curr_pos = 6 ; ELSE
+IF @IN[6] = 1 ; curr_pos = 1 ; ELSE
+IF @IN[7] = 1 ; curr_pos = 5 ; ELSE
+curr_pos = -1 ; 'arbitrary number to signify indeterminate position
+ENDIF ; ENDIF ; ENDIF ; ENDIF ; ENDIF ; ENDIF ; ENDIF ; ENDIF
+IF curr_pos <> -1 ; prev_pos = curr_pos ; ENDIF
+' Return to read routine
+JP #READ
+'
+EN
+'
+#MOVE
+'Make sure using correct values for parameters in case they have been
+'overwritten by LabVIEW or EPICS since previous move
+JS#INIT
+mode="MO"
+' if current position unknown, move in positive direction until any switch made
+IF curr_pos = -1
+PR~a=2100000000                        ;'MOVE MAXIMUM IN POSITIVE DIRECTION
+SH~a                                   ;'ENERGISE MOTOR
+BG~a                                   ;'BEGIN MOVE ON AXIS
+#CHK_SW
+' read switches and if any one made, stop motor.  otherwise keep checking.
+IF (@IN[1]=1)|(@IN[2]=1)|(@IN[3]=1)|(@IN[4]=1)|(@IN[5]=1)|(@IN[6]=1)|(@IN[7]=1)
+ST~a                                   ;'THEN STOP MOTOR
+AM~a
+MO~a
+ELSE
+JP #CHK_SW
+ENDIF
+ENDIF
+'
+' determine target switch
+IF targ_pos = 0 ; targ_sw = 4 ; ENDIF
+IF targ_pos = 1 ; targ_sw = 6 ; ENDIF
+IF targ_pos = 2 ; targ_sw = 1 ; ENDIF
+IF targ_pos = 3 ; targ_sw = 3 ; ENDIF
+IF targ_pos = 4 ; targ_sw = 2 ; ENDIF
+IF targ_pos = 5 ; targ_sw = 7 ; ENDIF
+IF targ_pos = 6 ; targ_sw = 5 ; ENDIF
+'
+' determine shortest move to reach target
+' in positive direction -
+IF (targ_pos > curr_pos) ; posn_pos = targ_pos - curr_pos
+ELSE ; posn_pos = 7 - curr_pos + targ_pos ; ENDIF
+'
+' in negative direction -
+IF (targ_pos < curr_pos) ; posn_neg = curr_pos - targ_pos
+ELSE ; posn_neg = 7 - targ_pos + curr_pos ; ENDIF
+'
+' compare number of positions to move in positive and negative directions
+IF (posn_neg < posn_pos) ; targ_dir = -1 ; ELSE ; targ_dir = 1 ; ENDIF
+'
+' Move to target
+'WT5000                                 ;'WAIT 5 SECONDS
+PR~a= targ_dir * 2100000000            ;'MOVE MAXIMUM IN POSITIVE DIRECTION
+SH~a                                   ;'ENERGISE MOTOR
+BG~a                                   ;'BEGIN MOVE ON AXIS
+AI targ_sw                             ;'WAIT UNTIL DIGITAL INPUT GOES HIGH
+ST~a                                   ;'THEN STOP MOTOR
+AM~a
+PR~a= targ_dir * 1000                  ;'Move to top of switch actuator
+BG~a                                   ;'BEGIN MOVE ON AXIS
+AM~a
+MO~a
+mode="RE"
+EN
+'
+#HOME_SW
+' Home with switches
+JS#INIT
+mode="HS"
+'WT5000                    ;'WAIT 5 SECONDS
+PR~a=2100000000            ;'MOVE MAXIMUM IN POSITIVE DIRECTION
+SH~a                       ;'ENERGISE MOTOR
+BG~a                       ;'BEGIN MOVE ON AXIS
+AI 4                       ;'WAIT UNTIL DIGITAL INPUT 4 (Position 0) GOES HIGH
+ST~a                       ;'THEN STOP MOTOR
+AM~a
+PR~a= 1000                ;'Move to top of switch actuator
+BG~a                       ;'BEGIN MOVE ON AXIS
+AM~a
+MO~a
+' define encoder position -
+DE~a=0
+mode="RE"
+EN
+'
+' NO home signal present, so obsolete routine
+'#HOME_EN
+' Home with encoder
+'mode="HE"
+'HM~a
+'SH~a
+'BG~a
+'AM~a
+'WT200
+''define encoder position -
+'DE~a=0
+'mode="RE"
+'EN
+'
