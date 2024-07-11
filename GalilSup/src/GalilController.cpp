@@ -6169,7 +6169,12 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
    for (i = 0; i < numAxes_; i++) {
        pAxis = getAxis(axisList_[i] - AASCII);
        if (!pAxis) continue;
-       pAxis->homingRoutineName = homingRoutineNames[i];
+       if (i < homingRoutineNames.size()) {
+           pAxis->homingRoutineName = homingRoutineNames[i];
+       }
+       else {
+           pAxis->homingRoutineName = "";
+       }
    }
 
    //Assemble code for download to controller.  This is generated, or user specified code.
