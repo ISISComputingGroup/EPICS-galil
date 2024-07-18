@@ -803,7 +803,8 @@ asynStatus GalilAxis::setupHome(double maxVelocity, int forwards)
    //We must use asynMotorAxis version of setIntegerParam to set MSTA bits for this MotorAxis
    setIntegerParam(pC_->motorStatusHomed_, 0);
    if (customHome_) {
-       // have separate branch here as we do not want to change hjog, it needs to be left at 0 at start for custom home code
+       // we do not want to change hjog, it needs to be left at 0 at start for custom home code
+       // and should already be zero from how home routine works
        std::cerr << "Using custom home code" << std::endl;
    }
    else if (useSwitch) {
@@ -1405,7 +1406,7 @@ bool GalilAxis::checkEncoderMotorSync(bool correct_motor)
     sprintf(pC_->cmd_, "MT%c=?", axisName_);
     pC_->sync_writeReadController();
     int motor = atoi(pC_->resp_); // servo is -1.5, -1, 1, or 1.5 so abs(int(motor)) is 1 
-    if ( status != asynSuccess || abs(motor) == 1 || !ueip_ || posdiff_tol <= 0.0 )
+    if ( status != asynSuccess || abs(motor) == 1 || !ueip_ )
     {
         return true;
     }
@@ -1413,7 +1414,12 @@ bool GalilAxis::checkEncoderMotorSync(bool correct_motor)
     pC_->getDoubleParam(axisNo_, pC_->GalilEncoderResolution_, &eres);
     pC_->getDoubleParam(axisNo_, pC_->motorResolution_, &mres);
     double posdiff_egu = motor_position_ * mres - encoder_position_ * eres;
-    if (fabs(posdiff_egu) < posdiff_tol)
+    if (posdiff_tol <= 0.0)
+    {
+        std::cerr << "Current Motor - Encoder drift: " << posdiff_egu << " egu" << std::endl;
+        return true;
+    }
+    else if (fabs(posdiff_egu) < posdiff_tol)
     {
         std::cerr << "Motor and Encoder are in sync by " << posdiff_egu << " < " << posdiff_tol << " egu" << std::endl;
         return true;
