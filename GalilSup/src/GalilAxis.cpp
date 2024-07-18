@@ -892,7 +892,7 @@ bool GalilAxis::checkEncoderMotorSync(bool correct_motor)
     sprintf(pC_->cmd_, "MT%c=?", axisName_);
     pC_->writeReadController(functionName);
     int motor = atoi(pC_->resp_); // servo is -1.5, -1, 1, or 1.5 so abs(int(motor)) is 1 
-	if ( status != asynSuccess || abs(motor) == 1 || !ueip_ || posdiff_tol <= 0.0 )
+	if ( status != asynSuccess || abs(motor) == 1 || !ueip_ )
 	{
 		return true;
 	}
@@ -900,7 +900,12 @@ bool GalilAxis::checkEncoderMotorSync(bool correct_motor)
 	pC_->getDoubleParam(axisNo_, pC_->GalilEncoderResolution_, &eres);
 	pC_->getDoubleParam(axisNo_, pC_->motorResolution_, &mres);
 	double posdiff_egu = motor_position_ * mres - encoder_position_ * eres;
-	if (fabs(posdiff_egu) < posdiff_tol)
+	if (posdiff_tol <= 0.0)
+	{
+		std::cerr << "Current Motor - Encoder drift: " << posdiff_egu << " egu" << std::endl;
+		return true;
+	}
+	else if (fabs(posdiff_egu) < posdiff_tol)
 	{
 		std::cerr << "Motor and Encoder are in sync by " << posdiff_egu << " < " << posdiff_tol << " egu" << std::endl;
 		return true;
