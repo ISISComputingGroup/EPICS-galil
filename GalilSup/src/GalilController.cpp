@@ -5038,15 +5038,9 @@ asynStatus GalilController::poller(void)
 	//Acquire a data record
 	acquireDataRecord();
 
-    // TODO which one of these do we do to alarm the motor record
-    // A) alarm every time there is a comms error
-    if (recstatus_ == asynError) {
-        cout << "bad things have happened" << endl;
-        return asynError;
-    }
-    // B) alarm after ALLOWED_TIMEOUTS(3) just like how we disconnect from the controller after that many attempts
     if (consecutive_acquire_timeouts_ > ALLOWED_TIMEOUTS) {
-        cout << "bad things have happened after 3 attempts" << endl;
+        errlogPrintf("Error communicating with controller %s after %d attempts. \n", address_.c_str(), ALLOWED_TIMEOUTS);
+        // cout << "Error communicating with controller after " << ALLOWED_TIMEOUTS << "attempts." << endl;
         return asynError;
     }
 
