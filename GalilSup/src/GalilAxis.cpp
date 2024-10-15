@@ -2231,7 +2231,7 @@ void GalilAxis::checkHoming(void)
       //Inform user
       if (stoppedTime_ >= homing_timeout)
          sprintf(message, "%c Homing timed out", axisName_);
-      else
+      if (home_soft_limits_hit)
          sprintf(message, "%c Homing violated soft limits", axisName_);
       //Set controller error mesg monitor
       pC_->setCtrlError(message);
