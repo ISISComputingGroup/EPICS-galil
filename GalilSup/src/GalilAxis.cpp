@@ -2229,10 +2229,9 @@ void GalilAxis::checkHoming(void)
       //Flag home has been cancelled
       cancelHomeSent_ = true;
       //Inform user
-      if (stoppedTime_ >= homing_timeout)
-         sprintf(message, "%c Homing timed out", axisName_);
-      if (home_soft_limits_hit)
-         sprintf(message, "%c Homing violated soft limits", axisName_);
+      sprintf(message, "%c Homing%s%s", axisName_,
+                      (stoppedTime_ >= homing_timeout ? " timed out" : ""),
+                      (home_soft_limits_hit ? " violated soft limits" : ""));
       //Set controller error mesg monitor
       pC_->setCtrlError(message);
       }
