@@ -2222,7 +2222,7 @@ void GalilAxis::checkHoming(void)
       epicsSnprintf(message, sizeof(message), "Homing aborted after %f seconds: _BG%c=%.0f _LF%c=%.0f _LR%c=%.0f _SC%c=%.0f [%s] hjog%c=%.0f homed%c=%.0f",
                   stoppedTime_, axisName_, bg_code, axisName_, lf, axisName_, lr,
                   axisName_, sc_code, lookupStopCode((int)sc_code), axisName_, hjog, axisName_, homed);
-      printf("%s\n", message);
+      pC_->setCtrlError(message);
 
       //Cancel home
       pollRequest_.send((void*)&MOTOR_CANCEL_HOME, sizeof(int));
