@@ -25,6 +25,8 @@ galil_Home_RevLimit_Home.dmc     | Find reverse limit switch, find home datum sw
 galil_Home_RevLimit+FIpos.dmc    | Find reverse limit switch, find encoder index                     | yes
 galil_Home_Thread.dmc            | Monitor galil threads until complete                              | N/A
 galil_Piezo_Home.dmc             | Find edge, find edge in opposite direction; good for piezo motors | no
+galil_Home_JogForwLimit.dmc      | Jog in forward direction until limit is hit **USED FOR CHIPIR JAWS IN/OUT** | no
+
 
 
 ## Other Files
