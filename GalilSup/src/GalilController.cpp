@@ -5040,7 +5040,6 @@ asynStatus GalilController::poller(void)
 
     if (consecutive_acquire_timeouts_ > ALLOWED_TIMEOUTS) {
         errlogPrintf("Error communicating with controller %s after %d attempts. \n", address_.c_str(), ALLOWED_TIMEOUTS);
-        // cout << "Error communicating with controller after " << ALLOWED_TIMEOUTS << "attempts." << endl;
         return asynError;
     }
 
