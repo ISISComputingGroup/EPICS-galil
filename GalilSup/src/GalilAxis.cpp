@@ -541,6 +541,9 @@ asynStatus GalilAxis::setAccelVelocity(double acceleration, double velocity, boo
    //Set acceleration and deceleration for normal moves
    //Find closest hardware setting
    accel = (long)lrint(acceleration/1024.0) * 1024;
+   if (accel == 0) {
+       accel = 1024; // galil manual says AC and DC must be at least 1024
+   }
    cmd = "AC" + string(1, c) + "=" + tsp(accel, 0) + ";DC" + string(1, c) + "=" + tsp(accel, 0);
 
    //Are we done here?
@@ -2172,8 +2175,9 @@ void GalilAxis::checkHoming(void)
    double homing_timeout = (HOMING_TIMEOUT < estall_time ? estall_time : HOMING_TIMEOUT);
 
    // ISIS: need to confirm limits high/low limit behaviour
-   if ((homing_ && (stoppedTime_ >= homing_timeout) && !cancelHomeSent_) ||
-       (((readback > highLimit_ && softlimits) || (readback < lowLimit_ && softlimits)) && homing_ && !cancelHomeSent_ && done_))
+   bool home_timeout = homing_ && (stoppedTime_ >= homing_timeout) && !cancelHomeSent_;
+   bool home_soft_limits_hit = (((readback > highLimit_ && softlimits) || (readback < lowLimit_ && softlimits)) && homing_ && !cancelHomeSent_ && done_);
+   if (home_timeout || home_soft_limits_hit)
       {
       sprintf(pC_->cmd_, "MG homed%c\n", axisName_);
       pC_->sync_writeReadController();
@@ -2207,9 +2211,17 @@ void GalilAxis::checkHoming(void)
       pC_->sync_writeReadController();
       double hjog = atof(pC_->resp_);
 
+      // get limit status
+      sprintf(pC_->cmd_, "MG _LF%c\n", axisName_);
+      pC_->sync_writeReadController();
+      double lf = atof(pC_->resp_);
+      sprintf(pC_->cmd_, "MG _LR%c\n", axisName_);
+      pC_->sync_writeReadController();
+      double lr = atof(pC_->resp_);
 
-      epicsSnprintf(message, sizeof(message), "Homing timed out after %f seconds: _BG%c=%.0f _SC%c=%.0f [%s] hjog%c=%.0f homed%c=%.0f",
-                  homing_timeout, axisName_, bg_code, axisName_, sc_code, lookupStopCode((int)sc_code), axisName_, hjog, axisName_, homed);
+      epicsSnprintf(message, sizeof(message), "Homing aborted after %f seconds: _BG%c=%.0f _LF%c=%.0f _LR%c=%.0f _SC%c=%.0f [%s] hjog%c=%.0f homed%c=%.0f",
+                  stoppedTime_, axisName_, bg_code, axisName_, lf, axisName_, lr,
+                  axisName_, sc_code, lookupStopCode((int)sc_code), axisName_, hjog, axisName_, homed);
       pC_->setCtrlError(message);
 
       //Cancel home
@@ -2217,10 +2229,9 @@ void GalilAxis::checkHoming(void)
       //Flag home has been cancelled
       cancelHomeSent_ = true;
       //Inform user
-      if (stoppedTime_ >= homing_timeout)
-         sprintf(message, "%c Homing timed out", axisName_);
-      else
-         sprintf(message, "%c Homing violated soft limits", axisName_);
+      sprintf(message, "%c Homing%s%s", axisName_,
+                      (stoppedTime_ >= homing_timeout ? " timed out" : ""),
+                      (home_soft_limits_hit ? " violated soft limits" : ""));
       //Set controller error mesg monitor
       pC_->setCtrlError(message);
       }
