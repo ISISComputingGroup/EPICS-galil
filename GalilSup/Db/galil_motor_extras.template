@@ -844,7 +844,7 @@ record(mbbo,"$(P)$(M)_HOMEALLOWED_CMD")
 	field(ONVL, "1")
 	field(TWVL, "2")
 	field(THVL, "3")
-	field(VAL,  "0")
+	field(VAL,  "3")
 	field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_HOME_ALLOWED")
 	field(FLNK, "$(P)$(M)_HOMEALLOWED_STATUS")
 }
