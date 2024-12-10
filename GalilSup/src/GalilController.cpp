@@ -6361,9 +6361,19 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
       //Wake poller, and re-start async records if needed
       poller_->wakePoller();
    }//connected_
-   else
-      start_ok = false;
+   else {
+       start_ok = false;
+       for (int i = 0; i < numAxes_; i++) {
+           pAxis = getAxis(axisList_[i] - AASCII);
+           if (!pAxis) continue;
+           pAxis->setIntegerParam(motorStatusCommsError_, 1);
+           pAxis->callParamCallbacks();
+       }
+   }
+  
 
+   
+     
    //Set controller start status
    if (start_ok && variables_ok && (download_status == 1 || download_status == 0))
       start_ok = true;
