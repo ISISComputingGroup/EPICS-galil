@@ -254,6 +254,9 @@ asynStatus GalilAxis::setDefaults(int limit_as_home, char *enables_string, int s
    //Pass default direction value to motorRecord
    setIntegerParam(pC_->motorStatusDirection_, direction_);
 
+   setIntegerParam(pC_->motorStatusMoving_, 0);
+   setIntegerParam(pC_->motorStatusDone_, 1);
+
    //Motor not homing now
    //This flag does not include JAH
    homing_ = false;
@@ -3020,7 +3023,7 @@ skip:
    setIntegerParam(pC_->motorStatusHighLimit_, fwd_);
    //Pass moving status to motorRecord
    setIntegerParam(pC_->motorStatusDone_, done_);
-   setIntegerParam(pC_->motorStatusMoving_, moving);
+   setIntegerParam(pC_->motorStatusMoving_, moving ? 1:0);
    //Pass comms status to motorRecord
    setIntegerParam(pC_->motorStatusCommsError_, status ? 1:0);
    //Update motor status fields in upper layers using asynMotorAxis->callParamCallbacks
