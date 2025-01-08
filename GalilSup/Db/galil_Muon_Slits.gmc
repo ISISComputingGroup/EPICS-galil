@@ -51,7 +51,7 @@ TLA=0
 OFA=0
 MOA
 EN
-
+'
 #musr
 IF tarm>7.5
 tarm=7.5
@@ -105,7 +105,7 @@ TLB=0
 OFB=0
 MOB
 EN
-
+'
 #hifi
 IF tarh>7.5
 tarh=7.5
@@ -124,14 +124,14 @@ dirh=-1
 ELSE
 dirh=1
 ENDIF
-OFC=8*dirh
+OFC=9*dirh
 IF diffh>0.5
-TLC=9
+TLC=9.5
 ELSE
 IF diffh>0.2
-TLC=8
+TLC=9.5
 ELSE
-TLC=6
+TLC=9.5
 ENDIF
 ENDIF
 SHC
@@ -143,14 +143,14 @@ dirh=-1
 ELSE
 dirh=1
 ENDIF
-OFC=8*dirh
+OFC=9*dirh
 IF diffh>0.5
-TLC=9
+TLC=9.5
 ELSE
 IF diffh>0.2
-TLC=8
+TLC=9.5
 ELSE
-TLC=6
+TLC=9.5
 ENDIF
 ENDIF
 diffh=@ABS[diffh]
