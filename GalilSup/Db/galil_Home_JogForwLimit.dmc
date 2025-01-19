@@ -1,0 +1,31 @@
+NO*****************AXIS ${AXIS}********************
+NO*******HOME - Forward Limit************
+#HOME${AXIS}
+IF ((home${AXIS}=1))
+    inhome${AXIS}=1
+	IF ((home${AXIS}=1) & (hjog${AXIS}=0))
+	    slimfl${AXIS}=_FL${AXIS};FL${AXIS}=2147483647
+		slimbl${AXIS}=_BL${AXIS};BL${AXIS}=-2147483648
+		hjog${AXIS}=1
+	ENDIF
+	IF ((hjog${AXIS}=1) & (_BG${AXIS}=0) & (home${AXIS}=1))
+		oldecel${AXIS}=_DC${AXIS};speed${AXIS}=_SP${AXIS};
+		DC${AXIS}=@ABS[hjgdc${AXIS}]
+		JG${AXIS}=@ABS[hjgsp${AXIS}]
+		SH${AXIS};WT50;BG${AXIS};hjog${AXIS}=2
+	ENDIF
+	IF ((hjog${AXIS}=2) & (_BG${AXIS}=0) & (home${AXIS}=1))
+		hjog${AXIS}=0;home${AXIS}=0;homed${AXIS}=1
+		MG "home${AXIS}", home${AXIS};MG "homed${AXIS}", homed${AXIS}
+	ENDIF
+ELSE
+	hjog${AXIS}=0
+ENDIF
+IF ((home${AXIS}=0) & (inhome${AXIS}=1))
+    FL${AXIS}=slimfl${AXIS}
+	BL${AXIS}=slimbl${AXIS}
+	inhome${AXIS}=0
+ENDIF
+IF (mlock=1)
+	II ,,dpon,dvalues
+ENDIF
