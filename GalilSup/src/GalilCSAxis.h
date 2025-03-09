@@ -13,24 +13,14 @@
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
 //
 // Contact details:
-// cliftm@ansto.gov.au
-// 800 Blackburn Road, Clayton, Victoria 3168, Australia.
-//
+// Mark Clift
+// email: padmoz@tpg.com.au
 
 #ifndef GalilCSAxis_H
 #define GalilCSAxis_H
 
 #include "asynMotorController.h"
 #include "asynMotorAxis.h"
-
-//Related CSAxis may have new setpoints too
-struct CSTargets 
-	{
-        double ncspos[MAX_GALIL_AXES];		//The new position setpoints for the related CSAxis Units=Steps
-        double ncsvel[MAX_GALIL_AXES];		//The velocity required for the related CSAxis Units=Steps/s
-        double ncsaccel[MAX_GALIL_AXES];	//The acceleration required for the related CSAxis Units=Steps/s/s
-        char csaxes[MAX_GALIL_CSAXES];		//List of related csaxis that also have new position setpoints
-	};
 
 class GalilCSAxis : public asynMotorAxis
 {
@@ -65,7 +55,7 @@ public:
   //Peform forward kinematic transform using real axis readback data, and store results in GalilCSAxis
   asynStatus forwardTransform(void);
   //Perform reverse coordinate and velocity transform
-  asynStatus reverseTransform(double pos, double vel, double accel, CSTargets *targets, double npos[], double nvel[], double naccel[], bool useCSSetpoints = true, bool profileMsg = false);
+  asynStatus reverseTransform(double pos, double vel, double accel, double npos[], double nvel[], double naccel[], bool useCSSetpoints = true, bool profileMsg = false);
   //Transform CSAxis profile into Axis profiles
   asynStatus transformCSAxisProfile(void);
   //Selects a free coordinate system S or T and returns coordsys number, or -1 if none free
@@ -112,6 +102,7 @@ public:
   asynStatus moveVelocity(double min_velocity, double max_velocity, double acceleration);
   asynStatus home(double minVelocity, double maxVelocity, double acceleration, int forwards);
   asynStatus stop(double acceleration);
+  asynStatus setPosition(double position);
   asynStatus initializeProfile(size_t maxProfilePoints);
   asynStatus setHighLimit(double highLimit);
   asynStatus setLowLimit(double lowLimit);

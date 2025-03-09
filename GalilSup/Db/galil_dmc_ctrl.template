@@ -21,9 +21,8 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 # Contact details:
-# cliftm@ansto.gov.au
-# 800 Blackburn Road, Clayton, Victoria 3168, Australia.
-#
+# Mark Clift
+# email: padmoz@tpg.com.au
 
 record(stringin,"$(P)DRIVER_MON")
 {
@@ -80,6 +79,21 @@ record(bi,"$(P)HOMETYPE_STATUS")
    	field(INP,  "@asyn($(PORT),0)CONTROLLER_HOMETYPE")
 }
 
+record(bi,"$(P)HOMEEDGE_STATUS")
+{
+	field(DESC, "home edge located")
+	field(DTYP, "asynInt32")
+	field(PINI, "YES")
+	field(SCAN, "$(SCAN)")
+	field(ZNAM, "Reverse")
+   	field(ZSV,  "NO_ALARM")
+
+  	field(ONAM, "Forward")
+  	field(OSV,  "NO_ALARM")
+
+   	field(INP,  "@asyn($(PORT),0)CONTROLLER_HOMEEDGE")
+}
+
 record(bo,"$(P)LIMITTYPE_CMD")
 {
 	field(DESC,"Ctrl limit sw type")
@@ -106,6 +120,20 @@ record(bo,"$(P)HOMETYPE_CMD")
 	field(VAL, "$(DEFAULT_HOMETYPE)")
 	field(OUT, "@asyn($(PORT),0)CONTROLLER_HOMETYPE")
 	field(FLNK,"$(P)HOMETYPE_STATUS")
+}
+
+record(bo,"$(P)HOMEEDGE_CMD")
+{
+	field(DESC,"home edge located")
+	field(DTYP, "asynInt32")
+	field(ZNAM,"Reverse")
+	field(ZSV, "NO_ALARM")
+	field(ONAM,"Forward")
+	field(OSV, "NO_ALARM")
+	field(PINI,"YES")
+	field(VAL, "1")
+	field(OUT, "@asyn($(PORT),0)CONTROLLER_HOMEEDGE")
+	field(FLNK,"$(P)HOMEEDGE_STATUS")
 }
 
 record(stringin,"$(P)ETHADDR_MON")

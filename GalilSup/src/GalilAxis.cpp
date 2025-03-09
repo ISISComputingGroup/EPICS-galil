@@ -13,9 +13,8 @@
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
 //
 // Contact details:
-// cliftm@ansto.gov.au
-// 800 Blackburn Road, Clayton, Victoria 3168, Australia.
-//
+// Mark Clift
+// email: padmoz@tpg.com.au
 
 #include <stdio.h>
 #include <math.h>
@@ -152,8 +151,8 @@ GalilAxis::GalilAxis(class GalilController *pC, //Pointer to controller instance
   // We assume motor with encoder
   setIntegerParam(pC->motorStatusGainSupport_, 1);
   setIntegerParam(pC->motorStatusHasEncoder_, 1);
-  //Wrong limit protection not actively stopping motor right now
-  setIntegerParam(pC->GalilWrongLimitProtectionActive_, 0);
+  //Wrong limit protection not stopping motor right now
+  setIntegerParam(pC->GalilWrongLimitProtectionStop_, 0);
   //Default stall/following error status
   setIntegerParam(pC_->motorStatusSlip_, 0);
   callParamCallbacks();
@@ -317,6 +316,14 @@ asynStatus GalilAxis::setDefaults(int limit_as_home, char *enables_string, int s
    //Default related csaxes list
    csaxesList_[0] = '\0';
 
+   //Default softLimits
+   lowLimit_ = 0.0;
+   highLimit_ = 0.0;
+   
+   //Operator has not used MR SET field yet
+   setPositionIn_ = false;
+   setPositionOut_ = false;
+
    return asynSuccess;
 }
 
@@ -437,7 +444,7 @@ void GalilAxis::gen_limitcode(string &limit_code)
 
 void GalilAxis::gen_EnsureOkToMove(string &tc)
 {
-  if (pC_->model_[3] == '2')// Model 21x3 does not have LD (limit disable) command
+  if (pC_->model_[3] == '1' || pC_->model_[3] == '2')// Model 21x3 does not have LD (limit disable) command
      tc += "IF(((_LR?=1)&(hjs?<0))|((_LF?=1)&(hjs?>0)))\n";
   else// All other models have LD (limit disable) command
      tc += "IF((((_LR?=1)|(_LD?>1))&(hjs?<0))|(((_LF?=1)|(_LD?=1)|(_LD?=3))&(hjs?>0)))\n";
@@ -454,69 +461,77 @@ void GalilAxis::gen_homecode(string &thread_code)
    tc = "IF(home?=1)\n";
    
    //Setup home code
-   if (limit_as_home_) {
-      //hjog%c=1 we have found limit switch outer edge
-      //hjog%c=2 we have found limit switch inner edge
-      //hjog%c=3 we have found our final home pos
-      //Code to jog off limit
-		
-      //Ensure correct limit active    
-      tc += "IF((((_LR?=0)&(hjs?>0))|((_LF?=0)&(hjs?<0)))&(hjog?=0))\n";
-      //Ensure ok to move in desired direction
-      gen_EnsureOkToMove(tc);
-      //Jog off limit
-      tc += "IF((_MO?=0)&(_BG?=0));JG?=hjs?;WT10;BG?;hjog?=1;ENDIF;ENDIF;ENDIF\n";
-      tc += "IF((((_LR?=1)&(hjs?>0))|((_LF?=1)&(hjs?<0)))&(hjog?=1)&(_BG?=1));ST?;ENDIF\n";
-      tc += "IF((hjog?=1)&(_BG?=0))\n";
-      //Ensure ok to move in desired direction
-      gen_EnsureOkToMove(tc);
-      //Start index search
-      tc += "IF((_MO?=0)&(ueip?=1)&(ui?=1));JG?=hjs?;FI?;WT10;BG?;hjog?=2\nELSE\n";
-      }
-   else
-      {
-      //Stop motor once home activated
-      tc += "IF((_HM?=hswact?)&(hjog?=0)&(_BG?=1));ST?;DC?=limdc?;ENDIF\n";
-      //Code to jog off home
-      tc += "IF((_HM?=hswact?)&(hjog?=0))\n";
-      //Ensure ok to move in desired direction
-      gen_EnsureOkToMove(tc);
-      //Start jog off home
-      tc += "IF((_BG?=0)&(_MO?=0));JG?=hjs?;WT10;BG?;hjog?=1;ENDIF;ENDIF;ENDIF\n";
-      //Stop motor once off home
-      tc += "IF((_HM?=hswiact?)&(hjog?=1)&(_BG?=1));ST?;ENDIF\n";
-      //Find encoder index
-      tc += "IF((hjog?=1)&(_BG?=0))\n";
-      //Ensure ok to move in desired direction
-      gen_EnsureOkToMove(tc);
-      //Start index search
-      tc += "IF((_MO?=0)&(ueip?=1)&(ui?=1));JG?=hjs?;FI?;WT10;BG?;hjog?=2\nELSE\n";
-      }
+   //hjog%c=0 Home just started, no galil code home jogs have happened
+   //hjog%c=1 Jog off limit switch has occurred, or skipped
+   //hjog%c=2 Jog to find home active has occurred, or skipped
+   //hjog%c=3 Jog to find requested home edge has occurred, or skipped
+   //hjog%c=4 Jog to find encoder index has occurred, or skipped
+   //hjog%c=5 Final home position found
 
-   //Common homing code regardless of homing to limit or home switch
+   //Correct limit active, and no galil code home jogs have happened
+   tc += "IF((((_LR?=0)&(hjs?>0))|((_LF?=0)&(hjs?<0)))&(hjog?=0))\n";
+   //If (limits as home false and home switch inactive, or limits as home true) AND
+   //Amplifier is on and axis not moving     
+   tc += "IF((((ulah?=0)&(_HM?=hswiact?))|(ulah?=1))&(_MO?=0)&(_BG?=0))\n";
+   //Ensure ok to move in desired direction
+   gen_EnsureOkToMove(tc);
+   //Jog off limit
+   tc += "JG?=hjs?;DC?=limdc?;WT10;BG?;hjog?=1;ENDIF\n";
+   //Else If limits as home false and home switch active then home active already found
+   tc += "ELSE;IF((ulah?=0)&(_HM?=hswact?)&(_MO?=0)&(_BG?=0));hjog?=2;ENDIF;ENDIF;ENDIF\n";
+
+   //Stop when limit deactivates
+   tc += "IF((((_LR?=1)&(hjs?>0))|((_LF?=1)&(hjs?<0)))&(hjog?=1)&(_BG?=1));ST?;ENDIF\n";
+
+   //If limit inactive, axis stopped and jog off limit happened
+   tc += "IF((((_LR?=1)&(hjs?>0))|((_LF?=1)&(hjs?<0)))&(hjog?=1)&(_BG?=0))\n";
+   //If (limits as home false and home switch inactive) AND
+   //Amplifier is on and axis not moving
+   tc += "IF((ulah?=0)&(_HM?=hswiact?)&(_MO?=0)&(_BG?=0))\n";
+   //Ensure ok to move in desired direction
+   gen_EnsureOkToMove(tc);
+   //Move to find home active state, else skip step
+   tc += "JG?=hjs?;DC?=limdc?;WT10;BG?;hjog?=2;ENDIF;ELSE;hjog?=2;ENDIF;ENDIF\n";
+
+   //If use limits as home false and home switch active and axis moving
+   //Stop motor when home switch becomes active
+   tc += "IF((ulah?=0)&(_HM?=hswact?)&(_MO?=0)&(_BG?=1)&(hjog?>-1)&(hjog?<3))\n";
+   tc += "ST?;DC?=limdc?;hjog?=2;ENDIF\n";
+
+   //If use limits as home false and home switch active and axis stopped
+   //Find home edge requested
+   tc += "IF((ulah?=0)&(_HM?=hswact?)&(hjog?=2)&(_MO?=0)&(_BG?=0))\n";
+   //Ensure ok to move
+   if (pC_->model_[3] == '1' || pC_->model_[3] == '2')// Model 21x3 does not have LD (limit disable) command
+      tc += "IF(((_LR?=1)&(hswedg=0))|((_LF?=1)&(hswedg=1)))\n";
+   else
+      tc += "IF((((_LR?=1)|(_LD?>1))&(hswedg=0))|(((_LF?=1)|(_LD?=1)|(_LD?=3))&(hswedg=1)))\n";
+   //Move to home edge requested
+   tc += "SP?=hjs?;DC?=limdc?;WT10;FE?;BG?;hjog?=3;ENDIF\n";
+   //Else if use limits as home true skip find home edge step
+   tc += "ELSE;IF((ulah?=1)&(hjog?=2));hjog?=3;ENDIF;ENDIF\n";
+
+   //Find encoder index
+   tc += "IF((hjog?=3)&(_BG?=0))\n";
+   //Ensure ok to move in desired direction
+   gen_EnsureOkToMove(tc);
+   //Start index search
+   if (pC_->model_[3] == '1' || pC_->model_[3] == '2')// Model 21x3 does not latch index and return, limit deceleration used
+      tc += "IF((_MO?=0)&(ueip?=1)&(ui?=1));JG?=hjs?;DC?=limdc?;FI?;WT10;BG?;hjog?=4\n";
+   else //Model 4xxx will latch index and return, so normal deceleration used
+      tc += "IF((_MO?=0)&(ueip?=1)&(ui?=1));JG?=hjs?;DC?=nrmdc?;FI?;WT10;BG?;hjog?=4\n";
+
    //If no encoder we are home already
-   tc += "IF(_MO?=0);hjog?=3;ENDIF;ENDIF;ENDIF;ENDIF\n";
+   tc += "ELSE;hjog?=5;ENDIF;ENDIF;ENDIF\n";
    //If encoder index complete we are home
-   tc += "IF((hjog?=2)&(_BG?=0));hjog?=3;ENDIF\n";
+   tc += "IF((hjog?=4)&(_BG?=0));hjog?=5;ENDIF\n";
    //Unset home flag
-   if (pC_->model_[3] == '2')// Model 21x3 does not have LD (limit disable) command
-      tc += "IF((_LR?=1)&(_LF?=1)&(hjog?=3)&(_BG?=0))\n";
-   else 
-      tc += "IF((((_LR?=1)|(_LD?>1))|((_LF?=1)|(_LD?=1)|(_LD?=3)))&(hjog?=3)&(_BG?=0))\n";
+   if (pC_->model_[3] == '1' || pC_->model_[3] == '2')// Model 21x3 does not have LD (limit disable) command
+      tc += "IF((_LR?=1)&(_LF?=1)&(hjog?=5)&(_BG?=0))\n";
+   else
+      tc += "IF(((_LR?=1)|(_LD?>1))&((_LF?=1)|(_LD?=1)|(_LD?=3))&(hjog?=5)&(_BG?=0))\n";
    //Flag homing complete, and send unsolicited messages to epics informing of homed status
    tc += "WT10;hjog?=0;home?=0;homed?=1;MG \"homed?\",homed?;ENDIF;ENDIF\n";
-  
-   /*
-   //Add code that counts cpu cycles through thread 0
-     if (axisName_ == 'A')
-        {
-        sprintf(axis_thread_code,"%scounter=counter+1\n",axis_thread_code);
-        tc += "counter=counter+1\n";
-	
-        //initialise counter variable
-        sprintf(pC_->cmd_, "counter=0");
-        pC_->sync_writeReadController();
-        }*/
 
    //Replace ? symbol with axisName_
    replace( tc.begin(), tc.end(), '?', axisName_);
@@ -542,11 +557,14 @@ asynStatus GalilAxis::setAccelVelocity(double acceleration, double velocity, boo
    int status;
 
    //Set acceleration and deceleration for normal moves
+   //Ensure acceleration is within maximum for this model
+   acceleration = (acceleration > pC_->maxAcceleration_) ? pC_->maxAcceleration_ : acceleration;
    //Find closest hardware setting
    accel = (long)lrint(acceleration/1024.0) * 1024;
    if (accel == 0) {
        accel = 1024; // galil manual says AC and DC must be at least 1024
    }
+   //Format the command string
    cmd = "AC" + string(1, c) + "=" + tsp(accel, 0) + ";DC" + string(1, c) + "=" + tsp(accel, 0);
 
    //Are we done here?
@@ -573,11 +591,13 @@ asynStatus GalilAxis::setAccelVelocity(double acceleration, double velocity, boo
    deceleration = (long)(lrint(decel/1024.0) * 1024);
    //Ensure deceleration is within maximum for this model
    deceleration = (deceleration > pC_->maxAcceleration_) ? pC_->maxAcceleration_ : deceleration;
-   //Set limit deceleration
+   //Set limit deceleration galil code variable
    limdc_ = (double)deceleration;
    cmd += ";limdc" + string(1, c) + "=" + tsp(limdc_, 0);
    cmd += ";hjgdc" + string(1, c) + "=" + tsp(limdc_, 0);  // for old homing code
-
+   //Set normal deceleration galil code variable
+   cmd += ";nrmdc" + string(1, c) + "=" + tsp(accel, 0);
+   //Write the command
    strcpy(pC_->cmd_, cmd.c_str());
    status = pC_->sync_writeReadController();
 
@@ -675,7 +695,7 @@ asynStatus GalilAxis::move(double position, int relative, double minVelocity, do
   bool used_move_command = false;
   int deferredMode;				//Deferred move mode
   //Is controller using main or auxillary encoder register for positioning
-  double readback = (ctrlUseMain_) ? encoder_position_ : motor_position_;
+  double readback = (motorIsServo_) ? encoder_position_ : motor_position_;
   double mres;
   asynStatus status = asynError;
 
@@ -700,6 +720,10 @@ asynStatus GalilAxis::move(double position, int relative, double minVelocity, do
   //Are moves to be deferred ?
   if (pC_->movesDeferred_ != 0) {
      //Moves are deferred
+     //Return if specified maxVelocity is <= 2.000000
+     if (trunc(maxVelocity * 1000000.0)  < trunc(2.000000 * 1000000.0)) {
+        return asynSuccess;
+     }
      //Retrieve deferred moves mode
      pC_->getIntegerParam(pC_->GalilDeferredMode_, &deferredMode);
      //Sync start and stop motor moves require relative move
@@ -766,12 +790,13 @@ asynStatus GalilAxis::move(double position, int relative, double minVelocity, do
 */
 asynStatus GalilAxis::setupHome(double maxVelocity, int forwards)
 {
-   int home_direction;		//Muliplier to change direction of the jog off home switch
-   double hjs;			//home jog speed
-   double hvel;			//Home velocity
-   int useSwitch;		//Jog toward switch
-   int useIndex;		//Find encoder index
-   int useEncoder;		//Use encoder if present
+   int home_direction;  //Muliplier to change direction of the jog off home switch
+   double hjs;          //home jog speed
+   double hvel;         //Home velocity
+   int homeEdge;        //Home switch edge to find
+   int useSwitch;       //Jog toward switch
+   int useIndex;        //Find encoder index
+   int useEncoder;      //Use encoder if present
 
    //Calculate direction of home jog
    home_direction = (forwards == 0) ? 1 : -1;
@@ -780,6 +805,21 @@ asynStatus GalilAxis::setupHome(double maxVelocity, int forwards)
    pC_->getIntegerParam(axisNo_, pC_->GalilUseSwitch_, &useSwitch);
    //When not using switch assume index search
    home_direction = (useSwitch) ? home_direction : home_direction * -1;
+
+   //Set home switch active/inactive states for _HM command
+   sprintf(pC_->cmd_, "hswact%c=%d\n", axisName_, pC_->hswact_);
+   pC_->sync_writeReadController();
+   sprintf(pC_->cmd_, "hswiact%c=%d\n", axisName_, pC_->hswiact_);
+   pC_->sync_writeReadController();
+   //Retrieve controller home edge
+   pC_->getIntegerParam(0, pC_->GalilHomeEdge_, &homeEdge);
+   //Set home edge parameter
+   sprintf(pC_->cmd_, "hsedge=%d\n", homeEdge);
+   pC_->sync_writeReadController();
+
+   //Set use limits as home (ulah) parameter
+   sprintf(pC_->cmd_, "ulah%c=%d\n", axisName_, limit_as_home_);
+   pC_->sync_writeReadController();
 
    //Calculate home jog speed, direction that controller home program will use
    hjs = maxVelocity * home_direction;
@@ -829,7 +869,7 @@ asynStatus GalilAxis::setupHome(double maxVelocity, int forwards)
    else {
      //Controller home program will be called by setting home%c=1
      //Tell controller home program that jog off switch is done already
-     sprintf(pC_->cmd_, "hjog%c=1", axisName_);
+     sprintf(pC_->cmd_, "hjog%c=3", axisName_);
      pC_->sync_writeReadController();
    }
 
@@ -984,6 +1024,8 @@ asynStatus GalilAxis::beginCheck(const char *caller, char callaxis, double maxVe
   int rev, fwd;				//Limit status
   int motoron;				//Motor Amp on status
   int autoonoff;			//Auto amp on/off status
+  int wlp;				//Wrong limit protection enable state
+  int limitDisable;                     //Limit disable setting
 
   //Clear controller messages
   if (resetCtrlMessage)
@@ -1011,21 +1053,25 @@ asynStatus GalilAxis::beginCheck(const char *caller, char callaxis, double maxVe
      mesg += " motor amplifier is off";
   }
 
+  //Protect against user issuing further moves in bad direction after wlp stop
+  pC_->getIntegerParam(axisNo_, pC_->motorStatusLowLimit_, &rev);
+  pC_->getIntegerParam(axisNo_, pC_->motorStatusHighLimit_, &fwd);
+  pC_->getIntegerParam(axisNo_, pC_->GalilWrongLimitProtection_, &wlp);
+  pC_->getIntegerParam(axisNo_, pC_->GalilLimitDisable_, &limitDisable);
+  //If wlp is enabled and motor limits direction is not_consistent
+  //Don't allow move when a limit is active
+  if (wlp && (limitsDirState_ == not_consistent) && ((rev_ && limitDisable < 2) ||
+     (fwd_ && (!limitDisable || limitDisable == 2)))) {
+     mesg = string(caller) + " " + string(1, callaxis) + " failed, " + string(1, axisName_);
+     mesg += " wrong limit protect stop";
+  }
+
   //Check for error
   if (!mesg.empty()) {
      //Set controller error mesg
      pC_->setCtrlError(mesg);
      return asynError;
   }
-
-  //Used to support wrongLimitProtection
-  //Store if move begun whilst on a limit
-  pC_->getIntegerParam(axisNo_, pC_->motorStatusLowLimit_, &rev);
-  pC_->getIntegerParam(axisNo_, pC_->motorStatusHighLimit_, &fwd);
-  if (rev || fwd)
-     beginOnLimit_ = true;
-  else
-     beginOnLimit_ = false;
 
   //Everything ok so far
   return asynSuccess;
@@ -1052,7 +1098,7 @@ asynStatus GalilAxis::checkLimits(const char *caller, char callaxis, double posi
 
    if (!status) {
       //Readback in steps
-      readback = (ctrlUseMain_) ? encoder_position_ : motor_position_;
+      readback = (motorIsServo_) ? encoder_position_ : motor_position_;
       //Check physical limits
       if ((position < readback && rev) || (position > readback && fwd)) {
          mesg = string(caller) + " " + string(1, callaxis) + " failed, " + string(1, axisName_) + " ";
@@ -1117,7 +1163,7 @@ asynStatus GalilAxis::checkMRSettings(const char *caller, char callaxis, bool mo
    if (status) return asynError;
 
    //Check motor record status
-   if (spmg != 3 && spmg != 2) {
+   if (spmg != spmgGo && spmg != spmgMove) {
       mesg = string(caller) + " " + string(1, callaxis) + " failed, " + string(1, axisName_);
       mesg += " spmg is not set to \"go\" or \"move\"";
    }
@@ -1244,6 +1290,8 @@ asynStatus GalilAxis::stop(double acceleration)
   else {
      //Stop this axis independently
      //cancel any home, and home switch jog off operations that may be underway
+     // we do not check homing_ as we may have resrtred when on was in progress?
+     // but we may stop on startup anyway?
      if (customHome_) {
           // hjog=0 not needed, might be a race condition if it is set (reexecute hjog==0 section)
          sprintf(pC_->cmd_, "home%c=0", axisName_);
@@ -1251,6 +1299,10 @@ asynStatus GalilAxis::stop(double acceleration)
      else {
          sprintf(pC_->cmd_, "home%c=0;hjog%c=0", axisName_, axisName_);
      }
+     pC_->sync_writeReadController();
+     //Cancel limit/home switch jog off operations that may be underway
+     //Set deceleration back to normal
+     sprintf(pC_->cmd_, "DC%c=nrmdc%c", axisName_, axisName_);
      pC_->sync_writeReadController();
      //Set homing flag false
      //This flag does not include JAH
@@ -1290,7 +1342,7 @@ asynStatus GalilAxis::stopInternal(double acceleration)
 /** Stop axis motor record.  Called by driver internally.
   * Prevents backlash, and retry attempts from motorRecord */
 asynStatus GalilAxis::stopMotorRecord(void) {
-   int status = asynSuccess;		//Return status
+   int status = asynSuccess; //Return status
    //What is the source of the stop request ?
    //Possible sources are the driver, or the motor record
    if (stopInternal_) {
@@ -1397,6 +1449,9 @@ asynStatus GalilAxis::setPosition(double position)
   
   //Set encoder position
   setEncoderPosition(enc_pos);
+  
+  //GalilAxis position changed via MR SET field, inform any GalilCSAxis
+  setPositionOut_ = true;
 
   //Always return success. Dont need more error mesgs
   return asynSuccess;
@@ -1535,15 +1590,12 @@ asynStatus GalilAxis::setHighLimit(double highLimit)
      //Construct command, and mesg
      sprintf(pC_->cmd_, "FL%c=%lf;BL%c=%lf", axisName_, 2147483647.0, axisName_, -2147483648.0);
      sprintf(mesg, "%c soft limits disabled", axisName_);
+     pC_->setCtrlError(mesg);
   }
   else {
      //Construct command, and mesg
      sprintf(pC_->cmd_, "FL%c=%lf;BL%c=%lf", axisName_, highLimit_, axisName_, lowLimit_);
-     strcpy(mesg, "");
   }
-
-  //Write mesg
-  pC_->setCtrlError(mesg);
 
   //Write command to controller
   pC_->sync_writeReadController();
@@ -1579,15 +1631,12 @@ asynStatus GalilAxis::setLowLimit(double lowLimit)
      //Construct command, and mesg
      sprintf(pC_->cmd_, "FL%c=%lf;BL%c=%lf", axisName_, 2147483647.0, axisName_, -2147483648.0);
      sprintf(mesg, "%c soft limits disabled", axisName_);
+     pC_->setCtrlError(mesg);
   }
   else {
      //Construct command, and mesg
      sprintf(pC_->cmd_, "FL%c=%lf;BL%c=%lf", axisName_, highLimit_, axisName_, lowLimit_);
-     strcpy(mesg, "");
   }
-
-  //Write mesg
-  pC_->setCtrlError(mesg);
 
   //Write command to controller
   pC_->sync_writeReadController();
@@ -1753,7 +1802,7 @@ asynStatus GalilAxis::invert_ssi(void)
    //Retrieve SSI dataform
    pC_->getIntegerParam(axisNo_, pC_->GalilSSIData_, &ssidataform);
    //Direction invert only for stepper and binary dataform combination
-   if (ssidataform == 0 && !ctrlUseMain_)
+   if (ssidataform == 0 && !motorIsServo_)
       {
       //Binary data form
       //Invert encoder direction
@@ -1786,8 +1835,6 @@ asynStatus GalilAxis::getStatus(void)
 {
    char src[MAX_GALIL_STRING_SIZE]="\0";	//data source to retrieve
    int motoron;					//paramList items to update
-   int connected;				//paramList items to update
-   int connectedlast;				//paramList items to update
    double userData;				//paramList items to update
    double errorlast;				//paramList items to update
    double velocitylast;				//paramList items to update
@@ -1798,6 +1845,7 @@ asynStatus GalilAxis::getStatus(void)
    int brakeport;				//Brake port for this axis
    int limitDisable = 0;                        //Limit disabled param
    bool ctrlType;				//Controller type
+   double reference_position;                   //Reference position
 
    //If data record query success in GalilController::acquireDataRecord
    if (pC_->recstatus_ == asynSuccess) {
@@ -1852,6 +1900,18 @@ asynStatus GalilAxis::getStatus(void)
          strcpy(src, "_TPx");
          src[3] = axisName_;
          encoder_position_ = pC_->sourceValue(pC_->recdata_, src);
+         //If this is a stepper then profile might be done, but the pulse output might not be done yet
+         //Pulse output done when reference_position (commanded target) = motor position (steps output by controller)
+         if (!motorIsServo_ && !inmotion_) {
+            //Reference position (commanded target)
+            strcpy(src, "_RPx");
+            src[3] = axisName_;
+            reference_position = pC_->sourceValue(pC_->recdata_, src);
+            if (motor_position_ != reference_position) {
+               //Profile complete, but pulse output isn't
+               inmotion_ = true;
+            }
+         }
          //Invert SSI encoder direction
          if (invert_ssi_)
             invert_ssi();
@@ -1874,19 +1934,7 @@ asynStatus GalilAxis::getStatus(void)
          //home switch
          strcpy(src, "_HMx");
          src[3] = axisName_;
-         home_ = (bool)(pC_->sourceValue(pC_->recdata_, src) == 1) ? 0 : 1;
-         //motor connected status
-         pC_->getIntegerParam(axisNo_, pC_->GalilMotorConnected_, &connectedlast);
-         if (limitDisable == 0)
-            connected = (rev_ && fwd_) ? 0 : 1;
-         else
-            connected = 1;
-         if (connectedlast != connected || !axisReady_)
-            pC_->setIntegerParam(axisNo_, pC_->GalilMotorConnected_, connected);
-         //If motor just connected, then limits are not
-         //confirmed consistent with motor direction yet
-         if (!connectedlast && connected)
-            limitsDirState_ = unknown;
+         home_ = (bool)(pC_->sourceValue(pC_->recdata_, src) == pC_->hswact_) ? 1 : 0;
          //User data
          strcpy(src, "_ZAx");
          src[3] = axisName_;
@@ -1929,7 +1977,7 @@ void GalilAxis::setStatus(bool *moving)
   pC_->getIntegerParam(axisNo_, pC_->GalilUseReadback_, &urip);
   //Encoder move status
   encoderMove_ = false;
-  if (ueip_ || urip || ctrlUseMain_)
+  if (ueip_ || urip || motorIsServo_)
      {
      //Check encoder move
      if (last_encoder_position_ > (encoder_position_ + enc_tol_))
@@ -1974,7 +2022,7 @@ void GalilAxis::checkEncoder(void)
    double estall_time;			//Allowed encoder stall time specified by user
    double pestall_time;			//Possible encoder stall has been happening for this many secs
 
-   if (((ueip_ || ctrlUseMain_) && !done_ && !deferredMove_ && (!encoderMove_ || !encDirOk_)))
+   if (((ueip_ || motorIsServo_) && !done_ && !deferredMove_ && (!encoderMove_ || !encDirOk_)))
       {
       //Record time when possible stall was first detected
       if (!pestall_detected_)
@@ -2015,7 +2063,7 @@ void GalilAxis::checkEncoder(void)
             }
          }
       }
-  else if (((ueip_ || ctrlUseMain_) && !done_ && encoderMove_ && encDirOk_ && !stopSent_) || (!done_ && !ueip_ && !ctrlUseMain_ && !stopSent_))
+  else if (((ueip_ || motorIsServo_) && !done_ && encoderMove_ && encDirOk_ && !stopSent_) || (!done_ && !ueip_ && !motorIsServo_ && !stopSent_))
       {
       //Reset stalled encoder flag when moving ok
       //Pass stall status to higher layers
@@ -2048,7 +2096,7 @@ void GalilAxis::syncEncodedStepper(void)
    pC_->getIntegerParam(axisNo_, pC_->GalilHoming_, &homing);
 
    //Motor just stopped
-   if (ueip_ && !ctrlUseMain_ && done_ && !last_done_ && !syncEncodedStepperAtStopSent_ &&
+   if (ueip_ && !motorIsServo_ && done_ && !last_done_ && !syncEncodedStepperAtStopSent_ &&
        !homing_ && !homing) {
       //Request encoder value be copied to step register
       pollRequest_.send((void*)&MOTOR_STEP_SYNC_ATSTOP, sizeof(int));
@@ -2064,7 +2112,7 @@ void GalilAxis::syncEncodedStepper(void)
       mreadback = motor_position_ * mres;
       ereadback = encoder_position_ * eres;
       //Stepper motor not moving, but encoder moved more than retry deadband
-      if (ueip_ && !ctrlUseMain_ && done_ && last_done_ && !homing_ && !homing && 
+      if (ueip_ && !motorIsServo_ && done_ && last_done_ && !homing_ && !homing && 
           !syncEncodedStepperAtEncSent_ && (mreadback < ereadback - rdbd || mreadback > ereadback + rdbd)) {
          //Request encoder value be copied to step register
          pollRequest_.send((void*)&MOTOR_STEP_SYNC_ATENC, sizeof(int));
@@ -2079,52 +2127,6 @@ void GalilAxis::syncEncodedStepper(void)
       syncEncodedStepperAtStopSent_ = false;
       syncEncodedStepperAtStopExecuted_ = false;
    }
-}
-
-//Called by poll without lock
-//Detects activation of incorrect limit and
-//May stop motor via pollServices thread
-void GalilAxis::wrongLimitProtection(void)
-{
-   char message[MAX_GALIL_STRING_SIZE];	//Safety stop message
-   int wlp;				//Wrong limit protection.  When motor hits wrong limit
-   int limitDisable;			//Limits disable feature
-
-   //Retrieve wrong limit protection setting
-   pC_->getIntegerParam(axisNo_, pC_->GalilWrongLimitProtection_, &wlp);
-   //Retrieve limit disable setting
-   pC_->getIntegerParam(axisNo_, pC_->GalilLimitDisable_, &limitDisable);
-   if (wlp && limitsDirState_ != consistent && !limitDisable)
-      {
-      if ((!done_ && direction_ && rev_) || (!done_ && !direction_ && fwd_))
-         {
-         if (!stopSent_)
-            {
-            //Wrong limit protection actively stopping this motor now
-            pC_->setIntegerParam(axisNo_, pC_->GalilWrongLimitProtectionActive_, 1);
-            //Set the stop reason so limit deceleration is applied during stop
-            stop_reason_ = MOTOR_STOP_ONWLP;
-            //Stop the motor if the wrong limit is active, AND wlp protection active
-            pollRequest_.send((void*)&MOTOR_STOP, sizeof(int));
-            //Flag the motor has been stopped
-            stopSent_ = true;
-            //Inform user
-            sprintf(message, "Wrong limit protect stop motor %c", axisName_);
-            //Set controller error mesg monitor
-            pC_->setCtrlError(message);
-            //Set direction limit state as not consistent if move did not begin on limit
-            if (!beginOnLimit_)
-               limitsDirState_ = not_consistent;  //Set limit status to not_consistent
-            }
-         }
-      else if (!done_)
-         {
-         //Wrong limit protection is NOT actively stopping this motor now
-         pC_->setIntegerParam(axisNo_, pC_->GalilWrongLimitProtectionActive_, 0);
-         }
-      }
-   else
-      pC_->setIntegerParam(axisNo_, pC_->GalilWrongLimitProtectionActive_, 0); //NOT actively stopping this motor now
 }
 
 //Called by poll
@@ -2172,7 +2174,7 @@ void GalilAxis::checkHoming(void)
    softlimits = (bool)(lowLimit_ == highLimit_ && lowLimit_ == 0.0) ? false : true;
 
    //Is controller using main or auxillary encoder register for positioning
-   double readback = (ctrlUseMain_) ? encoder_position_ : motor_position_;
+   double readback = (motorIsServo_) ? encoder_position_ : motor_position_;
    double estall_time;
    pC_->getDoubleParam(axisNo_, pC_->GalilEStallTime_, &estall_time);
    double homing_timeout = (HOMING_TIMEOUT < estall_time ? estall_time : HOMING_TIMEOUT);
@@ -2245,14 +2247,99 @@ void GalilAxis::checkHoming(void)
 //Check motor direction/limits consistency
 void GalilAxis::checkMotorLimitConsistency(void)
 {
-   //Check motor/limits consistency
-   if (rev_ && !direction_)
-      limitsDirState_ = consistent;
+   int status;         // Return status
+   int connectedlast;  // Motor connected status from last poll cycle
+   int connected;      // Determined here
+   int limitDisable;   // limitDisable status
+   int wlp;            // Wrong limit protection enable state. 0=disabled, 1 enabled
 
-   if (fwd_ && direction_)
-      limitsDirState_ = consistent;
-   //Pass motor/limits consistency to paramList
-   pC_->setIntegerParam(axisNo_, pC_->GalilLimitConsistent_, limitsDirState_);
+   // Retrieve required parameters
+   status = pC_->getIntegerParam(axisNo_, pC_->GalilWrongLimitProtection_, &wlp);
+   status |= pC_->getIntegerParam(axisNo_, pC_->GalilMotorConnected_, &connectedlast);
+   status |=  pC_->getIntegerParam(axisNo_, pC_->GalilLimitDisable_, &limitDisable);
+
+   //Determine motor connected status
+   if (limitDisable == 0)
+      connected = (rev_ && fwd_) ? 0 : 1;
+   else
+      connected = 1;
+   if (connectedlast != connected || !axisReady_)
+      pC_->setIntegerParam(axisNo_, pC_->GalilMotorConnected_, connected);
+   //If motor just connected or disconnected
+   //Then it's unknown if motor direction matches limit orientation
+   if ((!connectedlast && connected) || (connectedlast && !connected)) {
+      limitsDirState_ = unknown;
+   }
+   //Perform motor/limits direction consistency check while moving
+   if (!status && !done_) {
+      //Check motor/limits consistency
+      //Look for limit transitions that indicate motor direction
+      //is consistent with limit orientation
+      if ((rev_ && !revlast_ && !direction_) ||
+          (!rev_ && revlast_ && direction_)) {
+         limitsDirState_ = consistent;
+      }
+      if ((fwd_ && !fwdlast_ && direction_) ||
+          (!fwd_ && fwdlast_ && !direction_)) {
+         limitsDirState_ = consistent;
+      }
+      //Look for limit transitions that indicate motor direction
+      //is not consistent with limit orientation
+      if (((direction_ && rev_ && !revlast_) ||
+           (!direction_ && fwd_ && !fwdlast_))) {
+         //Set limit direction state to not_consistent with motor
+         limitsDirState_ = not_consistent;
+         //Given limit disable state and wlp enable state
+         //Determine if wlp stop is required
+         if ((wlp && direction_ && rev_ && !revlast_ && (limitDisable < 2)) ||
+             (wlp && !direction_ && fwd_ && !fwdlast_ && (!limitDisable || limitDisable == 2))) {
+            //Send wlp axis stop, if haven't already
+            wrongLimitStop();
+         }
+      }
+      //Pass motor/limits direction consistency to paramList
+      pC_->setIntegerParam(axisNo_, pC_->GalilLimitConsistent_, limitsDirState_);
+      //Below is duplicate of beginCheck, anyhow it's good to be safe
+      //If wlp is enabled and motor limits direction is not_consistent
+      //Don't allow move when a limit is active
+      if (wlp && (limitsDirState_ == not_consistent) && ((rev_ && limitDisable < 2) ||
+         (fwd_ && (!limitDisable || limitDisable == 2)))) {
+        //Send wlp axis stop, if haven't already
+        wrongLimitStop();
+      }
+   }
+   //If wlp is enabled and motor limits direction is not_consistent
+   //Move isn't allowed when a limit is active
+   //Set paramList accordingly to update clients
+   if (wlp && (limitsDirState_ == not_consistent) && ((rev_ && limitDisable < 2) ||
+      (fwd_ && (!limitDisable || limitDisable == 2)))) {
+      //Wrong limit protection stopping this motor now
+      pC_->setIntegerParam(axisNo_, pC_->GalilWrongLimitProtectionStop_, 1);
+   }
+   else {
+      //Wrong limit protection not stopping this motor now
+      pC_->setIntegerParam(axisNo_, pC_->GalilWrongLimitProtectionStop_, 0);
+   }
+}
+
+//Called by checkMotorLimitConsistency without lock
+//Sends motor stop request to pollServices thread, if not done so already
+void GalilAxis::wrongLimitStop(void)
+{
+   char message[MAX_GALIL_STRING_SIZE];	//Stop message
+
+   if (!stopSent_) {
+      //Set the stop reason so limit deceleration is applied during stop
+      stop_reason_ = MOTOR_STOP_ONWLP;
+      //Stop the motor
+      pollRequest_.send((void*)&MOTOR_STOP, sizeof(int));
+      //Flag the motor has been stopped
+      stopSent_ = true;
+      //Inform user
+      sprintf(message, "Wrong limit protect stop motor %c", axisName_);
+      //Set controller error mesg monitor
+      pC_->setCtrlError(message);
+   }
 }
 
 /* C Function which runs the pollServices thread */ 
@@ -2601,7 +2688,7 @@ asynStatus GalilAxis::beginMotion(const char *caller, double position, bool rela
       if (!relative)
          {
          //Retrieve readback
-         readback = (ctrlUseMain_) ? encoder_position_ : motor_position_;
+         readback = (motorIsServo_) ? encoder_position_ : motor_position_;
          //If new position differs from readback, then write new position
          if ((long long) position == (long long) readback)
             return asynSuccess;//Nothing to do
@@ -2685,7 +2772,7 @@ asynStatus GalilAxis::jogAfterHome(void) {
           sprintf(pC_->cmd_, "DP%c=0", axisName_);
           pC_->sync_writeReadController();
           //Program encoder position register
-          if (ueip_ || ctrlUseMain_) {
+          if (ueip_ || motorIsServo_) {
              sprintf(pC_->cmd_, "DE%c=0", axisName_);
              pC_->sync_writeReadController();
           }
@@ -2923,9 +3010,6 @@ asynStatus GalilAxis::poller(bool& moving)
    //check ssi encoder connect status
    set_ssi_connectflag();
 
-   //Enforce wrong limit protection if enabled
-   wrongLimitProtection();
-
    //Check home switch
    if (home_ && !limit_as_home_)
       home = 1;
@@ -2967,6 +3051,12 @@ skip:
    //Save encoder position, and done for next poll cycle
    last_encoder_position_ = encoder_position_;
    last_done_ = done_;
+   //Save limit status for next poll cycle
+   //Used to support checkMotorLimitConsistency and wronglimit protection
+   //Can't retrieve from paramList as limit status can be masked/hidden from motor record
+   //By this driver during homing
+   revlast_ = rev_;
+   fwdlast_ = fwd_;
 
    //Set status
    if (encoder_smooth_factor_ != 0.0)
@@ -2998,16 +3088,22 @@ skip:
    setIntegerParam(pC_->motorStatusHome_, home);
    //Pass direction to motorRecord
    setIntegerParam(pC_->motorStatusDirection_, direction_);
-   //Tell upper layers motor is moving whilst sync encoded stepper, and homing requests are being executed
-   //Also when stopDelay has yet to expire
+   //Tell upper layers motor is moving whilst
+   //sync encoded stepper at stop or
+   //homing requests are being executed or
+   //GalilAxis has a new position from CSAxis (setPositionIn_ true) or
+   //stopDelay has yet to expire
    //This prevents new moves being initiated whilst above functions are being executed
    //Also keeps HOMR and HOMF 1 until homing finished
    //Done late in poll to allow parallel execution with pollServices
-   if ((homedSent_ && !homedExecuted_) || homing_ ||
+   if ((homedSent_ && !homedExecuted_) || homing_ || setPositionIn_ ||
        (syncEncodedStepperAtStopSent_ && !syncEncodedStepperAtStopExecuted_) ||
        (stoppedTime_ < stopDelay && !status)) {
       moving = true;
       done_ = 0;
+      //Set setPositionIn_ false, we've acted by setting moving true for 1 cycle
+      //Moving true for 1 cycle will cause GalilAxis MR to synchronize drive field to new readback value
+      setPositionIn_ = (setPositionIn_) ? false : setPositionIn_;
    }
 
    //Dont show limits whilst homing otherwise mr may interrupt custom routines
@@ -3099,7 +3195,7 @@ void GalilAxis::set_ssi_connectflag(void)
     int ssitotalbits, ssierrbits;	//SSI parameters
     int ssidataform;
     int i;
-    bool even;						//Total number of bits odd or even
+    bool even;				//Total number of bits odd or even
 
     //Retrieve SSI parameters required
     pC_->getIntegerParam(pC_->GalilSSICapable_, &ssicapable);
@@ -3152,7 +3248,7 @@ void GalilAxis::set_ssi_connectflag(void)
        //set connect flag accordingly
        if ((ssiinput == 1 && !encoderSwapped_) || (ssiinput == 2 && encoderSwapped_))	//Main encoder
           ssi_connect = (encoder_position_ == disconnect_val) ? 0 : 1;
-       if ((ssiinput == 2 && !encoderSwapped_ && ctrlUseMain_) || (ssiinput == 1 && encoderSwapped_ && ctrlUseMain_))	//Aux encoder
+       if ((ssiinput == 2 && !encoderSwapped_ && motorIsServo_) || (ssiinput == 1 && encoderSwapped_ && motorIsServo_))	//Aux encoder
           ssi_connect = (motor_position_ == disconnect_val) ? 0 : 1;
        //Set motorRecord MSTA bit 15 motorStatusHomed_
        //With SSI encoder, just move it where you want it
@@ -3266,7 +3362,7 @@ asynStatus GalilAxis::set_ssi(void)
 	pC_->sync_writeReadController();
 	encoderSwapped_ = (bool)atoi(pC_->resp_);
 
-	if ((ssiinput == 2 && !encoderSwapped_ && !ctrlUseMain_) || (ssiinput == 1 && encoderSwapped_ && !ctrlUseMain_))
+	if ((ssiinput == 2 && !encoderSwapped_ && !motorIsServo_) || (ssiinput == 1 && encoderSwapped_ && !motorIsServo_))
 		{
 		sprintf(mesg, "%c cannot use auxillary encoder for SSI whilst motor is stepper", axisName_);
 		pC_->setCtrlError(mesg);
@@ -3380,8 +3476,8 @@ asynStatus GalilAxis::set_biss(void)
    //Figure out if we have a stepper
    stepper = ((motortype >= 2) && (motortype <= 5));
 
-   if ((bissInput == 2 && !encoderSwapped_ && !ctrlUseMain_ && stepper)
-            || (bissInput == 1 && encoderSwapped_ && !ctrlUseMain_ && stepper)) {
+   if ((bissInput == 2 && !encoderSwapped_ && !motorIsServo_ && stepper)
+            || (bissInput == 1 && encoderSwapped_ && !motorIsServo_ && stepper)) {
       sprintf(mesg, "%c cannot use auxillary encoder for BiSS whilst motor is stepper", axisName_);
       pC_->setCtrlError(mesg);
       status = asynError;
