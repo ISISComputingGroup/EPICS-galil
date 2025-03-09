@@ -21,23 +21,23 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 # Contact details:
-# cliftm@ansto.gov.au
-# 800 Blackburn Road, Clayton, Victoria 3168, Australia.
-#
-#
+# Mark Clift
+# email: padmoz@tpg.com.au
+
 # P    - PV prefix
 # M    - CSMotor Name
 # PORT - Asyn port name
 # ADDR - CS motor (8-15)
 
 #Forward kinematic transform
-record(stringout,"$(P)$(M)_FTRANSFORM_SP")
+record(waveform,"$(P)$(M)_FTRANSFORM_SP")
 {
 	field(DESC, "$(M) Forward transform")
 	field(PINI, "YES")
-	field(OMSL, "supervisory")
+	field(NELM, "256")
+	field(FTVL, "CHAR")
 	field(DTYP, "asynOctetWrite")
-	field(OUT,  "@asyn($(PORT),$(ADDR))CSMOTOR_FORWARD_TRANSFORM")
+	field(INP,  "@asyn($(PORT),$(ADDR))CSMOTOR_FORWARD_TRANSFORM")
 }
 
 # end

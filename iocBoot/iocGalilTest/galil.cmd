@@ -78,14 +78,14 @@ GalilCreateAxis("Galil","H",1,"",1)
 # 1. char *portName Asyn port for controller
 # 2. int section = code section to add custom code into 0 = card code, 1 = thread code, 2 = limits code, 3 = digital code
 # 3. char *code_file custom code file
-#GalilAddCode("Galil", 1, "customcode.dmc")
+# GalilAddCode("Galil", 1, "customcode.dmc")
 
 # GalilReplaceHomeCode command parameters are:
 # Replace generated axis home code with custom code
 # 1. char *portName Asyn port for controller
 # 2. char *Axis A-H
 # 3. char *code_file custom code file
-#GalilReplaceHomeCode("Galil", "C", "customhoming.dmc")
+# GalilReplaceHomeCode("Galil", "C", "customhoming.dmc")
 
 # GalilCreateCSAxes command parameters are:
 #

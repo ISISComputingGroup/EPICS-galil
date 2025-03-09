@@ -13,9 +13,8 @@
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
 //
 // Contact details:
-// cliftm@ansto.gov.au
-// 800 Blackburn Road, Clayton, Victoria 3168, Australia.
-//
+// Mark Clift
+// email: padmoz@tpg.com.au
 
 #ifndef GalilAxis_H
 #define GalilAxis_H
@@ -77,10 +76,11 @@ const epicsUInt32 BISS_STAT_ERROR =   2;
 const epicsUInt32 BISS_STAT_WARN =    3;
 
 //limitState enum used in wrong limit protection
-typedef enum limitsState
-   {
-   unknown, consistent, not_consistent
-   } limitsState;
+typedef enum limitsState {
+   unknown = 0,
+   consistent,
+   not_consistent
+} limitsState;
 
 class GalilAxis : public asynMotorAxis
 {
@@ -144,8 +144,8 @@ public:
   void checkEncoder(void);
   //Synchronize aux register with encoder
   void syncEncodedStepper(void);
-  //Stop motor if wrong limit activated and wrongLimitProtection is enabled
-  void wrongLimitProtection(void);
+  //Stop motor for wrong limit protection
+  void wrongLimitStop(void);
   //Sets time motor has been stopped for in GalilAxis::stoppedTime_
   void setStopTime(void);
   //Reset homing if stoppedTime_ greater than HOMING_TIMEOUT
@@ -268,7 +268,13 @@ private:
 
   int ueip_;				//motorRecord ueip.  User wants to read main encoder if true, aux if false
   int enc_tol_;                         //encoder tolerance. Used for determining encoder direction in setStatus()
-  bool ctrlUseMain_;			//Based on selected motor type controller will use main or aux encoder register for positioning
+  bool motorIsServo_;			//If true, controller will use main encoder for positioning
+                                        //If false, controller will use aux encoder for positioning
+
+  bool setPositionIn_;                  //Flag to indicate associated CSAxis position change via motor record set/use field
+                                        //Set by GalilCSAxis, consumed by GalilAxis
+  bool setPositionOut_;                 //Flag to indicate this axis position change via motor record set/use field
+                                        //Set by GalilAxis, consumed by GalilCSAxis
   double motor_position_;		//aux encoder or step count register
   double encoder_position_;		//main encoder register
   double last_encoder_position_;	//main encoder register stored from previous poll.  Used to detect movement.
@@ -278,7 +284,9 @@ private:
   bool inmotion_;			//Axis in motion status from controller
   int stop_code_;			//Axis stop code from controller
   bool fwd_;				//Forward limit status
+  bool fwdlast_;			//Forward limit status last poll cycle
   bool rev_;				//Reverse limit status
+  bool revlast_;			//Reverse limit status last poll cycle
 
   bool moveThruRecord_;			//CSAxis has pushed a move to this axis via motor record VAL
                                         //Used to control write access to motor record VAL field
@@ -299,7 +307,6 @@ private:
   bool useCSADynamics_;			//Should this axis use CSAxis requested acceleration and velocity
   
   limitsState limitsDirState_;		//Status of limits consistency with motor direction
-  bool beginOnLimit_;			//Did move begin while on a limit switch
   bool home_;				//Home switch raw status direct from data record
   int done_;				//Motor done status passed to motor record
   int last_done_;			//Backup of done status at end of each poll.  Used to detect stop
