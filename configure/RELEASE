@@ -7,14 +7,15 @@ TEMPLATE_TOP=$(EPICS_BASE)/templates/makeBaseApp/top
 # this is nedeed for linking asyn statically on windows if asyn has vxi11 support
 ONCRPC=$(SUPPORT)/oncrpc/master
 
-ASYN=$(SUPPORT)/asyn/master
 AUTOSAVE=$(SUPPORT)/autosave/master
-BUSY=$(SUPPORT)/busy/master
-CALC=$(SUPPORT)/calc/master
-MOTOR=$(SUPPORT)/motor/master
 SSCAN=$(SUPPORT)/sscan/master
+CALC=$(SUPPORT)/calc/master
+ASYN=$(SUPPORT)/asyn/master
+BUSY=$(SUPPORT)/busy/master
+MOTOR=$(SUPPORT)/motor/master
 GALIL=$(SUPPORT)/galil/master
-#ASYN=$(SUPPORT)/asyn/master
+IPAC=$(SUPPORT)/ipac/master
+SNCSEQ=$(SUPPORT)/seq/master
 #ASUBFUNCTIONS=$(SUPPORT)/asubFunctions/master
 #AUTOSAVE=$(SUPPORT)/autosave/master
 #BUSY=$(SUPPORT)/busy/master
