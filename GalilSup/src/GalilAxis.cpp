@@ -561,9 +561,7 @@ asynStatus GalilAxis::setAccelVelocity(double acceleration, double velocity, boo
    acceleration = (acceleration > pC_->maxAcceleration_) ? pC_->maxAcceleration_ : acceleration;
    //Find closest hardware setting
    accel = (long)lrint(acceleration/1024.0) * 1024;
-   if (accel == 0) {
-       accel = 1024; // galil manual says AC and DC must be at least 1024
-   }
+   accel = (accel == 0) ? 1024 : accel; // galil manual says AC and DC must be at least 1024
    //Format the command string
    cmd = "AC" + string(1, c) + "=" + tsp(accel, 0) + ";DC" + string(1, c) + "=" + tsp(accel, 0);
 
@@ -589,6 +587,7 @@ asynStatus GalilAxis::setAccelVelocity(double acceleration, double velocity, boo
    decel = fabs((velocity * velocity)/((distance/mres) * 2.0));
    //Find closest hardware setting
    deceleration = (long)(lrint(decel/1024.0) * 1024);
+   deceleration = (deceleration == 0) ? 1024 : deceleration; // galil manual says AC and DC must be at least 1024
    //Ensure deceleration is within maximum for this model
    deceleration = (deceleration > pC_->maxAcceleration_) ? pC_->maxAcceleration_ : deceleration;
    //Set limit deceleration galil code variable
