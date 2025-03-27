@@ -4706,9 +4706,7 @@ asynStatus GalilController::writeOctet(asynUser *pasynUser, const char*  value, 
   unsigned i;					//looping
   string mesg;					//Controller mesg
   GalilCSAxis *pCSAxis;				//Pointer to CSAxis instance
-
   int addr=0;					//Address requested
-
 
   //Just return if shutting down
   if (shuttingDown_)
@@ -5264,7 +5262,7 @@ void GalilController::processUnsolicitedMesgs(void)
          //Retrieve next mesg
          charstr = epicsStrtok_r(NULL, " \r\n", &tokSave);
          }//while
-     }
+      }
 }
 
 //Extract controller data from GalilController data record
@@ -6708,6 +6706,7 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
            // Program validation failed
            downloadStatus = downloadFailed;
          }
+
          if (downloadSuccess == downloadStatus) {
             errlogPrintf("Code transfer successful to model %s, address %s\n",model_.c_str(), address_.c_str());	
             //Burn program code to eeprom if burn_program is 1
@@ -6747,6 +6746,7 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
          else {
             errlogPrintf("\nError uploading code model %s, address %s\n",model_.c_str(), address_.c_str());
          }
+
          //Start thread 0 if code on controller matches what was downloaded
          //Its assumed that thread 0 starts any other required threads on controller
          if ((0 == (int)dc.compare(uc)) && 0 != (int)uc.compare("") && thread_mask_ >= 0) {
@@ -6771,8 +6771,6 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
       else // Download failed
          start_ok = false;
 
-
-
       //Limits motor direction consistency unknown at connect/reconnect
       for (i = 0; i < numAxes_; i++) {
          pAxis = getAxis(axisList_[i] - AASCII);
@@ -6780,7 +6778,6 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
          pAxis->limitsDirState_ = unknown;
          //Pass motor/limits consistency to paramList
          setIntegerParam(pAxis->axisNo_, GalilLimitConsistent_, pAxis->limitsDirState_);
-
          pAxis->homingRoutineName = homingRoutineNames[i];
       }
 
@@ -6803,8 +6800,6 @@ void GalilController::GalilStartController(char *code_file, int burn_program, in
            pAxis->callParamCallbacks();
        }
    }
-  
-
    
      
    //Set controller start status

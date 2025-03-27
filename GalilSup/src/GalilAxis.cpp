@@ -1289,7 +1289,7 @@ asynStatus GalilAxis::stop(double acceleration)
   else {
      //Stop this axis independently
      //cancel any home, and home switch jog off operations that may be underway
-     // we do not check homing_ as we may have resrtred when on was in progress?
+     // we do not check homing_ as we may have resrtred when one was in progress?
      // but we may stop on startup anyway?
      if (customHome_) {
           // hjog=0 not needed, might be a race condition if it is set (reexecute hjog==0 section)
@@ -2167,7 +2167,7 @@ void GalilAxis::setStopTime(void)
 void GalilAxis::checkHoming(void)
 {
    bool softlimits;
-   char message[256];
+   char message[MAX_GALIL_STRING_SIZE];
 
    //Determine if soft limits are active
    softlimits = (bool)(lowLimit_ == highLimit_ && lowLimit_ == 0.0) ? false : true;
