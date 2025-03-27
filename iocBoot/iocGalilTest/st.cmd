@@ -31,6 +31,10 @@ saveData_Init("saveData.req", "P=IOC01:")
 create_monitor_set("GalilTest_positions.req", 5,"P=DMC01:")
 # Save motor settings every 30 seconds
 create_monitor_set("GalilTest_settings.req", 30,"IOC=IOC01:,P1=DMC01:, P2=RIO01:")
+# Save kinematics every 30 seconds
+create_monitor_set("GalilTest_kinematics.req", 30,"P1=DMC01:")
+
+# end
 
 ## if you are using RealCOM mode with moxa nport on windows then serial parameters
 ## are set by the application rather than on the port. Uncomment the following if

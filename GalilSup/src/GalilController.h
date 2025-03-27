@@ -13,9 +13,8 @@
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
 //
 // Contact details:
-// cliftm@ansto.gov.au
-// 800 Blackburn Road, Clayton, Victoria 3168, Australia.
-//
+// Mark Clift
+// email: padmoz@tpg.com.au
 
 #ifndef GalilController_H
 #define GalilController_H
@@ -40,6 +39,7 @@
 #define MAX_GALIL_AXES 8
 #define MAX_GALIL_LINEAR_INCREMENT 8388607
 #define MAX_GALIL_ABSOLUTE_MOVE 2147483647
+#define MAX_ENUM_ROWS 16
 //Number of parameter tables created
 //Meaning records can have address values 0-63
 #define MAX_ADDRESS 64
@@ -83,6 +83,7 @@
 #define GalilAddressString		"CONTROLLER_ADDRESS"
 #define GalilModelString		"CONTROLLER_MODEL"
 #define GalilHomeTypeString		"CONTROLLER_HOMETYPE"
+#define GalilHomeEdgeString		"CONTROLLER_HOMEEDGE"
 #define GalilLimitTypeString		"CONTROLLER_LIMITTYPE"
 #define GalilCtrlErrorString		"CONTROLLER_ERROR"
 #define GalilCommunicationErrorString	"CONTROLLER_COMMERR"
@@ -156,7 +157,7 @@
 #define GalilMotorConnectedString	"MOTOR_MCONN"
 #define GalilAfterLimitString		"MOTOR_EGUAFTER_LIMIT"
 #define GalilWrongLimitProtectionString	"MOTOR_WLP"
-#define GalilWrongLimitProtectionActiveString	"MOTOR_WLP_ACTIVE"
+#define GalilWrongLimitProtectionStopString	"MOTOR_WLP_STOP"
 #define GalilUserOffsetString		"MOTOR_OFF"
 #define GalilEncoderResolutionString	"MOTOR_ERES"
 #define GalilDirectionString		"MOTOR_DIR"
@@ -179,6 +180,7 @@
 #define GalilBrakeString		"MOTOR_BRAKE"
 #define GalilHomeAllowedString		"MOTOR_HOME_ALLOWED"
 #define GalilStopDelayString		"MOTOR_STOP_DELAY"
+#define GalilMicrostepString		"MOTOR_MICROSTEP"
 #define GalilAmpGainString		"MOTOR_AMP_GAIN"
 #define GalilAmpCurrentLoopGainString	"MOTOR_AMP_CURRENTLOOP_GAIN"
 #define GalilAmpLowCurrentString	"MOTOR_AMP_LOWCURRENT"
@@ -279,6 +281,66 @@ struct Source //each data record source key (e.g. "_RPA") maps to one of these, 
 	{ /*ctor just initializes values*/ }
 };
 
+// DMC code download status
+typedef enum downloadState {
+  notRequired = 0,
+  downloadSuccess,
+  downloadFailed,
+} downloadState;
+
+// Motor record spmg state
+typedef enum motorRecordState {
+  spmgStop = 0,
+  spmgPause,
+  spmgMove,
+  spmgGo
+} motorRecordState;
+
+// Amplifier enum information
+typedef struct {
+  const char *enumString;
+  int  enumValue;
+} enumStruct_t;
+
+static const enumStruct_t ampGain_43040[] = {
+  {"0.40 A/V",   0},
+  {"0.70 A/V",   1},
+  {"1.00 A/V",   2},
+};
+
+static const enumStruct_t ampGain_43140[] = {
+  {"0.10 A",   0},
+};
+
+static const enumStruct_t microstep_43547[] = {
+  {"256",   256},
+};
+
+static const enumStruct_t ampGain_44040[] = {
+  {"0.50 A",   0},
+  {"0.75 A",   1},
+  {"1.00 A",   2},
+  {"1.40 A",   3},
+};
+
+static const enumStruct_t microstep_44040[] = {
+  {"1",   1},
+  {"2",   2},
+  {"4",   4},
+  {"16", 16},
+};
+
+static const enumStruct_t ampGain_44140[] = {
+  {"0.50 A",   0},
+  {"1.00 A",   1},
+  {"2.00 A",   2},
+  {"3.00 A",   3},
+};
+
+static const enumStruct_t microstep_44140[] = {
+  {"64",   64},
+};
+
 class GalilController : public asynMotorController {
 public:
   //These variables need to be accessible from static callbacks
@@ -302,7 +364,8 @@ public:
   bool my_isascii(int c);
   asynStatus arrayUpload(void);
   asynStatus programUpload(string *prog);
-  asynStatus programDownload(string prog);
+  asynStatus programDownload(const string prog);
+  asynStatus programValidate(const string prog);
   
   /* These are the methods that we override from asynMotorController */
   asynStatus setDeferredMoves(bool deferMoves);
@@ -312,6 +375,7 @@ public:
   asynStatus writeOctet(asynUser *pasynUser, const char*  value,  size_t  nChars,  size_t *  nActual);
   asynStatus readInt32(asynUser *pasynUser, epicsInt32 *value);
   asynStatus readFloat64(asynUser *pasynUser, epicsFloat64 *value);
+  asynStatus readEnum(asynUser *pasynUser, char *strings[], int values[], int severities[], size_t nElements, size_t *nIn);
   asynStatus drvUserCreate(asynUser *pasynUser, const char* drvInfo, const char** pptypeName, size_t* psize); 
   asynStatus drvUserDestroy(asynUser *pasynUser);
   void report(FILE *fp, int level);
@@ -398,6 +462,10 @@ public:
   asynStatus checkMRSettings(const char *caller, const char *axes, char *axis);
   //Check axes settings given move request
   asynStatus checkAllSettings(const char *caller, const char *axes, double npos[], char *axis);
+  //Update amplifer information upon connect
+  asynStatus updateAmpInfo();
+  //Enum row callback
+  void enumRowCallback(unsigned ampNum, int reason, const enumStruct_t *pEnum, size_t nElements);
 
   void InitializeDataRecord(void);
   double sourceValue(const std::vector<char>& record, const std::string& source);
@@ -429,6 +497,7 @@ protected:
   int GalilAddress_;
   int GalilModel_;
   int GalilHomeType_;
+  int GalilHomeEdge_;
   int GalilLimitType_;
   int GalilCtrlError_;
   int GalilDeferredMode_;
@@ -488,7 +557,7 @@ protected:
   int GalilMotorConnected_;
   int GalilAfterLimit_;
   int GalilWrongLimitProtection_;
-  int GalilWrongLimitProtectionActive_;
+  int GalilWrongLimitProtectionStop_;
   int GalilUserOffset_;
   int GalilEncoderResolution_;
   int GalilUseEncoder_;
@@ -508,6 +577,7 @@ protected:
   int GalilBrake_;
   int GalilHomeAllowed_;
   int GalilStopDelay_;
+  int GalilMicrostep_;
   int GalilAmpGain_;
   int GalilAmpCurrentLoopGain_;
   int GalilAmpLowCurrent_;
@@ -606,9 +676,14 @@ private:
 
   double timeMultiplier_;		//Controller time base divided by default time base
 
+  int hswact_;                          //Value of axis _HM when home switch active
+  int hswiact_;                         //Value of axis _HM when home switch inactive
+
   int digports_;			//Digital ports used in motor enable/disable
   int digvalues_;			//Digital port interrupt values
   bool digInitialUpdate_;		//Digital port initial update
+
+  int ampModel_[2];                     // Model number of amplifier on channels A-D [0] and A-H [1]
 
   bool rio_;				//Is controller a RIO
   char code_file_[MAX_FILENAME_LEN];	//Code file(s) that user gave to GalilStartController
