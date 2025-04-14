@@ -16,14 +16,14 @@ dire=-1
 ELSE
 dire=1
 ENDIF
-OFA=8*dire
+OFA=9*dire
 IF diffe>0.5
-TLA=9
+TLA=9.5
 ELSE
 IF diffe>0.2
-TLA=8
+TLA=9.5
 ELSE
-TLA=6
+TLA=9.5
 ENDIF
 ENDIF
 SHA
@@ -35,14 +35,14 @@ dire=-1
 ELSE
 dire=1
 ENDIF
-OFA=8*dire
+OFA=9*dire
 IF diffe>0.5
-TLA=9
+TLA=9.5
 ELSE
 IF diffe>0.2
-TLA=8
+TLA=9.5
 ELSE
-TLA=6
+TLA=9.5
 ENDIF
 ENDIF
 diffe=@ABS[diffe]
