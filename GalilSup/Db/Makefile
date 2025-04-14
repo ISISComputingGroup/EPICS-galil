@@ -32,8 +32,8 @@ DB += galil_userdef_records8.template
 
 # Example galil code templates
 # These are renamed and installed to a GMC directory for historic reasons
-# See ReadMe_dmc.md for details
-GMC += ReadMe_dmc.md
+# See README.md for details
+GMC += README.md
 GMC += $(patsubst ../%.dmc, %.gmc, $(wildcard ../*.dmc))
 
 include $(TOP)/configure/RULES
