@@ -52,12 +52,12 @@ MC~a
 '****Step 4 - Oscillations************
 time1=TIME
 SP~a=vel
-PA~a=dist/2;BG~a;
+SH~a;PA~a=dist/2;BG~a;
 #CHECK1
 JP #CHECK1, @IN[7]=0
 check=_RP~a
 AM~a
-PA~a=-dist/2;BG~a;AM~a
+SH~a;PA~a=-dist/2;BG~a;AM~a
 count=count+1
 time=TIME-time1
 'JP #HOMER, check>125
