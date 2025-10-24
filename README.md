@@ -1,7 +1,4 @@
 EPICS-galil
 ===========
-The EPICS galil driver 3-0 from from https://github.com/motorapp/Galil-3-0
-with some local modifications
-  
-
+Local fork of an old version of https://github.com/motorapp/Galil We only use `galil-old` branch from here and will be moving to use https://github.com/ISISComputingGroup/Galil in future
  
