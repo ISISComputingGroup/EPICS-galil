@@ -47,8 +47,8 @@ record(bo,"$(P):$(R)_CMD")
 	field(PINI, "YES")
 	field(DTYP, "asynUInt32Digital")
         field(OUT,  "@asynMask($(PORT) $(WORD) $(MASK))BINARY_OUT")
-	field(SIML, "$(P)$(R)_STATUS:SIM")
-	field(SIOL, "$(P)$(R)_STATUS:SIM:VAL PP")
+	field(SIML, "$(P):$(R)_STATUS:SIM")
+	field(SIOL, "$(P):$(R)_STATUS:SIM:VAL PP")
 }
 
 record(bo, "$(P):$(R)_STATUS:SIM") 
@@ -58,7 +58,7 @@ record(bo, "$(P):$(R)_STATUS:SIM")
     field(VAL, "$(RECSIM=0)")
 }
 
-record(bo, "$(P)$(R)_STATUS:SIM:VAL")
+record(bo, "$(P):$(R)_STATUS:SIM:VAL")
 {
     field(SCAN, "Passive")
     field(DTYP, "Soft Channel")
